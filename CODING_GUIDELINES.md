@@ -3,7 +3,7 @@
 
 These coding standards are adapted from safety-critical development principles. The goal is to ensure predictable, maintainable, and testable embedded software.
 
-## 🧱 General Rules
+## General Rules
 
 1. **No dynamic memory allocation**
    - Avoid use of `new`, `delete`, `malloc`, `free`
@@ -24,7 +24,7 @@ These coding standards are adapted from safety-critical development principles. 
 5. **All objects should be created at compile-time where possible**
    - Initialization should not depend on runtime allocations
 
-## 🧪 Testing Rules
+## Testing Rules
 
 - Unit tests may use dynamic memory if they run on host machine only
 - GoogleTest is allowed for off-target test modules

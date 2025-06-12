@@ -1,0 +1,71 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "default",
+      "generator": "Ninja",
+      "hidden":true,
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS":true,
+        "toolchainName": {
+          "type": "STRING",
+          "value": "${presetName}"
+        }
+      }
+    },
+    {
+      "name": "toolchain-versions",
+      "inherits": "default",
+      "hidden":true,
+      "environment": {
+        "toolchain_ver_native": "11.4",
+        "toolchain_ver_stm": "14.2"
+      }
+    },
+    {
+      "name": "toolchain-files",
+      "inherits": "toolchain-versions",
+      "hidden":true,
+      "environment": {
+        "toolchain_file_native": "$env{TOOLCHAIN_PATH}/native/$env{toolchain_ver_native}/toolchain-native.cmake",
+        "toolchain_file_stm": "$env{TOOLCHAIN_PATH}/stm/$env{toolchain_ver_stm}/toolchain-stm.cmake"
+      }
+    },
+    {
+      "name": "native",
+      "inherits":"toolchain-files",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": {
+          "type": "STRING",
+          "value": "$env{toolchain_file_native}"
+        }
+      }
+    },
+    {
+      "name": "stm",
+      "inherits":"toolchain-files",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": {
+          "type": "STRING",
+          "value": "$env{toolchain_file_stm}"
+        }
+      }
+    },
+    {
+      "name": "full",
+      "inherits":"toolchain-files",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": {
+          "type": "STRING",
+          "value": "$env{toolchain_file_native}"
+        }
+      }
+    }
+  ]
+}
