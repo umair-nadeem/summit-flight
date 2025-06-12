@@ -1,0 +1,10 @@
+
+# Build artifacts
+build/
+
+# VS Code
+.vscode/
+.idea/
+
+# CMake
+CMakeUserPresets.json
