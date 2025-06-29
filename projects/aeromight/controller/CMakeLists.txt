@@ -3,26 +3,26 @@ only_for_toolchain(stm)
 add_library(aeromight_lib INTERFACE)
 
 target_sources(aeromight_lib INTERFACE 
-    main.cpp
-    $<TARGET_OBJECTS:stm32f411_platform>
+    aeromight.cpp
+)
+
+target_link_libraries(aeromight_lib INTERFACE
+    stm32f411
 )
 
 target_compile_options(aeromight_lib INTERFACE
-    -mfloat-abi=hard
-    -mfpu=fpv4-sp-d16
+    # Preprocessor Macros
+    -DSTM32F411xE
+    -DARM_MATH_CM4
+    -DARM_MATH_MATRIX_CHECK
+    -DARM_MATH_ROUNDING
+    -DUSE_HAL_DRIVER
+    -DUSE_FULL_LL_DRIVER
 )
 
-target_link_options(aeromight_lib INTERFACE
-    -Wl,-gc-sections
-    -Wl,--unresolved-symbols=report-all
-    -mcpu=cortex-m4
-    -mthumb
-    -mthumb-interwork
-    -mfloat-abi=hard
-    -mfpu=fpv4-sp-d16  
-    -specs=nano.specs -specs=nosys.specs
-    -T ${CMAKE_CURRENT_SOURCE_DIR}/STM32F411XX_FLASH.ld
-)
+add_cortex_m4_compile_flags(aeromight_lib)
+
+add_cortex_m4_link_flags(aeromight_lib ${CMAKE_CURRENT_SOURCE_DIR}/STM32F411XX_FLASH.ld)
 
 add_executable(aeromight)
 
