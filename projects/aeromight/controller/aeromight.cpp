@@ -1,18 +1,39 @@
-#include "stdlib.h"
+#include <stdlib.h>
+
+#include "main.h"
 
 extern "C"
 {
 
-void start(void)
+void start()
 {
-   int x = -35;
-   int y = 10;
 
-   x = x + y;
+   static constexpr size_t blocking_delay = 500u;
+   static constexpr size_t min_delay_multiplier = 1u;
+   static constexpr size_t max_delay_multiplier = 10;
 
-   for (size_t i=0; i<5; i++)
+   size_t delay_multiplier = min_delay_multiplier;
+   bool increasing_delay = true;
+
+   while (1)
    {
-      x += i;
+      HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+      HAL_Delay(delay_multiplier * blocking_delay);
+
+      increasing_delay ? ++delay_multiplier : --delay_multiplier;
+
+      // max limit reached, oscillate downwards
+      if (delay_multiplier >= max_delay_multiplier)
+      {
+         delay_multiplier = max_delay_multiplier;
+         increasing_delay = false;
+      }
+
+      if (delay_multiplier <= min_delay_multiplier)
+      {
+         delay_multiplier = min_delay_multiplier;
+         increasing_delay = true;
+      }
    }
 
 }

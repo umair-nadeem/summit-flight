@@ -20,6 +20,8 @@ target_compile_options(aeromight_lib INTERFACE
     -DUSE_FULL_LL_DRIVER
 )
 
+add_toolchain_flags(aeromight_lib)
+
 add_cortex_m4_compile_flags(aeromight_lib)
 
 add_cortex_m4_link_flags(aeromight_lib ${CMAKE_CURRENT_SOURCE_DIR}/STM32F411XX_FLASH.ld)
@@ -28,3 +30,4 @@ add_executable(aeromight)
 
 target_link_libraries(aeromight aeromight_lib)
 
+export_executable(aeromight ${CMAKE_BINARY_DIR}/executables)
