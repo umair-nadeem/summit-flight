@@ -1,6 +1,9 @@
 #include <stdlib.h>
 
 #include "main.h"
+#include "FreeRTOS.h"
+
+static constexpr uint32_t value = TICK_TYPE_WIDTH_32_BITS;
 
 extern "C"
 {

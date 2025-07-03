@@ -48,22 +48,12 @@
       }
     },
     {
-      "name": "stm",
+      "name": "stm_m4",
       "inherits":"toolchain-files",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": {
           "type": "STRING",
           "value": "$env{toolchain_file_stm}"
-        }
-      }
-    },
-    {
-      "name": "full",
-      "inherits":"toolchain-files",
-      "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": {
-          "type": "STRING",
-          "value": "$env{toolchain_file_native}"
         }
       }
     }

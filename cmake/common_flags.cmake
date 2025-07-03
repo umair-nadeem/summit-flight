@@ -1,5 +1,5 @@
-function(add_toolchain_flags interface_library)
-    target_compile_options(${interface_library} INTERFACE
+function(add_common_flags library)
+    target_compile_options(${library} INTERFACE
 
         $<$<COMPILE_LANGUAGE:C>:-std=gnu17>
 
@@ -42,7 +42,6 @@ function(add_toolchain_flags interface_library)
         -Wsign-conversion
         -Wsign-promo
         -Wstrict-null-sentinel
-        $<$<STREQUAL:${TOOLCHAIN},stm>:-Wstrict-overflow=5>
         -Wsuggest-final-methods
         -Wsuggest-final-types
         -Wsuggest-override

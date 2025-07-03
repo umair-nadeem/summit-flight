@@ -1,13 +1,18 @@
-only_for_toolchain(stm)
+only_for_toolchain(stm_m4)
 
 add_library(aeromight_lib INTERFACE)
 
+target_include_directories(aeromight_lib INTERFACE ${CMAKE_CURRENT_LIST_DIR}/os)
+
 target_sources(aeromight_lib INTERFACE 
     aeromight.cpp
+
+    ${CMAKE_CURRENT_LIST_DIR}/os/port.c
 )
 
 target_link_libraries(aeromight_lib INTERFACE
     stm32f411
+    os_wrapper
 )
 
 target_compile_options(aeromight_lib INTERFACE
@@ -20,11 +25,9 @@ target_compile_options(aeromight_lib INTERFACE
     -DUSE_FULL_LL_DRIVER
 )
 
-add_toolchain_flags(aeromight_lib)
+add_compile_flags(aeromight_lib)
 
-add_cortex_m4_compile_flags(aeromight_lib)
-
-add_cortex_m4_link_flags(aeromight_lib ${CMAKE_CURRENT_SOURCE_DIR}/STM32F411XX_FLASH.ld)
+add_cortex_m4_link_flags(aeromight_lib ${CMAKE_CURRENT_LIST_DIR}/STM32F411XX_FLASH.ld)
 
 add_executable(aeromight)
 

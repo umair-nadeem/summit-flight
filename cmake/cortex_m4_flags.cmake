@@ -1,5 +1,5 @@
-function(add_cortex_m4_compile_flags interface_library)
-    target_compile_options(${interface_library} INTERFACE
+function(add_cortex_m4_compile_flags library)
+    target_compile_options(${library} INTERFACE
         # Architecture-Specific
        -mfloat-abi=hard
        -mfpu=fpv4-sp-d16
@@ -15,10 +15,11 @@ function(add_cortex_m4_compile_flags interface_library)
 
        # C++ Flags and Warnings
        $<$<COMPILE_LANGUAGE:CXX>:
-       -fno-rtti
        -fno-exceptions
-       -Weffc++
+       -fno-rtti
        -Wabi-tag
+       -Weffc++
+       -Wstrict-overflow=5
        >
 
        ## Optimization & Performance
@@ -38,8 +39,8 @@ function(add_cortex_m4_compile_flags interface_library)
    )
 endfunction()
 
-function(add_cortex_m4_link_flags interface_library linker_script)
-    target_link_options(${interface_library} INTERFACE
+function(add_cortex_m4_link_flags library linker_script)
+    target_link_options(${library} INTERFACE
         -Wl,-gc-sections
         -Wl,--unresolved-symbols=report-all
         -mcpu=cortex-m4

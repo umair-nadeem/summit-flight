@@ -1,5 +1,5 @@
-macro(only_for_toolchain this_toolchain)
-   if (NOT TOOLCHAIN STREQUAL "${this_toolchain}")
+macro(only_for_toolchain target_toolchain)
+   if (NOT TOOLCHAIN STREQUAL "${target_toolchain}")
       return ()
    endif ()
 endmacro()

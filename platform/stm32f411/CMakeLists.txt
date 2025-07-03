@@ -1,4 +1,6 @@
-only_for_toolchain(stm)
+only_for_toolchain(stm_m4)
+
+add_library(stm32f411 INTERFACE)
 
 file(GLOB_RECURSE sources_files
     ${CMAKE_CURRENT_LIST_DIR}/Core/Src/*.c
@@ -8,8 +10,6 @@ file(GLOB_RECURSE sources_files
 list(APPEND sources_files
     ${CMAKE_CURRENT_LIST_DIR}/startup_stm32f411xe.s
 )
-
-add_library(stm32f411 INTERFACE)
 
 target_sources(stm32f411 INTERFACE ${sources_files})
 
