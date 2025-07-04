@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <cstdio>
 
 #include "main.h"
 #include "FreeRTOS.h"
@@ -10,6 +11,9 @@ extern "C"
 
 void start()
 {
+   size_t clock_value = SystemCoreClock;
+
+   printf("value of clock is %u", clock_value);
 
    static constexpr size_t blocking_delay = 500u;
    static constexpr size_t min_delay_multiplier = 1u;
