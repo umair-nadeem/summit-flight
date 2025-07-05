@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script formats all C++ source/header files in the 'common' and 'projects' directories
+# This script formats all C++ source/header files in the 'common' and 'project' directories
 # using clang-format (version 16 assumed).
 # Only .cpp, .hpp, and .h files are processed.
 
@@ -9,7 +9,7 @@ set -e
 CLANG_FORMAT=clang-format-16
 
 # List of root folders to include
-INCLUDE_DIRS=("common" "projects")
+INCLUDE_DIRS=("common" "project")
 
 echo "Running clang-format ..."
 
