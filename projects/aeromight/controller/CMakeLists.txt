@@ -6,13 +6,16 @@ target_include_directories(aeromight_lib INTERFACE ${CMAKE_CURRENT_LIST_DIR}/os)
 
 target_sources(aeromight_lib INTERFACE 
     aeromight.cpp
+    sensor_acquisition_task.cpp
 
     ${CMAKE_CURRENT_LIST_DIR}/os/port.c
 )
 
 target_link_libraries(aeromight_lib INTERFACE
     stm32f411
-    os_wrapper
+    rtos
+
+    aeromight_sensors
 )
 
 target_compile_options(aeromight_lib INTERFACE

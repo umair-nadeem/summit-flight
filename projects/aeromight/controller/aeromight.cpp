@@ -1,48 +1,54 @@
 #include <stdlib.h>
 #include <cstdio>
+#include <cstring>
+
+#include "rtos/task_interface.hpp"
+#include "rtos/RtosTaskConfig.h"
 
 #include "main.h"
-#include "FreeRTOS.h"
+#include "SensorAcquisitionTaskData.h"
 
-static constexpr uint32_t value = TICK_TYPE_WIDTH_32_BITS;
+namespace controller
+{
+
+// task data
+SensorAcquisitionTaskData sensor_acq_task_data{};
+
+// task control blocks
+rtos::TCB sensor_acq_task_tcb{};
+
+// task stack
+uint32_t sensor_acq_task_stack_buffer[controller::sensor_acq_task_stack_depth_in_words];
+
+void register_tasks()
+{
+   std::memset(sensor_acq_task_stack_buffer, 0, sizeof(sensor_acq_task_stack_buffer));
+
+   rtos::RtosTaskConfig sensor_acq_task_config{
+      .func = sensor_acquisition_task,
+      .name = controller::sensor_acq_task_name,
+      .stack_depth_in_words = controller::sensor_acq_task_stack_size_in_bytes / sizeof(uint32_t),
+      .params = static_cast<void*>(&sensor_acq_task_data),
+      .priority = controller::sensor_acq_task_priority,
+      .stack_buffer = sensor_acq_task_stack_buffer,
+      .task_block = sensor_acq_task_tcb};
+
+   rtos::create_task(sensor_acq_task_config);
+}
+
+}  // namespace controller
 
 extern "C"
 {
 
-void start()
+void controller_register_rtos_objects()
 {
-   size_t clock_value = SystemCoreClock;
+   controller::register_tasks();
+}
 
-   printf("value of clock is %u", clock_value);
-
-   static constexpr size_t blocking_delay = 500u;
-   static constexpr size_t min_delay_multiplier = 1u;
-   static constexpr size_t max_delay_multiplier = 10;
-
-   size_t delay_multiplier = min_delay_multiplier;
-   bool increasing_delay = true;
-
-   while (1)
-   {
-      HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-      HAL_Delay(delay_multiplier * blocking_delay);
-
-      increasing_delay ? ++delay_multiplier : --delay_multiplier;
-
-      // max limit reached, oscillate downwards
-      if (delay_multiplier >= max_delay_multiplier)
-      {
-         delay_multiplier = max_delay_multiplier;
-         increasing_delay = false;
-      }
-
-      if (delay_multiplier <= min_delay_multiplier)
-      {
-         delay_multiplier = min_delay_multiplier;
-         increasing_delay = true;
-      }
-   }
-
+void controller_start_scheduler()
+{
+   rtos::start_scheduler();
 }
 
 }

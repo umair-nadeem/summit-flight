@@ -54,7 +54,8 @@ static void MX_GPIO_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void start(void);
+void controller_register_rtos_objects(void);
+void controller_start_scheduler(void);
 /* USER CODE END 0 */
 
 /**
@@ -88,7 +89,9 @@ int main(void)
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
 
-  start();
+  controller_register_rtos_objects();
+
+  controller_start_scheduler();
 
   /* USER CODE END 2 */
 
