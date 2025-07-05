@@ -8,12 +8,12 @@
 namespace rtos
 {
 
-template<typename PeriodicTask>
+template <typename PeriodicTask>
 [[noreturn]] void run_periodic_task(PeriodicTask& periodicTask)
 {
-   const size_t period_in_ms = periodicTask.get_period_ms();
-   TickType_t xLastWakeTime = xTaskGetTickCount();
-   BaseType_t xWasDelayed;
+   const size_t period_in_ms  = periodicTask.get_period_ms();
+   TickType_t   xLastWakeTime = xTaskGetTickCount();
+   BaseType_t   xWasDelayed;
 
    while (true)
    {
@@ -24,4 +24,4 @@ template<typename PeriodicTask>
    }
 }
 
-}  // namespace rtos
+}   // namespace rtos

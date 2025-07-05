@@ -1,3 +1,5 @@
+// clang-format off
+
 /*
  * FreeRTOS Kernel <DEVELOPMENT BRANCH>
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
@@ -264,3 +266,5 @@ portFORCE_INLINE static void vPortSetBASEPRI( uint32_t ulNewMaskValue )
 /* *INDENT-ON* */
 
 #endif /* PORTMACRO_H */
+
+// clang-format on

@@ -1,0 +1,90 @@
+AccessModifierOffset : -3
+AlignAfterOpenBracket : true
+AlignConsecutiveAssignments:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+AlignConsecutiveDeclarations:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+AlignEscapedNewlines : Left
+AlignOperands : true
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 2
+AllowAllParametersOfDeclarationOnNextLine : true
+AllowShortBlocksOnASingleLine : Never
+AllowShortCaseLabelsOnASingleLine : false
+AllowShortFunctionsOnASingleLine : Inline
+AllowShortIfStatementsOnASingleLine : Never
+AllowShortLoopsOnASingleLine : false
+AlwaysBreakBeforeMultilineStrings : false
+AlwaysBreakAfterReturnType : None
+BinPackArguments : true
+BinPackParameters : true
+BreakBeforeBinaryOperators : None
+BreakBeforeBraces : Allman
+BreakBeforeTernaryOperators : false
+BreakConstructorInitializers : BeforeColon
+AlwaysBreakTemplateDeclarations : Yes
+Cpp11BracedListStyle : true
+ColumnLimit: 0
+DerivePointerAlignment : false
+ExperimentalAutoDetectBinPacking : false
+PackConstructorInitializers : Never
+SortIncludes: CaseSensitive
+
+IncludeBlocks: Regroup
+IncludeCategories:
+  # STM
+  - Priority: 10
+    Regex: '^<main.h>'
+  - Priority: 11
+    Regex: '^<core_.*>'
+
+  # other libraries
+  - Priority: 30
+    Regex: '^<(gtest/.*)|(gmock/.*)'
+
+  # other libraries with subfolders
+  - Priority: 40
+    Regex: '^<.*/.*>'
+
+  # STL (everything without subfolders)
+  # this has high priority, but comes later in order to allow more specific regexes to match first
+  - Priority: 20
+    Regex: '^<[^/]+>'
+
+  # local includes
+  - Priority: 70
+    Regex: '^".*"'
+
+IndentCaseLabels: true
+IndentWidth: 3
+IndentWrappedFunctionNames: false
+KeepEmptyLinesAtTheStartOfBlocks: true
+Language: Cpp
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: None
+PenaltyBreakBeforeFirstCallParameter: 1
+PenaltyBreakComment: 300
+PenaltyBreakFirstLessLess: 120
+PenaltyBreakString: 1000
+PenaltyExcessCharacter: 1000000
+PenaltyReturnTypeOnItsOwnLine: 200
+PointerAlignment: Left
+QualifierAlignment: Left
+SpaceAfterCStyleCast: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 3
+SpacesInAngles: Never
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: true
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+Standard: c++20
+TabWidth: 3
+UseTab: Never

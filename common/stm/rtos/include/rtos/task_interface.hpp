@@ -16,9 +16,9 @@ inline TaskHandle_t create_task(const RtosTaskConfig& config)
    static_assert(std::is_pointer_v<decltype(config.stack_buffer)>);
 
    TaskHandle_t task_handle = nullptr;
- 
+
    task_handle = xTaskCreateStatic(config.func,
-                                   config.name, 
+                                   config.name,
                                    config.stack_depth_in_words,
                                    config.params,
                                    config.priority,
@@ -35,4 +35,4 @@ inline void start_scheduler()
    vTaskStartScheduler();
 }
 
-}  // namespace rtos
+}   // namespace rtos
