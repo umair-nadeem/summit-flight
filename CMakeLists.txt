@@ -13,4 +13,4 @@ include(only_for_toolchain)
 
 add_subdirectory(common)
 add_subdirectory(platform)
-add_subdirectory(projects)
+add_subdirectory(project)
