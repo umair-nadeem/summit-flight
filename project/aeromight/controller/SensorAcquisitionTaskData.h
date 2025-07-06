@@ -14,7 +14,7 @@ namespace controller
 
 struct SensorAcquisitionTaskData
 {
-   hw::gpio::DigitalOutput blue_led{GPIOC, GPIO_PIN_13, true};
+   hw::gpio::DigitalOutput blue_led{GPIOC, LL_GPIO_PIN_13, true};
 };
 
 }   // namespace controller
