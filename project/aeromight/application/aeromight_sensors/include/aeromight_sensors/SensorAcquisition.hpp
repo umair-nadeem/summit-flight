@@ -9,33 +9,45 @@ template <typename Led>
 class SensorAcquisition
 {
 public:
-   explicit SensorAcquisition(Led& led, const size_t period)
+   explicit SensorAcquisition(Led& led, const size_t period_in_ms)
        : m_led{led},
-         m_period_in_ms{period}
+         m_period_in_ms{period_in_ms}
    {
    }
 
    void run_once()
    {
-      size_t delay_multiplier = min_delay_multiplier;
-      bool   increasing_delay = true;
-
-      // m_led.toggle();
-      // add delay
-
-      increasing_delay ? ++delay_multiplier : --delay_multiplier;
-
-      // max limit reached, oscillate downwards
-      if (delay_multiplier >= max_delay_multiplier)
+      if (m_led_on)
       {
-         delay_multiplier = max_delay_multiplier;
-         increasing_delay = false;
+         m_on_time_counter += m_period_in_ms;
+
+         if (m_on_time_counter >= m_target_on_time)
+         {
+            m_led.turn_off();
+            m_led_on           = false;
+            m_on_time_counter  = 0u;
+            m_off_time_counter = 0u;
+
+            // adjust target_on_time for next time
+            m_target_on_time += on_time_increment_delta;
+
+            if (m_target_on_time > max_on_time)
+            {
+               m_target_on_time = min_on_time;
+            }
+         }
       }
-
-      if (delay_multiplier <= min_delay_multiplier)
+      else
       {
-         delay_multiplier = min_delay_multiplier;
-         increasing_delay = true;
+         m_off_time_counter += m_period_in_ms;
+
+         if (m_off_time_counter >= fixed_off_time)
+         {
+            m_led.turn_on();
+            m_led_on           = true;
+            m_on_time_counter  = 0u;
+            m_off_time_counter = 0u;
+         }
       }
    }
 
@@ -45,12 +57,17 @@ public:
    }
 
 private:
-   static constexpr size_t blocking_delay       = 500u;
-   static constexpr size_t min_delay_multiplier = 1u;
-   static constexpr size_t max_delay_multiplier = 10;
+   static constexpr size_t on_time_increment_delta = 500u;
+   static constexpr size_t min_on_time             = 500u;
+   static constexpr size_t max_on_time             = 4000u;
+   static constexpr size_t fixed_off_time          = 1000u;
 
    Led&         m_led;
    const size_t m_period_in_ms;
+   size_t       m_target_on_time{min_on_time};
+   size_t       m_on_time_counter{0u};
+   size_t       m_off_time_counter{0u};
+   bool         m_led_on{false};
 };
 
 }   // namespace aeromight_sensors

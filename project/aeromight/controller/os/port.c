@@ -132,9 +132,13 @@ typedef void ( * portISR_t )( void );
  */
 void vPortSetupTimerInterrupt( void );
 
+#define vPortSVCHandler     SVC_Handler
+#define xPortPendSVHandler  PendSV_Handler
+#define xPortSysTickHandler SysTick_Handler
+
 /*
- * Exception handlers.
- */
+* Exception handlers.
+*/
 void xPortPendSVHandler( void ) __attribute__( ( naked ) );
 void xPortSysTickHandler( void );
 void vPortSVCHandler( void ) __attribute__( ( naked ) );
