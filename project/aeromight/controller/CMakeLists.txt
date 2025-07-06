@@ -13,7 +13,7 @@ target_sources(aeromight_lib INTERFACE
 
 target_link_libraries(aeromight_lib INTERFACE
     stm32f411
-    hw_abstraction
+    hw
     rtos
 
     aeromight_sensors

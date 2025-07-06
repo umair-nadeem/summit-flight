@@ -23,7 +23,7 @@ public:
 
          if (m_on_time_counter >= m_target_on_time)
          {
-            m_led.turn_off();
+            m_led.set_low();
             m_led_on           = false;
             m_on_time_counter  = 0u;
             m_off_time_counter = 0u;
@@ -43,7 +43,7 @@ public:
 
          if (m_off_time_counter >= fixed_off_time)
          {
-            m_led.turn_on();
+            m_led.set_high();
             m_led_on           = true;
             m_on_time_counter  = 0u;
             m_off_time_counter = 0u;
