@@ -17,13 +17,9 @@ target_include_directories(freertos SYSTEM INTERFACE ${OS_DIR}/include)
 
 
 ############################################################################################
-
-
-add_library(rtos INTERFACE)
-
-target_sources(rtos INTERFACE
-    ${CMAKE_CURRENT_LIST_DIR}/src/hooks.cpp)
-
-target_link_libraries(rtos INTERFACE freertos)
-
-target_include_directories(rtos INTERFACE ${CMAKE_CURRENT_LIST_DIR}/include)
+add_module(
+    SOURCES
+        ${CMAKE_CURRENT_LIST_DIR}/src/hooks.cpp
+    LIBS
+        freertos
+)

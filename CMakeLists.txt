@@ -12,6 +12,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(compile_flags)
 include(export_executable)
 include(only_for_toolchain)
+include(add_module)
 include(add_module_test)
 
 add_subdirectory(common)
