@@ -2,7 +2,7 @@
 
 #include <cstddef>
 
-#include "error/general_error_handler.h"
+#include "error/error_handler.h"
 
 namespace aeromight_sensors
 {

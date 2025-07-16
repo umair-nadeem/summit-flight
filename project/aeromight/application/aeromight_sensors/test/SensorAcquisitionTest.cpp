@@ -11,9 +11,11 @@ public:
    }
 
 private:
-   size_t value{125u};
+   size_t                                       period{1u};
+   aeromight_sensors::SensorAcquisition<size_t> sensor_acquisition{period, period};
 };
 
 TEST_F(SensorAcquisitionTest, canEventMsgWhenDeliveryContainerChanges)
 {
+   sensor_acquisition.run_once();
 }
