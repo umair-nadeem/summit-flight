@@ -1,0 +1,10 @@
+add_module(
+   SOURCES
+      src/cortex_fault_handlers.cpp
+      src/error_record.cpp
+      src/freertos_hooks.cpp
+      src/general_error_handlers.cpp
+      src/stm_hal_handlers.cpp
+   LIBS
+      freertos
+)

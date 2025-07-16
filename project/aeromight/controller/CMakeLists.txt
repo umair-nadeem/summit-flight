@@ -17,6 +17,7 @@ target_link_libraries(aeromight_lib INTERFACE
     rtos
 
     aeromight_sensors
+    error
 )
 
 target_compile_options(aeromight_lib INTERFACE
@@ -27,6 +28,7 @@ target_compile_options(aeromight_lib INTERFACE
     -DARM_MATH_ROUNDING
     -DUSE_HAL_DRIVER
     -DUSE_FULL_LL_DRIVER
+    -DUSE_FULL_ASSERT
 )
 
 add_compile_flags(aeromight_lib)

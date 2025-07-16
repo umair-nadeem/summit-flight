@@ -54,6 +54,8 @@ static void MX_GPIO_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void hal_failed_assert_handler(const char* file, const uint32_t line, const uint32_t pc);
+void hal_error_handler(const uint32_t pc);
 void controller_register_rtos_objects(void);
 void controller_start_scheduler(void);
 /* USER CODE END 0 */
@@ -89,7 +91,9 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+  SCB->SHCSR |= (SCB_SHCSR_MEMFAULTENA_Msk |
+                 SCB_SHCSR_BUSFAULTENA_Msk |
+                 SCB_SHCSR_USGFAULTENA_Msk);
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -202,10 +206,8 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
+  const void* pc = __builtin_return_address(0);
+  hal_error_handler((uint32_t)pc);
   /* USER CODE END Error_Handler_Debug */
 }
 
@@ -222,6 +224,8 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  const void* pc = __builtin_return_address(0);
+  hal_failed_assert_handler((const char*)file, line, (uint32_t)pc);
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

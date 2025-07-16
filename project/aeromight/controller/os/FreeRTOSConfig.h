@@ -4,6 +4,7 @@
 #define FREERTOS_CONFIG_H
 
 #include "system_stm32f4xx.h"
+#include "error/freertos_hooks.h"
 
 /******************************************************************************/
 /* Hardware and scheduling definitions. ***************************************/
@@ -97,13 +98,7 @@
 /******************************************************************************/
 
 /* *INDENT-OFF* */
-#define configASSERT( x )         \
-    if( ( x ) == 0 )              \
-    {                             \
-        taskDISABLE_INTERRUPTS(); \
-        for( ; ; )                \
-        ;                         \
-    }
+#define configASSERT( x )    if( ( x ) == 0 ) { freertos_config_assert(#x, __FILE__, __LINE__); }
 /* *INDENT-ON* */
 
 /******************************************************************************/

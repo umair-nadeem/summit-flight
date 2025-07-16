@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "SensorAcquisitionTaskData.h"
+#include "error/error_record.h"
 #include "main.h"
 #include "rtos/RtosTaskConfig.h"
 #include "rtos/task_interface.hpp"
@@ -21,18 +22,21 @@ uint32_t sensor_acq_task_stack_buffer[controller::sensor_acq_task_stack_depth_in
 
 void register_tasks()
 {
-   std::memset(sensor_acq_task_stack_buffer, 0, sizeof(sensor_acq_task_stack_buffer));
+   if (!error::is_error_record_found())
+   {
+      std::memset(sensor_acq_task_stack_buffer, 0, sizeof(sensor_acq_task_stack_buffer));
 
-   rtos::RtosTaskConfig sensor_acq_task_config{
-       .func                 = sensor_acquisition_task,
-       .name                 = controller::sensor_acq_task_name,
-       .stack_depth_in_words = controller::sensor_acq_task_stack_size_in_bytes / sizeof(uint32_t),
-       .params               = static_cast<void*>(&sensor_acq_task_data),
-       .priority             = controller::sensor_acq_task_priority,
-       .stack_buffer         = sensor_acq_task_stack_buffer,
-       .task_block           = sensor_acq_task_tcb};
+      rtos::RtosTaskConfig sensor_acq_task_config{
+          .func                 = sensor_acquisition_task,
+          .name                 = controller::sensor_acq_task_name,
+          .stack_depth_in_words = controller::sensor_acq_task_stack_size_in_bytes / sizeof(uint32_t),
+          .params               = static_cast<void*>(&sensor_acq_task_data),
+          .priority             = controller::sensor_acq_task_priority,
+          .stack_buffer         = sensor_acq_task_stack_buffer,
+          .task_block           = sensor_acq_task_tcb};
 
-   rtos::create_task(sensor_acq_task_config);
+      rtos::create_task(sensor_acq_task_config);
+   }
 }
 
 }   // namespace controller

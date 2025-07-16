@@ -19,7 +19,6 @@ target_include_directories(freertos SYSTEM INTERFACE ${OS_DIR}/include)
 ############################################################################################
 add_module(
     SOURCES
-        ${CMAKE_CURRENT_LIST_DIR}/src/hooks.cpp
     LIBS
         freertos
 )

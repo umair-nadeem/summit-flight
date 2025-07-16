@@ -2,6 +2,8 @@
 
 #include <cstddef>
 
+#include "error/general_error_handler.h"
+
 namespace aeromight_sensors
 {
 
@@ -13,6 +15,7 @@ public:
        : m_led{led},
          m_period_in_ms{period_in_ms}
    {
+      error::assert(m_period_in_ms > 0);
    }
 
    void run_once()
