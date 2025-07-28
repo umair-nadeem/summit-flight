@@ -3,7 +3,7 @@
 extern "C"
 {
 
-   void common_fault_handler(uint32_t* stack_frame, error::CortexFaultRecord::FaultType type)
+   void common_fault_handler(const uint32_t* stack_frame, const error::CortexFaultRecord::FaultType type)
    {
       error::CortexFaultRecord record{};
       record.stacked_lr  = stack_frame[5];
