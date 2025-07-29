@@ -1,6 +1,6 @@
 #pragma once
 
-namespace controller
+namespace controller::task
 {
 
 // Sensor Acquistion Task
@@ -10,4 +10,4 @@ static constexpr size_t            sensor_acq_task_stack_depth_in_words{sensor_a
 static constexpr size_t            sensor_acq_task_priority{4u};
 static constexpr size_t            sensor_acq_task_period_in_ms{4u};
 
-}   // namespace controller
+}   // namespace controller::task

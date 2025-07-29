@@ -18,7 +18,7 @@ SensorAcquisitionTaskData sensor_acq_task_data{};
 rtos::TCB sensor_acq_task_tcb{};
 
 // task stack
-uint32_t sensor_acq_task_stack_buffer[controller::sensor_acq_task_stack_depth_in_words];
+uint32_t sensor_acq_task_stack_buffer[controller::task::sensor_acq_task_stack_depth_in_words];
 
 void register_tasks()
 {
@@ -28,10 +28,10 @@ void register_tasks()
 
       rtos::RtosTaskConfig sensor_acq_task_config{
           .func                 = sensor_acquisition_task,
-          .name                 = controller::sensor_acq_task_name,
-          .stack_depth_in_words = controller::sensor_acq_task_stack_size_in_bytes / sizeof(uint32_t),
+          .name                 = controller::task::sensor_acq_task_name,
+          .stack_depth_in_words = controller::task::sensor_acq_task_stack_size_in_bytes / sizeof(uint32_t),
           .params               = static_cast<void*>(&sensor_acq_task_data),
-          .priority             = controller::sensor_acq_task_priority,
+          .priority             = controller::task::sensor_acq_task_priority,
           .stack_buffer         = sensor_acq_task_stack_buffer,
           .task_block           = sensor_acq_task_tcb};
 

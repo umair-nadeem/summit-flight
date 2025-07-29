@@ -6,7 +6,7 @@
 
 extern "C"
 {
-   void sensor_acquisition_task(void* params);
+   [[noreturn]] void sensor_acquisition_task(void* params);
 }
 
 namespace controller
