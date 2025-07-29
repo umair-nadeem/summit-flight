@@ -11,8 +11,6 @@ CLANG_FORMAT=clang-format-16
 # List of root folders to include
 INCLUDE_DIRS=("common" "project")
 
-echo "Running clang-format ..."
-
 for DIR in "${INCLUDE_DIRS[@]}"; do
    if [ -d "$DIR" ]; then
       find "$DIR" -type f \( -name "*.cpp" -o -name "*.hpp" -o -name "*.h" \) \
@@ -21,5 +19,3 @@ for DIR in "${INCLUDE_DIRS[@]}"; do
       echo "Warning: directory '$DIR' does not exist, skipping."
    fi
 done
-
-echo "Formatting complete."

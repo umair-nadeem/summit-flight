@@ -10,7 +10,6 @@ do
    compile_commands="$project_root/out/build/$toolchain/compile_commands.json"
 
    if [[ -f $compile_commands ]]; then
-      echo "Running cppcheck for toolchain $toolchain..."
       cppcheck \
       --enable=all \
       --inconclusive \
@@ -26,9 +25,5 @@ do
       --quiet \
       --error-exitcode=1 \
       --project=$compile_commands
-   else
-      echo "Skipping cppcheck for toolchain $toolchain"
    fi
 done
-
-echo "✅ cppcheck passed."
