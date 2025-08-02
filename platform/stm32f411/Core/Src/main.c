@@ -58,8 +58,7 @@ static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN 0 */
 void hal_failed_assert_handler(const char* file, const uint32_t line, const uint32_t pc);
 void hal_error_handler(const uint32_t pc);
-void controller_register_rtos_objects(void);
-void controller_start_scheduler(void);
+void controller_initialize_hardware_and_start_scheduler(void);
 /* USER CODE END 0 */
 
 /**
@@ -104,9 +103,7 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  controller_register_rtos_objects();
-
-  controller_start_scheduler();
+  controller_initialize_hardware_and_start_scheduler();
 
   /* USER CODE END 2 */
 

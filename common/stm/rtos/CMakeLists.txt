@@ -19,6 +19,10 @@ target_include_directories(freertos SYSTEM INTERFACE ${OS_DIR}/include)
 ############################################################################################
 add_module(
     SOURCES
+        src/SemaphoreGiver.cpp
+        src/SemaphoreTaker.cpp
+        src/task_api.cpp
     LIBS
+        error
         freertos
 )

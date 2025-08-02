@@ -3,7 +3,7 @@
 namespace error
 {
 
-struct GeneralAssertRecord
+struct GeneralFailureRecord
 {
    char     file_name[32];
    char     function_name[32];

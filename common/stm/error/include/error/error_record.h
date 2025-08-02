@@ -16,7 +16,7 @@ using MasterErrorRecord = std::variant<std::monostate,
                                        FreertosAssertFailureRecord,
                                        HalErrorRecord,
                                        HalAssertFailureRecord,
-                                       GeneralAssertRecord>;
+                                       GeneralFailureRecord>;
 
 void add_error_record(const MasterErrorRecord& error_record);
 bool is_error_record_found();

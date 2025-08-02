@@ -4,7 +4,7 @@
 #define FREERTOS_CONFIG_H
 
 #include "system_stm32f4xx.h"
-#include "error/freertos_hooks.h"
+#include "error/freertos_hook.h"
 
 /******************************************************************************/
 /* Hardware and scheduling definitions. ***************************************/
@@ -63,9 +63,9 @@
 /* Interrupt nesting behaviour configuration. *********************************/
 /******************************************************************************/
 
-#define configKERNEL_INTERRUPT_PRIORITY              (15 << 4)
-#define configMAX_SYSCALL_INTERRUPT_PRIORITY         (5 << 4)
-#define configMAX_API_CALL_INTERRUPT_PRIORITY        (5 << 4)
+#define configKERNEL_INTERRUPT_PRIORITY              (15 << 4)   // set to minimum interrupt priority level
+#define configMAX_SYSCALL_INTERRUPT_PRIORITY         (5 << 4)    // ISRs calling freertos api can use up to this priority level
+#define configMAX_API_CALL_INTERRUPT_PRIORITY        (5 << 4)    // same as configMAX_SYSCALL_INTERRUPT_PRIORITY
 
 /******************************************************************************/
 /* Hook and callback function related definitions. ****************************/

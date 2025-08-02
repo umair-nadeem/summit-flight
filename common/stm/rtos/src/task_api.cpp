@@ -1,15 +1,12 @@
-#pragma once
+#include "rtos/task_api.h"
 
 #include <cassert>
 #include <type_traits>
 
-#include "rtos/RtosTaskConfig.h"
-#include "task.h"
-
 namespace rtos
 {
 
-inline TaskHandle_t create_task(const RtosTaskConfig& config)
+TaskHandle_t create_task(const RtosTaskConfig& config)
 {
    static_assert(std::is_pointer_v<decltype(config.func)>);
    static_assert(std::is_pointer_v<decltype(config.params)>);
@@ -30,7 +27,7 @@ inline TaskHandle_t create_task(const RtosTaskConfig& config)
    return task_handle;
 }
 
-inline void start_scheduler()
+void start_scheduler()
 {
    vTaskStartScheduler();
 }

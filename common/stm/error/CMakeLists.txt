@@ -3,8 +3,7 @@ add_module(
       src/cortex_fault_handlers.cpp
       src/error_handler.cpp
       src/error_record.cpp
-      src/freertos_hooks.cpp
+      src/freertos_errors.cpp
       src/stm_hal_handlers.cpp
    LIBS
-      freertos
 )
