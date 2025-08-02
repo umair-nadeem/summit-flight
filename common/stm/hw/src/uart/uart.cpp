@@ -27,7 +27,6 @@ void prepare_for_communication(UartConfig& config, std::span<const std::byte> tx
                              LL_DMA_MEMORY_INCREMENT |
                              LL_DMA_PERIPH_NOINCREMENT |
                              LL_DMA_MODE_NORMAL |
-                             LL_DMA_MODE_NORMAL |
                              LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
 
    LL_DMA_SetPeriphAddress(config.dma_handle, config.tx_dma_stream, LL_USART_DMA_GetRegAddr(config.uart_handle));

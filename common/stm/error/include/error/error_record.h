@@ -19,6 +19,6 @@ using MasterErrorRecord = std::variant<std::monostate,
                                        GeneralFailureRecord>;
 
 void add_error_record(const MasterErrorRecord& error_record);
-bool is_error_record_found();
+bool has_no_error();
 
 }   // namespace error

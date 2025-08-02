@@ -17,7 +17,7 @@ public:
          m_tx_buffer{tx_buffer},
          m_period_in_ms{period_in_ms}
    {
-      error::assert(m_period_in_ms > 0);
+      error::verify(m_period_in_ms > 0);
    }
 
    void run_once()
@@ -76,6 +76,7 @@ private:
          m_tx_buffer[3] = std::byte{'4'};
          m_tx_buffer[4] = std::byte{'5'};
          m_logger.send(5u);
+         m_logging_counter = 0;
       }
    }
 

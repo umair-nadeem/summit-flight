@@ -1,5 +1,6 @@
 #include "SensorAcquisitionTaskData.h"
 #include "aeromight_sensors/SensorAcquisition.hpp"
+#include "error/error_handler.h"
 #include "hw/uart/uart.hpp"
 #include "rtos/periodic_task.hpp"
 
@@ -8,7 +9,7 @@ extern "C"
 
    [[noreturn]] void sensor_acquisition_task(void* params)
    {
-      assert(params != nullptr);
+      error::verify(params != nullptr);
       auto* data = static_cast<controller::SensorAcquisitionTaskData*>(params);
 
       aeromight_sensors::SensorAcquisition<decltype(data->blue_led),

@@ -18,7 +18,7 @@ void add_error_record(const MasterErrorRecord& error_record)
    }
 }
 
-bool is_error_record_found()
+bool has_no_error()
 {
    return std::holds_alternative<std::monostate>(master_error_record);
 }

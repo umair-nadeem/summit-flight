@@ -5,11 +5,11 @@
 namespace error
 {
 
-void assert(const bool condition)
+void verify(const bool condition)
 {
    if (!condition)
    {
-      throw AssertFailureException("error: assert failure");
+      throw AssertFailureException("error: verify failure");
    }
 }
 

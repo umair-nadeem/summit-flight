@@ -17,7 +17,7 @@ struct Queue
       error::freertos_assert(queue_handle != nullptr);
    }
 
-   [[nodiscard]] QueueHandle_t get_handle()
+   [[nodiscard]] QueueHandle_t get_handle() const
    {
       return queue_handle;
    }

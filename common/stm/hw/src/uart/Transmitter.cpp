@@ -12,7 +12,7 @@ Transmitter::Transmitter(UartConfig&                 uart_config,
       m_tx_buffer{tx_buffer},
       m_function_take_semaphore{std::move(function_take_semaphore)}
 {
-   error::assert(m_function_take_semaphore != nullptr);
+   error::verify(m_function_take_semaphore != nullptr);
 }
 
 void Transmitter::send(const uint32_t size)

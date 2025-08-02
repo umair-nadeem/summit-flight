@@ -3,6 +3,6 @@
 namespace error
 {
 
-void assert(const bool condition);
+void verify(const bool condition);
 
 }   // namespace error

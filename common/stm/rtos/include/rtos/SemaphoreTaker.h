@@ -17,7 +17,7 @@ public:
 
    void set_handle(SemaphoreHandle_t semaphore_handle)
    {
-      error::assert(semaphore_handle != nullptr);
+      error::verify(semaphore_handle != nullptr);
       m_handle = semaphore_handle;
    }
 

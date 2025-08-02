@@ -24,7 +24,7 @@ struct Semaphore
       return semaphore_handle;
    }
 
-   [[nodiscard]] SemaphoreHandle_t get_handle()
+   [[nodiscard]] SemaphoreHandle_t get_handle() const
    {
       return semaphore_handle;
    }

@@ -8,7 +8,7 @@
 namespace error
 {
 
-void assert(const bool condition, const std::source_location location)
+void verify(const bool condition, const std::source_location location)
 {
    if (!condition)
    {

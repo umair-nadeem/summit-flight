@@ -65,18 +65,20 @@ extern "C"
 {
    void controller_initialize_hardware_and_start_scheduler()
    {
-      if (!error::is_error_record_found())
+      if (error::has_no_error())
       {
          // tasks
          controller::register_sensor_acquisition_task();
 
-         // start scheduler
-         rtos::start_scheduler();
-
          // rtos
          controller::setup_rtos_objects();
-         {
-         }
+
+         // start scheduler
+         rtos::start_scheduler();
+      }
+      else
+      {
+         __asm volatile("BKPT #0");
       }
    }
 }

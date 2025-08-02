@@ -16,7 +16,6 @@ do
       --std=c++20 \
       --language=c++ \
       --inline-suppr \
-      --suppress=internalAstError \
       --suppress=unusedFunction \
       --suppress=missingInclude \
       --suppress=*:*\/os\* \
