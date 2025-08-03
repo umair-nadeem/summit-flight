@@ -11,8 +11,8 @@ public:
    }
 
 private:
-   size_t                                       period{1u};
-   aeromight_sensors::SensorAcquisition<size_t> sensor_acquisition{period, period};
+   std::size_t                                       period{1u};
+   aeromight_sensors::SensorAcquisition<std::size_t> sensor_acquisition{period, period};
 };
 
 TEST_F(SensorAcquisitionTest, canEventMsgWhenDeliveryContainerChanges)

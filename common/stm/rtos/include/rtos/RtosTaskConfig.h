@@ -14,9 +14,9 @@ struct RtosTaskConfig
 {
    TaskFunction      func;
    const char* const name;
-   const size_t      stack_depth_in_words;
+   const std::size_t stack_depth_in_words;
    void* const       params;
-   size_t            priority;
+   std::size_t       priority;
    uint32_t*         stack_buffer;
    TCB&              task_block;
 };

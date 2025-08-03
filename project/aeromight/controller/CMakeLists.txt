@@ -39,4 +39,10 @@ add_executable(aeromight)
 
 target_link_libraries(aeromight aeromight_lib)
 
-export_executable(aeromight ${CMAKE_BINARY_DIR}/executables)
+export_executable(aeromight ${CMAKE_BINARY_DIR}/artifacts)
+
+print_size(
+    aeromight 
+    ${CMAKE_BINARY_DIR}/artifacts/aeromight
+    ${CMAKE_SOURCE_DIR}/cmake/print_size_info.cmake
+)

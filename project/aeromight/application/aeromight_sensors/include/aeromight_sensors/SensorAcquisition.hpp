@@ -11,7 +11,7 @@ template <typename Led, typename Logger>
 class SensorAcquisition
 {
 public:
-   explicit SensorAcquisition(Led& led, Logger& logger, std::span<std::byte> tx_buffer, const size_t period_in_ms)
+   explicit SensorAcquisition(Led& led, Logger& logger, std::span<std::byte> tx_buffer, const std::size_t period_in_ms)
        : m_led{led},
          m_logger{logger},
          m_tx_buffer{tx_buffer},
@@ -22,53 +22,42 @@ public:
 
    void run_once()
    {
-      if (m_led_on)
-      {
-         m_on_time_counter += m_period_in_ms;
-
-         if (m_on_time_counter >= m_target_on_time)
-         {
-            m_led.set_low();
-            m_led_on           = false;
-            m_on_time_counter  = 0u;
-            m_off_time_counter = 0u;
-
-            // adjust target_on_time for next time
-            m_target_on_time += on_time_increment_delta;
-
-            if (m_target_on_time > max_on_time)
-            {
-               m_target_on_time = min_on_time;
-            }
-         }
-      }
-      else
-      {
-         m_off_time_counter += m_period_in_ms;
-
-         if (m_off_time_counter >= fixed_off_time)
-         {
-            m_led.set_high();
-            m_led_on           = true;
-            m_on_time_counter  = 0u;
-            m_off_time_counter = 0u;
-         }
-      }
+      blink_led();
 
       log_data();
    }
 
-   size_t get_period_ms() const
+   std::size_t get_period_ms() const
    {
       return m_period_in_ms;
    }
 
 private:
+   void blink_led()
+   {
+      m_led_state_duration_counter += m_period_in_ms;
+      if (m_led_state_duration_counter >= led_state_duration)
+      {
+         if (m_led_on)
+         {
+            m_led.set_low();
+            m_led_on = false;
+         }
+         else
+         {
+            m_led.set_high();
+            m_led_on = true;
+         }
+
+         m_led_state_duration_counter = 0;
+      }
+   }
+
    void log_data()
    {
       m_logging_counter += m_period_in_ms;
 
-      if (m_logging_counter >= max_on_time)
+      if (m_logging_counter >= 2 * led_state_duration)
       {
          m_tx_buffer[0] = std::byte{'1'};
          m_tx_buffer[1] = std::byte{'2'};
@@ -76,23 +65,19 @@ private:
          m_tx_buffer[3] = std::byte{'4'};
          m_tx_buffer[4] = std::byte{'5'};
          m_logger.send(5u);
+
          m_logging_counter = 0;
       }
    }
 
-   static constexpr size_t on_time_increment_delta = 500u;
-   static constexpr size_t min_on_time             = 500u;
-   static constexpr size_t max_on_time             = 4000u;
-   static constexpr size_t fixed_off_time          = 1000u;
+   static constexpr std::size_t led_state_duration = 2000u;
 
    Led&                 m_led;
    Logger&              m_logger;
    std::span<std::byte> m_tx_buffer;
-   const size_t         m_period_in_ms;
-   size_t               m_target_on_time{min_on_time};
-   size_t               m_on_time_counter{0u};
-   size_t               m_off_time_counter{0u};
-   size_t               m_logging_counter{0u};
+   const std::size_t    m_period_in_ms;
+   std::size_t          m_led_state_duration_counter{0u};
+   std::size_t          m_logging_counter{0u};
    bool                 m_led_on{false};
 };
 

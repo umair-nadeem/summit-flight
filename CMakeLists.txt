@@ -10,10 +10,11 @@ message("Toolchain file ${CMAKE_TOOLCHAIN_FILE} is selected")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 include(compile_flags)
-include(export_executable)
+include(postbuild_operations)
 include(only_for_toolchain)
 include(add_module)
 include(add_module_test)
+include(print_size_info)
 
 add_subdirectory(common)
 add_subdirectory(external)

@@ -12,15 +12,10 @@ struct Semaphore
    StaticSemaphore_t semaphore_buffer{};
    SemaphoreHandle_t semaphore_handle{nullptr};
 
-   [[nodiscard]] SemaphoreHandle_t create(const bool initialize_as_given)
+   [[nodiscard]] SemaphoreHandle_t create()
    {
       semaphore_handle = xSemaphoreCreateBinaryStatic(&semaphore_buffer);
       error::freertos_assert(semaphore_handle != nullptr);
-
-      if (initialize_as_given)
-      {
-         error::freertos_assert(xSemaphoreGive(semaphore_handle) == pdPASS);
-      }
       return semaphore_handle;
    }
 

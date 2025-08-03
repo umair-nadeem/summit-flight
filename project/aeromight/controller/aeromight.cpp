@@ -24,9 +24,6 @@ rtos::TCB sensor_acq_task_tcb{};
 // task stack
 uint32_t sensor_acq_task_stack_buffer[controller::task::sensor_acq_task_stack_depth_in_words];
 
-// queue
-alignas(std::max_align_t) std::byte logging_queue_storage[10u * 64u];
-
 // semaphore
 rtos::Semaphore logging_uart_semaphore{};
 
@@ -47,10 +44,10 @@ void register_sensor_acquisition_task()
    rtos::create_task(sensor_acq_task_config);
 }
 
-void setup_rtos_objects()
+void prepare_uart()
 {
    // logging uart
-   auto logging_uart_sem_handle = logging_uart_semaphore.create(true);
+   auto logging_uart_sem_handle = logging_uart_semaphore.create();
    sensor_acq_task_data.logging_uart.transmitter_sem_taker.set_handle(logging_uart_sem_handle);
    sensor_acq_task_data.logging_uart.isr_sem_giver.set_handle(logging_uart_sem_handle);
 
@@ -67,11 +64,11 @@ extern "C"
    {
       if (error::has_no_error())
       {
+         // rtos
+         controller::prepare_uart();
+
          // tasks
          controller::register_sensor_acquisition_task();
-
-         // rtos
-         controller::setup_rtos_objects();
 
          // start scheduler
          rtos::start_scheduler();

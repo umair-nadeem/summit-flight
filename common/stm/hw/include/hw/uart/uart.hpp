@@ -43,7 +43,7 @@ void handle_dma_rx_global_interrupt(UartConfig&                config,
    {
       clear_dma_tc_flag(config.dma_handle, config.tx_dma_stream);
 
-      const size_t length = rx_buffer.size() - LL_DMA_GetDataLength(config.dma_handle, config.rx_dma_stream);
+      const std::size_t length = rx_buffer.size() - LL_DMA_GetDataLength(config.dma_handle, config.rx_dma_stream);
       std::copy(rx_buffer.begin(), rx_buffer.begin() + static_cast<std::ptrdiff_t>(length), rx_user_buffer.begin());
 
       std::span<const std::byte> received_data{rx_user_buffer.data(), length};
