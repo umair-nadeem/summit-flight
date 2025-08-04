@@ -14,7 +14,7 @@ void clear_dma_tc_flag(DMA_TypeDef* dma_handle, const uint32_t dma_stream);
 bool is_dma_tc_flag_active(DMA_TypeDef* dma_handle, const uint32_t dma_stream);
 
 template <typename SemaphoreGiverFromIsr>
-void handle_uart_global_interrupt(UartConfig& config, SemaphoreGiverFromIsr& isr_sem_giver)
+inline void handle_uart_global_interrupt(UartConfig& config, SemaphoreGiverFromIsr& isr_sem_giver)
 {
    // uart is idle
    if (LL_USART_IsActiveFlag_IDLE(config.uart_handle) == 1u)
@@ -34,10 +34,10 @@ void handle_uart_global_interrupt(UartConfig& config, SemaphoreGiverFromIsr& isr
 }
 
 template <typename QueueSenderFromIsr>
-void handle_dma_rx_global_interrupt(UartConfig&                config,
-                                    QueueSenderFromIsr&        queue_sender_from_isr,
-                                    std::span<const std::byte> rx_buffer,
-                                    std::span<std::byte>       rx_user_buffer)
+inline void handle_dma_rx_global_interrupt(UartConfig&                config,
+                                           QueueSenderFromIsr&        queue_sender_from_isr,
+                                           std::span<const std::byte> rx_buffer,
+                                           std::span<std::byte>       rx_user_buffer)
 {
    if (is_dma_tc_flag_active(config.dma_handle, config.rx_dma_stream))
    {

@@ -38,7 +38,7 @@ public:
 
    void set_handle(QueueHandle_t queue_handle)
    {
-      error::assert(queue_handle != nullptr);
+      error::verify(queue_handle != nullptr);
       m_handle = queue_handle;
    }
 

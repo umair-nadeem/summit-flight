@@ -15,10 +15,11 @@ struct Queue
    QueueHandle_t queue_handle{nullptr};
    alignas(std::max_align_t) std::byte storage_buffer[storage_buffer_size];
 
-   void create()
+   [[nodiscard]] QueueHandle_t create()
    {
       queue_handle = xQueueCreateStatic(QueueLength, ItemSize, reinterpret_cast<uint8_t*>(storage_buffer), &queue_buffer);
       error::freertos_assert(queue_handle != nullptr);
+      return queue_handle;
    }
 
    [[nodiscard]] QueueHandle_t get_handle() const

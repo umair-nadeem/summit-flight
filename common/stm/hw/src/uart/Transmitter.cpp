@@ -27,6 +27,11 @@ void Transmitter::blocking_send(const uint32_t size)
    wait_for_tx_to_complete();
 }
 
+std::span<std::byte> Transmitter::get_buffer() const
+{
+   return m_tx_buffer;
+}
+
 void Transmitter::wait_for_tx_to_complete()
 {
    if (m_tx_in_progress)

@@ -2,7 +2,17 @@
 #include "aeromight_sensors/SensorAcquisition.hpp"
 #include "error/error_handler.h"
 #include "hw/uart/uart.hpp"
+#include "logging/LogClient.hpp"
+#include "rtos/QueueSender.hpp"
 #include "rtos/periodic_task.hpp"
+#include "task_params.h"
+
+namespace logging
+{
+
+extern rtos::QueueSender<params::LogBuffer> logging_queue_sender;
+
+}   // namespace logging
 
 extern "C"
 {
@@ -12,27 +22,14 @@ extern "C"
       error::verify(params != nullptr);
       auto* data = static_cast<controller::SensorAcquisitionTaskData*>(params);
 
-      aeromight_sensors::SensorAcquisition<decltype(data->blue_led),
-                                           decltype(data->logging_uart.transmitter)>
-          sensor_acquisition{data->blue_led,
-                             data->logging_uart.transmitter,
-                             std::as_writable_bytes(std::span{data->logging_uart.dma_tx_buffer}),
-                             controller::task::sensor_acq_task_period_in_ms};
+      using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
+
+      LogClient logger_sensor_acq{logging::logging_queue_sender, "snsr_acq"};
+
+      aeromight_sensors::SensorAcquisition<decltype(data->blue_led), LogClient> sensor_acquisition{data->blue_led,
+                                                                                                   logger_sensor_acq,
+                                                                                                   controller::task::sensor_acq_task_period_in_ms};
 
       rtos::run_periodic_task(sensor_acquisition);
-   }
-}
-
-extern "C"
-{
-   void USART1_IRQHandler()
-   {
-      auto& data = controller::sensor_acq_task_data;
-      hw::uart::handle_uart_global_interrupt(data.logging_uart.config, data.logging_uart.isr_sem_giver);
-   }
-
-   void DMA2_Stream2_IRQHandler()
-   {
-      // do nothing, as rx is not applicable
    }
 }

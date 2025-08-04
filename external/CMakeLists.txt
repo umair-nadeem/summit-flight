@@ -1,3 +1,10 @@
 if (TOOLCHAIN STREQUAL "native")
    add_subdirectory(googletest)
 endif()
+
+add_library(printf INTERFACE)
+set_property(TARGET printf PROPERTY C_STANDARD 99)
+set_property(TARGET printf PROPERTY C_STANDARD_REQUIRED ON)
+set_property(TARGET printf PROPERTY C_EXTENSIONS OFF)
+target_sources(printf INTERFACE ${CMAKE_CURRENT_LIST_DIR}/printf/src/printf/printf.c)
+target_include_directories(printf SYSTEM INTERFACE printf/src)

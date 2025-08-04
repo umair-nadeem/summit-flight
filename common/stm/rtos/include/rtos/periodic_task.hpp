@@ -14,12 +14,12 @@ template <typename PeriodicTask>
    const std::size_t period_in_ms  = periodicTask.get_period_ms();
    TickType_t        xLastWakeTime = xTaskGetTickCount();
    BaseType_t        xWasDelayed;
-   UBaseType_t       high_water;
+   UBaseType_t       stack_water_mark;
 
    while (true)
    {
-      high_water = uxTaskGetStackHighWaterMark(NULL);
-      if (high_water > 1)
+      stack_water_mark = uxTaskGetStackHighWaterMark(NULL);
+      if (stack_water_mark > 1)
       {
          //
       }
