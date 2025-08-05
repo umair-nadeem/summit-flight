@@ -1,8 +1,7 @@
 #pragma once
 
-#include "stm32f4xx_ll_gpio.h"
-
 #include "interfaces/IDigitalOutput.hpp"
+#include "stm32f4xx_ll_gpio.h"
 
 namespace hw::gpio
 {
