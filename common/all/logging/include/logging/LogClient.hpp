@@ -4,12 +4,13 @@
 
 #include <printf/printf.h>
 
+#include "interfaces/IQueueSender.hpp"
 #include "logging/log_params.hpp"
 
 namespace logging
 {
 
-template <typename QueueSender>
+template <interfaces::IQueueSender<params::LogBuffer> QueueSender>
 class LogClient
 {
 public:

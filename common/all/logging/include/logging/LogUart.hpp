@@ -34,7 +34,7 @@ public:
          }
       }
 
-      m_uart_transmitter.send(std::min(length_to_transmit, msg_len));
+      m_uart_transmitter.send_and_return(std::min(length_to_transmit, msg_len));
    }
 
 private:

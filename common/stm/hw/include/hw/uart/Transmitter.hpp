@@ -4,6 +4,7 @@
 #include <span>
 
 #include "UartConfig.hpp"
+#include "interfaces/IUartTransmitter.hpp"
 
 namespace hw::uart
 {
@@ -17,8 +18,8 @@ public:
                         std::span<std::byte>        tx_buffer,
                         const FunctionTakeSemaphore function_take_semaphore);
 
-   void                 blocking_send(const uint32_t size);
-   void                 send(const uint32_t size);
+   void                 send_blocking(const uint32_t size);
+   void                 send_and_return(const uint32_t size);
    std::span<std::byte> get_buffer() const;
 
 private:
@@ -30,5 +31,7 @@ private:
    const FunctionTakeSemaphore m_function_take_semaphore;
    volatile bool               m_tx_in_progress{false};
 };
+
+static_assert(interfaces::IUartTransmitter<Transmitter>);
 
 }   // namespace hw::uart

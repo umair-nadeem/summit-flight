@@ -2,6 +2,8 @@
 
 #include "stm32f4xx_ll_gpio.h"
 
+#include "interfaces/IDigitalOutput.hpp"
+
 namespace hw::gpio
 {
 
@@ -54,5 +56,7 @@ private:
    const uint32_t      m_pin;
    const bool          m_active_low;
 };
+
+static_assert(interfaces::IDigitalOutput<DigitalOutput>);
 
 }   // namespace hw::gpio

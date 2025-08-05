@@ -3,10 +3,10 @@
 namespace interfaces
 {
 
-template <typename T>
-concept ILogChannel = requires(T t, std::span<const char> msg) {
+template <typename C>
+concept ILogChannel = requires(C c, std::span<const char> msg) {
    {
-      t.publish_log(msg)
+      c.publish_log(msg)
    }
    -> std::same_as<void>;
 };

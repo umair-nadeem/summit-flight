@@ -1,11 +1,12 @@
 #pragma once
 
 #include "interfaces/ILogChannel.hpp"
+#include "interfaces/IQueueReceiver.hpp"
 
 namespace logging
 {
 
-template <typename QueueReceiver, interfaces::ILogChannel LogUart>
+template <interfaces::IQueueReceiver<params::LogBuffer> QueueReceiver, interfaces::ILogChannel LogUart>
 class LogServer
 {
 public:
@@ -18,7 +19,7 @@ public:
    void run_once()
    {
       // blocking call
-      auto msg = m_queue_receiver.receive();
+      auto msg = m_queue_receiver.receive_blocking();
 
       m_log_uart.publish_log(msg);
    }

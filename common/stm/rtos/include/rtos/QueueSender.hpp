@@ -3,6 +3,7 @@
 #include "FreeRTOS.h"
 #include "error/error_handler.hpp"
 #include "error/freertos_errors.hpp"
+#include "interfaces/IQueueSender.hpp"
 #include "queue.h"
 
 namespace rtos
@@ -12,7 +13,7 @@ template <typename T>
 class QueueSender
 {
 public:
-   void send(const T& element)
+   void send_blocking(const T& element)
    {
       BaseType_t result;
       do
@@ -45,5 +46,7 @@ public:
 private:
    QueueHandle_t m_handle{nullptr};
 };
+
+static_assert(interfaces::IQueueSender<QueueSender<int>, int>);
 
 }   // namespace rtos

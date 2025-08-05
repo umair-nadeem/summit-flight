@@ -5,6 +5,7 @@
 #include "FreeRTOS.h"
 #include "error/error_handler.hpp"
 #include "error/freertos_errors.hpp"
+#include "interfaces/IQueueReceiver.hpp"
 #include "queue.h"
 
 namespace rtos
@@ -14,7 +15,7 @@ template <typename T>
 class QueueReceiver
 {
 public:
-   T receive()
+   T receive_blocking()
    {
       T          data;
       BaseType_t result;
@@ -57,5 +58,7 @@ public:
 private:
    QueueHandle_t m_handle{nullptr};
 };
+
+static_assert(interfaces::IQueueReceiver<QueueReceiver<int>, int>);
 
 }   // namespace rtos
