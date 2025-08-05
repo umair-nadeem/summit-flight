@@ -1,5 +1,7 @@
 if (TOOLCHAIN STREQUAL "native")
    add_subdirectory(googletest)
+elseif (TOOLCHAIN STREQUAL "stm_m4")
+   add_subdirectory(stm32f411)
 endif()
 
 add_library(printf INTERFACE)

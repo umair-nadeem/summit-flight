@@ -1,5 +1,3 @@
-only_for_toolchain(stm_m4)
-
 add_library(stm32f411 INTERFACE)
 
 file(GLOB_RECURSE sources_files ${CMAKE_CURRENT_LIST_DIR}/Drivers/STM32F4xx_HAL_Driver/Src/*.c)

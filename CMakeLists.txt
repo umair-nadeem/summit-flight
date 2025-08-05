@@ -18,5 +18,4 @@ include(print_size_info)
 
 add_subdirectory(common)
 add_subdirectory(external)
-add_subdirectory(platform)
 add_subdirectory(project)
