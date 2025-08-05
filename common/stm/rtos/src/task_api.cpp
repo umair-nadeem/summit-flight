@@ -1,4 +1,4 @@
-#include "rtos/task_api.h"
+#include "rtos/task_api.hpp"
 
 #include <cassert>
 #include <type_traits>

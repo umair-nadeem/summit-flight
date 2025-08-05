@@ -3,17 +3,17 @@
 #include <cstring>
 #include <stdlib.h>
 
-#include "LoggingTaskData.h"
-#include "SensorAcquisitionTaskData.h"
-#include "error/error_record.h"
+#include "LoggingTaskData.hpp"
+#include "SensorAcquisitionTaskData.hpp"
+#include "error/error_record.hpp"
 #include "hw/uart/uart.hpp"
 #include "main.h"
 #include "rtos/Queue.hpp"
 #include "rtos/QueueSender.hpp"
-#include "rtos/RtosTaskConfig.h"
+#include "rtos/RtosTaskConfig.hpp"
 #include "rtos/Semaphore.hpp"
-#include "rtos/task_api.h"
-#include "task_params.h"
+#include "rtos/task_api.hpp"
+#include "task_params.hpp"
 
 namespace logging
 {

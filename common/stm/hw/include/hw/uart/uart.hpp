@@ -2,7 +2,7 @@
 
 #include <span>
 
-#include "UartConfig.h"
+#include "UartConfig.hpp"
 
 namespace hw::uart
 {

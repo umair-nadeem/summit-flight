@@ -1,11 +1,11 @@
-#include "SensorAcquisitionTaskData.h"
+#include "SensorAcquisitionTaskData.hpp"
 #include "aeromight_sensors/SensorAcquisition.hpp"
-#include "error/error_handler.h"
+#include "error/error_handler.hpp"
 #include "hw/uart/uart.hpp"
 #include "logging/LogClient.hpp"
 #include "rtos/QueueSender.hpp"
 #include "rtos/periodic_task.hpp"
-#include "task_params.h"
+#include "task_params.hpp"
 
 namespace logging
 {

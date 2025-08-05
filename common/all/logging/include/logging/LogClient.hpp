@@ -4,7 +4,7 @@
 
 #include <printf/printf.h>
 
-#include "logging/log_params.h"
+#include "logging/log_params.hpp"
 
 namespace logging
 {

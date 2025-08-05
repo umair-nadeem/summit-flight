@@ -1,9 +1,9 @@
-#include "error/freertos_errors.h"
+#include "error/freertos_errors.hpp"
 
 #include <cassert>
 #include <string.h>
 
-#include "error/error_record.h"
+#include "error/error_record.hpp"
 
 namespace error
 {

@@ -4,7 +4,7 @@
 ./ci/format.sh
 
 # Run cppcheck
-./ci/run_cppcheck.sh
+./ci/cppcheck.sh
 
 status=$?
 

@@ -2,10 +2,10 @@
 
 #include <variant>
 
-#include "CortexFaultRecord.h"
-#include "FreertosErrorRecords.h"
-#include "GeneralErrorRecord.h"
-#include "HalErrorRecord.h"
+#include "CortexFaultRecord.hpp"
+#include "FreertosErrorRecords.hpp"
+#include "GeneralErrorRecord.hpp"
+#include "HalErrorRecord.hpp"
 
 namespace error
 {

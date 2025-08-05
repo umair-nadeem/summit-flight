@@ -1,6 +1,6 @@
 #pragma once
 
-#include "error/freertos_errors.h"
+#include "error/freertos_errors.hpp"
 #include "queue.h"
 
 namespace rtos

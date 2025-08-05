@@ -1,8 +1,8 @@
 #pragma once
 
 #include "FreeRTOS.h"
-#include "error/error_handler.h"
-#include "error/freertos_errors.h"
+#include "error/error_handler.hpp"
+#include "error/freertos_errors.hpp"
 #include "queue.h"
 
 namespace rtos

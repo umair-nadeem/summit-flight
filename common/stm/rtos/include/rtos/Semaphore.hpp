@@ -1,7 +1,7 @@
 #pragma once
 
 #include "FreeRTOS.h"
-#include "error/freertos_errors.h"
+#include "error/freertos_errors.hpp"
 #include "semphr.h"
 
 namespace rtos

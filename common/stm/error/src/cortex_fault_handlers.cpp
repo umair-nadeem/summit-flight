@@ -1,4 +1,4 @@
-#include "error/error_record.h"
+#include "error/error_record.hpp"
 
 extern "C"
 {

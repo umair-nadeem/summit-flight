@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rtos/RtosTaskConfig.h"
+#include "rtos/RtosTaskConfig.hpp"
 #include "task.h"
 
 namespace rtos

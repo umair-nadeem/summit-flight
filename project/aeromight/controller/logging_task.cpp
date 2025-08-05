@@ -1,9 +1,9 @@
-#include "LoggingTaskData.h"
-#include "error/error_handler.h"
+#include "LoggingTaskData.hpp"
+#include "error/error_handler.hpp"
 #include "hw/uart/uart.hpp"
 #include "logging/LogServer.hpp"
 #include "logging/LogUart.hpp"
-#include "task_params.h"
+#include "task_params.hpp"
 
 extern "C"
 {

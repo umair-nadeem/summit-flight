@@ -1,11 +1,11 @@
 #pragma once
 
-#include "hw/uart/Transmitter.h"
-#include "hw/uart/UartConfig.h"
-#include "logging/log_params.h"
+#include "hw/uart/Transmitter.hpp"
+#include "hw/uart/UartConfig.hpp"
+#include "logging/log_params.hpp"
 #include "rtos/QueueReceiver.hpp"
-#include "rtos/SemaphoreGiver.h"
-#include "rtos/SemaphoreTaker.h"
+#include "rtos/SemaphoreGiver.hpp"
+#include "rtos/SemaphoreTaker.hpp"
 
 extern "C"
 {

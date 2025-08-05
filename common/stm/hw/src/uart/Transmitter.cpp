@@ -1,6 +1,6 @@
-#include "hw/uart/Transmitter.h"
+#include "hw/uart/Transmitter.hpp"
 
-#include "error/error_handler.h"
+#include "error/error_handler.hpp"
 
 namespace hw::uart
 {

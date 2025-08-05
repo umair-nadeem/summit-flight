@@ -1,4 +1,4 @@
-#include "rtos/SemaphoreTaker.h"
+#include "rtos/SemaphoreTaker.hpp"
 
 namespace rtos
 {

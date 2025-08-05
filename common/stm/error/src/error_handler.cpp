@@ -1,9 +1,9 @@
 
-#include "error/error_handler.h"
+#include "error/error_handler.hpp"
 
 #include <string.h>
 
-#include "error/error_record.h"
+#include "error/error_record.hpp"
 
 namespace error
 {
