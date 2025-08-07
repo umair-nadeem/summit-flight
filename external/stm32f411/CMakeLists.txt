@@ -4,7 +4,6 @@ file(GLOB_RECURSE sources_files ${CMAKE_CURRENT_LIST_DIR}/Drivers/STM32F4xx_HAL_
 
 list(APPEND sources_files
    ${CMAKE_CURRENT_LIST_DIR}/Core/Src/main.c
-   ${CMAKE_CURRENT_LIST_DIR}/Core/Src/stm32f4xx_hal_msp.c
    ${CMAKE_CURRENT_LIST_DIR}/Core/Src/syscalls.c
    ${CMAKE_CURRENT_LIST_DIR}/Core/Src/system_stm32f4xx.c
    ${CMAKE_CURRENT_LIST_DIR}/startup_stm32f411xe.s

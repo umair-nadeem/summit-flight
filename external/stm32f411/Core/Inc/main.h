@@ -35,6 +35,7 @@ extern "C" {
 #include "stm32f4xx_ll_cortex.h"
 #include "stm32f4xx_ll_utils.h"
 #include "stm32f4xx_ll_pwr.h"
+#include "stm32f4xx_ll_spi.h"
 #include "stm32f4xx_ll_usart.h"
 #include "stm32f4xx_ll_gpio.h"
 
@@ -70,6 +71,10 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define blue_led_Pin LL_GPIO_PIN_13
+#define blue_led_GPIO_Port GPIOC
+#define chip_select_mpu6500_Pin LL_GPIO_PIN_4
+#define chip_select_mpu6500_GPIO_Port GPIOA
 #ifndef NVIC_PRIORITYGROUP_0
 #define NVIC_PRIORITYGROUP_0         ((uint32_t)0x00000007) /*!< 0 bit  for pre-emption priority,
                                                                  4 bits for subpriority */
