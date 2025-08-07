@@ -1,7 +1,7 @@
 #pragma once
 
+#include "hw/HwPin.hpp"
 #include "interfaces/IDigitalOutput.hpp"
-#include "stm32f4xx_ll_gpio.h"
 
 namespace hw::gpio
 {
@@ -9,9 +9,8 @@ namespace hw::gpio
 class DigitalOutput
 {
 public:
-   explicit DigitalOutput(GPIO_TypeDef* const port, const uint32_t pin, const bool active_low = false)
-       : m_port{port},
-         m_pin{pin},
+   explicit DigitalOutput(const HwPin& hw_pin, const bool active_low = false)
+       : m_hw_pin{hw_pin},
          m_active_low{active_low}
    {
    }
@@ -20,11 +19,11 @@ public:
    {
       if (m_active_low)
       {
-         LL_GPIO_ResetOutputPin(m_port, m_pin);
+         LL_GPIO_ResetOutputPin(m_hw_pin.port, m_hw_pin.pin);
       }
       else
       {
-         LL_GPIO_SetOutputPin(m_port, m_pin);
+         LL_GPIO_SetOutputPin(m_hw_pin.port, m_hw_pin.pin);
       }
    }
 
@@ -32,17 +31,17 @@ public:
    {
       if (m_active_low)
       {
-         LL_GPIO_SetOutputPin(m_port, m_pin);
+         LL_GPIO_SetOutputPin(m_hw_pin.port, m_hw_pin.pin);
       }
       else
       {
-         LL_GPIO_ResetOutputPin(m_port, m_pin);
+         LL_GPIO_ResetOutputPin(m_hw_pin.port, m_hw_pin.pin);
       }
    }
 
    bool is_high() const
    {
-      return (m_port->ODR & m_pin);
+      return (m_hw_pin.port->ODR & m_hw_pin.pin);
    }
 
    bool is_low() const
@@ -51,9 +50,8 @@ public:
    }
 
 private:
-   GPIO_TypeDef* const m_port;
-   const uint32_t      m_pin;
-   const bool          m_active_low;
+   const HwPin& m_hw_pin;
+   const bool   m_active_low;
 };
 
 static_assert(interfaces::IDigitalOutput<DigitalOutput>);

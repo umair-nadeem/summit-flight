@@ -7,7 +7,6 @@
 #include "SensorAcquisitionTaskData.hpp"
 #include "error/error_record.hpp"
 #include "hw/uart/uart.hpp"
-#include "main.h"
 #include "rtos/Queue.hpp"
 #include "rtos/QueueSender.hpp"
 #include "rtos/RtosTaskConfig.hpp"
@@ -24,6 +23,9 @@ rtos::QueueSender<params::LogBuffer> logging_queue_sender{};
 
 namespace controller
 {
+
+// global data
+GlobalData global_data{};
 
 // task data
 SensorAcquisitionTaskData sensor_acq_task_data{};

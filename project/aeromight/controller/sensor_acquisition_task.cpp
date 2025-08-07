@@ -33,3 +33,11 @@ extern "C"
       rtos::run_periodic_task(sensor_acquisition);
    }
 }
+
+extern "C"
+{
+   void DMA2_Stream0_IRQHandler()
+   {
+      // spi1 dma rx
+   }
+}
