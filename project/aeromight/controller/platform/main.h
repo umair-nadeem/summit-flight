@@ -1,3 +1,5 @@
+// clang-format off
+
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
@@ -97,3 +99,5 @@ void Error_Handler(void);
 #endif
 
 #endif /* __MAIN_H */
+
+// clang-format on

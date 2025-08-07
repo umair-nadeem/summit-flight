@@ -2,14 +2,18 @@ only_for_toolchain(stm_m4)
 
 add_library(aeromight_lib INTERFACE)
 
-target_include_directories(aeromight_lib INTERFACE ${CMAKE_CURRENT_LIST_DIR}/os)
+target_include_directories(aeromight_lib INTERFACE 
+   ${CMAKE_CURRENT_LIST_DIR}/os
+   ${CMAKE_CURRENT_LIST_DIR}/platform
+)
 
 target_sources(aeromight_lib INTERFACE 
+   ${CMAKE_CURRENT_LIST_DIR}/platform/main.c
+   ${CMAKE_CURRENT_LIST_DIR}/os/port.c
+
    aeromight.cpp
    logging_task.cpp
    sensor_acquisition_task.cpp
-
-   ${CMAKE_CURRENT_LIST_DIR}/os/port.c
 )
 
 target_link_libraries(aeromight_lib INTERFACE
