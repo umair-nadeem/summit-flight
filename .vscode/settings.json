@@ -1,0 +1,24 @@
+{
+  "extensions.ignoreRecommendations": true,
+  
+  "terminal.integrated.env.linux": {
+    "TOOLCHAIN_PATH": "/home/umair/workspace/projects/toolchain"
+  },
+
+  "clangd.path": "/usr/bin/clangd-16",
+  "clangd.arguments": [
+    "--compile-commands-dir=${workspaceFolder}/out/build/stm_m4",
+    "--completion-style=detailed",
+    "--header-insertion=never",
+    "--query-driver=/home/umair/workspace/projects/toolchain/stm/14.2/gcc-arm-none-eabi/bin/arm-none-eabi-*"
+  ],
+  "clang-format.executable": "/usr/bin/clang-format",
+  
+  "cmake.options.statusBarVisibility": "visible",
+  "cmake.sourceDirectory": "${workspaceFolder}",
+  "cmake.configureOnOpen": true,
+
+  "cortex-debug.armToolchainPrefix": "arm-none-eabi",
+  "cortex-debug.armToolchainPath": "/home/umair/workspace/projects/toolchain/stm/14.2/gcc-arm-none-eabi/bin",
+  "cortex-debug.gdbPath": "/home/umair/workspace/projects/toolchain/stm/14.2/gcc-arm-none-eabi/bin/arm-none-eabi-gdb"
+}
