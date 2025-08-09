@@ -4,6 +4,8 @@
 
 #include "hardware_bindings.hpp"
 #include "hw/gpio/DigitalOutput.hpp"
+#include "hw/pcb_component/Enabler.hpp"
+#include "hw/pcb_component/Led.hpp"
 #include "hw/spi/SpiMasterWithDma.hpp"
 
 extern "C"
@@ -16,10 +18,11 @@ namespace controller
 
 struct SensorAcquisitionTaskData
 {
-   hw::gpio::DigitalOutput blue_led{global_data.gpios.blue_led, true};
+   hw::pcb_component::Led blue_led{global_data.gpios.blue_led, true};
 
    // SPI 1
-   hw::gpio::DigitalOutput spi1_chip_select{global_data.spi.spi1_chip_select, true};
+   hw::gpio::DigitalOutput                                     spi1_chip_select_gpio{global_data.spi.spi1_chip_select, true};
+   hw::pcb_component::Enabler<decltype(spi1_chip_select_gpio)> spi1_chip_select{spi1_chip_select_gpio};
 
    hw::spi::SpiMasterWithDma<decltype(spi1_chip_select)> spi1_master{global_data.spi.spi1_config, spi1_chip_select};
 };

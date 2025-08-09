@@ -1,6 +1,8 @@
 #pragma once
 
-namespace interfaces
+#include <concepts>
+
+namespace interfaces::peripherals
 {
 
 template <typename C>
@@ -11,4 +13,4 @@ concept IImuSensorDriver = requires(C c) {
    -> std::same_as<void>;
 };
 
-}   // namespace interfaces
+}   // namespace interfaces::peripherals

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace interfaces
+namespace interfaces::hw
 {
 
 template <typename C>
@@ -21,4 +21,4 @@ concept IUartTransmitter = requires(C c, const uint32_t s) {
    -> std::same_as<std::span<std::byte>>;
 };
 
-}   // namespace interfaces
+}   // namespace interfaces::hw

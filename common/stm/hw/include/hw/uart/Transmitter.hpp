@@ -4,7 +4,7 @@
 #include <span>
 
 #include "UartConfig.hpp"
-#include "interfaces/IUartTransmitter.hpp"
+#include "interfaces/hw/IUartTransmitter.hpp"
 
 namespace hw::uart
 {
@@ -32,6 +32,6 @@ private:
    volatile bool               m_tx_in_progress{false};
 };
 
-static_assert(interfaces::IUartTransmitter<Transmitter>);
+static_assert(interfaces::hw::IUartTransmitter<Transmitter>);
 
 }   // namespace hw::uart

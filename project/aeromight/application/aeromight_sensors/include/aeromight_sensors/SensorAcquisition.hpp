@@ -3,12 +3,13 @@
 #include <cstddef>
 
 #include "error/error_handler.hpp"
-#include "interfaces/IImuSensorDriver.hpp"
+#include "interfaces/pcb_component/ILed.hpp"
+#include "interfaces/peripherals/IImuSensorDriver.hpp"
 
 namespace aeromight_sensors
 {
 
-template <interfaces::IImuSensorDriver Mpu6500Driver, typename Led, typename Logger>
+template <interfaces::peripherals::IImuSensorDriver Mpu6500Driver, interfaces::pcb_component::ILed Led, typename Logger>
 class SensorAcquisition
 {
 public:
@@ -42,13 +43,13 @@ private:
       {
          if (m_led_on)
          {
-            m_led.set_low();
+            m_led.turn_off();
             m_led_on = false;
             m_logger.print("123-off");
          }
          else
          {
-            m_led.set_high();
+            m_led.turn_on();
             m_led_on = true;
          }
 

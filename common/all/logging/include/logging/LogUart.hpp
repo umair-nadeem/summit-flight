@@ -3,12 +3,12 @@
 #include <span>
 
 #include "interfaces/ILogChannel.hpp"
-#include "interfaces/IUartTransmitter.hpp"
+#include "interfaces/hw/IUartTransmitter.hpp"
 
 namespace logging
 {
 
-template <interfaces::IUartTransmitter UartTransmitter>
+template <interfaces::hw::IUartTransmitter UartTransmitter>
 class LogUart
 {
 public:

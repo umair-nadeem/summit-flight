@@ -1,12 +1,12 @@
 #pragma once
 
 #include "interfaces/ILogChannel.hpp"
-#include "interfaces/IQueueReceiver.hpp"
+#include "interfaces/rtos/IQueueReceiver.hpp"
 
 namespace logging
 {
 
-template <interfaces::IQueueReceiver<params::LogBuffer> QueueReceiver, interfaces::ILogChannel LogUart>
+template <interfaces::rtos::IQueueReceiver<params::LogBuffer> QueueReceiver, interfaces::ILogChannel LogUart>
 class LogServer
 {
 public:

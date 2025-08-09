@@ -6,18 +6,18 @@
 #include "error/error_handler.hpp"
 #include "hw/dma/dma.hpp"
 #include "hw/spi/SpiConfig.hpp"
-#include "interfaces/IDigitalOutput.hpp"
+#include "interfaces/pcb_component/IEnabler.hpp"
 
 namespace hw::spi
 {
 
-template <interfaces::IDigitalOutput DigitalOutput>
+template <interfaces::pcb_component::IEnabler ChipSelect>
 class SpiMasterWithDma
 {
    using TransferCompleteCallback = void (*)(void*);
 
 public:
-   explicit SpiMasterWithDma(SpiConfig& spi_config, DigitalOutput& chip_select)
+   explicit SpiMasterWithDma(SpiConfig& spi_config, ChipSelect& chip_select)
        : m_spi_config{spi_config},
          m_chip_select{chip_select}
    {
@@ -99,12 +99,12 @@ public:
 private:
    void enable_chip_select()
    {
-      m_chip_select.set_low();
+      m_chip_select.enable();
    }
 
    void disable_chip_select()
    {
-      m_chip_select.set_high();
+      m_chip_select.disable();
    }
 
    void clear_stale_flags()
@@ -117,7 +117,7 @@ private:
    }
 
    SpiConfig&               m_spi_config;
-   DigitalOutput&           m_chip_select;
+   ChipSelect&              m_chip_select;
    TransferCompleteCallback m_transfer_complete_callback{nullptr};
    void*                    m_callback_context{nullptr};
    std::atomic<bool>        m_transfer_in_progress{false};

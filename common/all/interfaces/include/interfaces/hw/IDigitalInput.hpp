@@ -1,6 +1,6 @@
 #pragma once
 
-namespace interfaces
+namespace interfaces::hw
 {
 
 template <typename C>
@@ -16,4 +16,4 @@ concept IDigitalInput = requires(C c) {
    -> std::same_as<bool>;
 };
 
-}   // namespace interfaces
+}   // namespace interfaces::hw

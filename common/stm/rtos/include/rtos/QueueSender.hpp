@@ -3,7 +3,7 @@
 #include "FreeRTOS.h"
 #include "error/error_handler.hpp"
 #include "error/freertos_errors.hpp"
-#include "interfaces/IQueueSender.hpp"
+#include "interfaces/rtos/IQueueSender.hpp"
 #include "queue.h"
 
 namespace rtos
@@ -47,6 +47,6 @@ private:
    QueueHandle_t m_handle{nullptr};
 };
 
-static_assert(interfaces::IQueueSender<QueueSender<int>, int>);
+static_assert(interfaces::rtos::IQueueSender<QueueSender<int>, int>);
 
 }   // namespace rtos

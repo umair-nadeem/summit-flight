@@ -1,6 +1,6 @@
-#include "error/error_handler.h"
+#include "error/error_handler.hpp"
 
-#include "error/AssertFailureException.h"
+#include "error/AssertFailureException.hpp"
 
 namespace error
 {

@@ -1,21 +1,21 @@
 #pragma once
 
 #include "hw/HwPin.hpp"
-#include "interfaces/hw/IDigitalOutput.hpp"
+#include "interfaces/pcb_component/ILed.hpp"
 
-namespace hw::gpio
+namespace hw::pcb_component
 {
 
-class DigitalOutput
+class Led
 {
 public:
-   explicit DigitalOutput(const HwPin& hw_pin, const bool active_low = false)
+   explicit Led(const HwPin& hw_pin, const bool active_low = false)
        : m_hw_pin{hw_pin},
          m_active_low{active_low}
    {
    }
 
-   void set_high()
+   void turn_on()
    {
       if (m_active_low)
       {
@@ -27,7 +27,7 @@ public:
       }
    }
 
-   void set_low()
+   void turn_off()
    {
       if (m_active_low)
       {
@@ -37,16 +37,6 @@ public:
       {
          LL_GPIO_ResetOutputPin(m_hw_pin.port, m_hw_pin.pin);
       }
-   }
-
-   bool is_high() const
-   {
-      return (m_hw_pin.port->ODR & m_hw_pin.pin);
-   }
-
-   bool is_low() const
-   {
-      return !is_high();
    }
 
 private:
@@ -54,6 +44,5 @@ private:
    const bool   m_active_low;
 };
 
-static_assert(interfaces::hw::IDigitalOutput<DigitalOutput>);
-
-}   // namespace hw::gpio
+static_assert(interfaces::pcb_component::ILed<Led>);
+}   // namespace hw::pcb_component

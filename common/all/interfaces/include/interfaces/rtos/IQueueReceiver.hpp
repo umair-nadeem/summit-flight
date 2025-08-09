@@ -1,6 +1,6 @@
 #pragma once
 
-namespace interfaces
+namespace interfaces::rtos
 {
 
 template <typename C, typename T>
@@ -21,4 +21,4 @@ concept IQueueReceiver = requires(C c, T& t, const bool b) {
    -> std::same_as<bool>;
 };
 
-}   // namespace interfaces
+}   // namespace interfaces::rtos
