@@ -1,6 +1,7 @@
 #pragma once
 
 #include "hw/HwPin.hpp"
+#include "hw/spi/SpiConfig.hpp"
 
 namespace controller
 {
@@ -15,7 +16,13 @@ struct GlobalData
    struct Spi
    {
       // spi 1
-      hw::HwPin chip_select_spi1{GPIOA, LL_GPIO_PIN_4};
+      hw::spi::SpiConfig spi1_config{
+          .spi_handle    = SPI1,
+          .dma_handle    = DMA2,
+          .tx_dma_stream = LL_DMA_STREAM_3,
+          .rx_dma_stream = LL_DMA_STREAM_0};
+
+      hw::HwPin spi1_chip_select{GPIOA, LL_GPIO_PIN_4};
    } spi;
 };
 

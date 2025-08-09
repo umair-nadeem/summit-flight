@@ -16,7 +16,7 @@ public:
 
    explicit Transmitter(UartConfig&                 uart_config,
                         std::span<std::byte>        tx_buffer,
-                        const FunctionTakeSemaphore function_take_semaphore);
+                        const FunctionTakeSemaphore func_take_semaphore);
 
    void                 send_blocking(const uint32_t size);
    void                 send_and_return(const uint32_t size);
@@ -28,7 +28,7 @@ private:
 
    UartConfig&                 m_uart_config;
    std::span<std::byte>        m_tx_buffer;
-   const FunctionTakeSemaphore m_function_take_semaphore;
+   const FunctionTakeSemaphore m_func_take_semaphore;
    volatile bool               m_tx_in_progress{false};
 };
 

@@ -3,11 +3,12 @@
 #include <span>
 
 #include "interfaces/ILogChannel.hpp"
+#include "interfaces/IUartTransmitter.hpp"
 
 namespace logging
 {
 
-template <typename UartTransmitter>
+template <interfaces::IUartTransmitter UartTransmitter>
 class LogUart
 {
 public:
@@ -39,8 +40,8 @@ public:
 
 private:
    UartTransmitter& m_uart_transmitter;
-};
 
-static_assert(interfaces::ILogChannel<LogUart<int>>);
+   static_assert(interfaces::ILogChannel<LogUart<UartTransmitter>>);
+};
 
 }   // namespace logging

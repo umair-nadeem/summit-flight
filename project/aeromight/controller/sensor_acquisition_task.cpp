@@ -1,8 +1,10 @@
 #include "SensorAcquisitionTaskData.hpp"
+#include "aeromight_boundaries/AeromightSensorData.hpp"
 #include "aeromight_sensors/SensorAcquisition.hpp"
 #include "error/error_handler.hpp"
 #include "hw/uart/uart.hpp"
 #include "logging/LogClient.hpp"
+#include "mpu6500_driver/Mpu6500Driver.hpp"
 #include "rtos/QueueSender.hpp"
 #include "rtos/periodic_task.hpp"
 #include "task_params.hpp"
@@ -26,9 +28,19 @@ extern "C"
 
       LogClient logger_sensor_acq{logging::logging_queue_sender, "snsr_acq"};
 
-      aeromight_sensors::SensorAcquisition<decltype(data->blue_led), LogClient> sensor_acquisition{data->blue_led,
-                                                                                                   logger_sensor_acq,
-                                                                                                   controller::task::sensor_acq_task_period_in_ms};
+      mpu6500_driver::Mpu6500Driver<sys_time::ClockSource,
+                                    decltype(data->spi1_master)>
+          mpu6500_driver{aeromight_boundaries::aeromight_sensor_data.imu_sensor_data_storage,
+                         data->spi1_master};
+
+      aeromight_sensors::SensorAcquisition<
+          decltype(mpu6500_driver),
+          decltype(data->blue_led),
+          LogClient>
+          sensor_acquisition{mpu6500_driver,
+                             data->blue_led,
+                             logger_sensor_acq,
+                             controller::task::sensor_acq_task_period_in_ms};
 
       rtos::run_periodic_task(sensor_acquisition);
    }
@@ -38,6 +50,7 @@ extern "C"
 {
    void DMA2_Stream0_IRQHandler()
    {
-      // spi1 dma rx
+      auto& data = controller::sensor_acq_task_data;
+      data.spi1_master.handle_spi_transfer_complete_interrupt();
    }
 }

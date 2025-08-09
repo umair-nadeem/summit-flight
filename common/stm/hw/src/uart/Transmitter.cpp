@@ -7,12 +7,12 @@ namespace hw::uart
 
 Transmitter::Transmitter(UartConfig&                 uart_config,
                          std::span<std::byte>        tx_buffer,
-                         const FunctionTakeSemaphore function_take_semaphore)
+                         const FunctionTakeSemaphore func_take_semaphore)
     : m_uart_config(uart_config),
       m_tx_buffer{tx_buffer},
-      m_function_take_semaphore{std::move(function_take_semaphore)}
+      m_func_take_semaphore{std::move(func_take_semaphore)}
 {
-   error::verify(m_function_take_semaphore != nullptr);
+   error::verify(m_func_take_semaphore != nullptr);
 }
 
 void Transmitter::send_and_return(const uint32_t size)
@@ -36,7 +36,7 @@ void Transmitter::wait_for_tx_to_complete()
 {
    if (m_tx_in_progress)
    {
-      m_function_take_semaphore();   // blocks until transfer is complete
+      m_func_take_semaphore();   // blocks until transfer is complete
       m_tx_in_progress = false;
    }
 }

@@ -9,8 +9,7 @@
   "clangd.arguments": [
     "--compile-commands-dir=${workspaceFolder}/out/build/stm_m4",
     "--completion-style=detailed",
-    "--header-insertion=never",
-    "--query-driver=/home/umair/workspace/projects/toolchain/stm/14.2/gcc-arm-none-eabi/bin/arm-none-eabi-*"
+    "--header-insertion=never"
   ],
   "clang-format.executable": "/usr/bin/clang-format",
   

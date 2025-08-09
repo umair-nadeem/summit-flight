@@ -5,6 +5,7 @@
 
 #include "LoggingTaskData.hpp"
 #include "SensorAcquisitionTaskData.hpp"
+#include "aeromight_boundaries/AeromightSensorData.hpp"
 #include "error/error_record.hpp"
 #include "hw/uart/uart.hpp"
 #include "rtos/Queue.hpp"
@@ -16,18 +17,19 @@
 
 namespace logging
 {
-
 rtos::QueueSender<params::LogBuffer> logging_queue_sender{};
-
 }   // namespace logging
+
+namespace aeromight_boundaries
+{
+AeromightSensorData aeromight_sensor_data{};
+}   // namespace aeromight_boundaries
 
 namespace controller
 {
 
-// global data
-GlobalData global_data{};
-
-// task data
+// all data
+GlobalData                global_data{};
 SensorAcquisitionTaskData sensor_acq_task_data{};
 LoggingTaskData           logging_task_data{};
 

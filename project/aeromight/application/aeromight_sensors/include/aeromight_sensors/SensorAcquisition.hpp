@@ -3,16 +3,18 @@
 #include <cstddef>
 
 #include "error/error_handler.hpp"
+#include "interfaces/IImuSensorDriver.hpp"
 
 namespace aeromight_sensors
 {
 
-template <typename Led, typename Logger>
+template <interfaces::IImuSensorDriver Mpu6500Driver, typename Led, typename Logger>
 class SensorAcquisition
 {
 public:
-   explicit SensorAcquisition(Led& led, Logger& logger, const std::size_t period_in_ms)
-       : m_led{led},
+   explicit SensorAcquisition(Mpu6500Driver& mpu6500_driver, Led& led, Logger& logger, const std::size_t period_in_ms)
+       : m_mpu6500_driver{mpu6500_driver},
+         m_led{led},
          m_logger{logger},
          m_period_in_ms{period_in_ms}
    {
@@ -22,6 +24,8 @@ public:
 
    void run_once()
    {
+      m_mpu6500_driver.execute();
+
       blink_led();
    }
 
@@ -54,6 +58,7 @@ private:
 
    static constexpr std::size_t led_state_duration = 2000u;
 
+   Mpu6500Driver&    m_mpu6500_driver;
    Led&              m_led;
    Logger&           m_logger;
    const std::size_t m_period_in_ms;

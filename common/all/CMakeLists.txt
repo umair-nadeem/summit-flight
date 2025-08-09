@@ -1,2 +1,5 @@
+add_subdirectory(boundaries)
+add_subdirectory(imu_sensor)
 add_subdirectory(interfaces)
+add_subdirectory(mpu6500_driver)
 add_subdirectory(logging)

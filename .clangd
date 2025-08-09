@@ -1,0 +1,10 @@
+CompileFlags:
+  Add: [
+    "--target=arm-none-eabi",
+    "--query-driver=/home/umair/workspace/projects/toolchain/stm/14.2/gcc-arm-none-eabi/bin/arm-none-eabi-*",
+    "-I/home/umair/workspace/projects/toolchain/stm/14.2/gcc-arm-none-eabi/arm-none-eabi/include/c++/14.2.1",
+    "-I/home/umair/workspace/projects/toolchain/stm/14.2/gcc-arm-none-eabi/arm-none-eabi/include/c++/14.2.1/arm-none-eabi",
+    "-I/home/umair/workspace/projects/toolchain/stm/14.2/gcc-arm-none-eabi/lib/gcc/arm-none-eabi/14.2.1/include",
+    "-I/home/umair/workspace/projects/toolchain/stm/14.2/gcc-arm-none-eabi/lib/gcc/arm-none-eabi/14.2.1/include-fixed"
+  ]
+  

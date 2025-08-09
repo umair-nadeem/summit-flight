@@ -21,9 +21,11 @@ target_link_libraries(aeromight_lib INTERFACE
    hw
    rtos
 
+   aeromight_boundaries
    aeromight_sensors
    error
    interfaces
+   mpu6500_driver
    logging
 )
 
