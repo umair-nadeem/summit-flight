@@ -25,21 +25,80 @@ public:
 
    void execute()
    {
-      // state machine to do init sensor and read data
-      m_spi_master.transfer(m_tx_buffer, m_rx_buffer);
-   }
-
-   void read_data()
-   {
-      m_spi_master.transfer(m_tx_buffer, m_rx_buffer);
+      process_states();
    }
 
    // This is called from ISR via SPI driver (must be ISR-safe)
    void spi_transfer_complete_callback()
    {
-      read_raw_from_rx_buffer();
+      read_raw_data_from_rx_buffer();
       m_data_storage.update_latest(m_imu_data);
       m_spi_rx_done.store(true, std::memory_order_release);
+   }
+
+private:
+   enum class Mpu6500State
+   {
+      reset,
+      wakeup,
+      verify_id,
+      read_data,
+      done,
+      error
+   };
+
+   void process_states()
+   {
+      switch (m_state)
+      {
+         case Mpu6500State::reset:
+            m_tx_buffer[0] = 0x6B & 0x7F;
+            m_tx_buffer[1] = 0x00;
+            m_spi_master.transfer(std::span{m_tx_buffer.data(), 2u}, std::span{m_rx_buffer.data(), 2u});
+
+            m_state = Mpu6500State::wakeup;
+            break;
+
+         case Mpu6500State::wakeup:
+            m_tx_buffer[0] = 0x75 | 0x80;   // read mode
+            m_tx_buffer[1] = 0x00;          // dummy
+            m_spi_master.transfer(std::span{m_tx_buffer.data(), 2u}, std::span{m_rx_buffer.data(), 2u});
+
+            m_state = Mpu6500State::verify_id;
+            break;
+
+         case Mpu6500State::verify_id:
+            if (m_rx_buffer[1] == 0x70)
+            {
+               m_state = Mpu6500State::read_data;
+            }
+            else
+            {
+               m_state = Mpu6500State::error;
+            }
+            break;
+
+         case Mpu6500State::read_data:
+            // Read 14 bytes starting at ACCEL_XOUT_H (0x3B)
+            m_tx_buffer[0] = 0x3B | 0x80;                                   // read mode
+            std::fill(m_tx_buffer.begin() + 1u, m_tx_buffer.end(), 0x00);   // dummy bytes
+
+            m_spi_master.transfer(std::span{m_tx_buffer.data(), 15u}, std::span{m_rx_buffer.data(), 15u});
+
+            // rx_buffer[1]..rx_buffer[14] now contain accel, temp, gyro
+            m_state = Mpu6500State::done;
+            break;
+
+         case Mpu6500State::done:
+            break;
+
+         case Mpu6500State::error:
+            break;
+
+         default:
+            error::stop_operation();
+            break;
+      }
    }
 
    // Static trampoline to call the instance method
@@ -49,13 +108,12 @@ public:
       self->spi_transfer_complete_callback();
    }
 
-private:
    static constexpr auto to_int16(uint8_t msb, uint8_t lsb)
    {
       return static_cast<int16_t>((msb << 8) | lsb);
    }
 
-   inline void read_raw_from_rx_buffer()
+   inline void read_raw_data_from_rx_buffer()
    {
       m_imu_data.accel_mps2.x = to_int16(m_rx_buffer[1], m_rx_buffer[2]) * ACCEL_SCALE;
       m_imu_data.accel_mps2.y = to_int16(m_rx_buffer[3], m_rx_buffer[4]) * ACCEL_SCALE;
@@ -74,6 +132,7 @@ private:
    std::array<uint8_t, params::num_bytes_transaction> m_rx_buffer{};
    imu_sensor::ImuData                                m_imu_data{};
    std::atomic<bool>                                  m_spi_rx_done{false};
+   Mpu6500State                                       m_state{Mpu6500State::reset};
 
    static constexpr float ACCEL_SCALE = 9.81f / 16384.0f;
    static constexpr float GYRO_SCALE  = 3.14159f / (180.0f * 131.0f);

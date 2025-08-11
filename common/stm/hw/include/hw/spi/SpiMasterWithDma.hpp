@@ -22,8 +22,6 @@ public:
          m_chip_select{chip_select}
    {
       disable_chip_select();
-
-      prepare_for_communication();
    }
 
    void prepare_for_communication()

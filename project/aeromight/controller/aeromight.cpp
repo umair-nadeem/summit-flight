@@ -91,6 +91,11 @@ void setup_uart()
                                        std::as_bytes(std::span{logging_task_data.logging_uart.dummy_dma_rx_buffer}));
 }
 
+void setup_spi()
+{
+   sensor_acq_task_data.spi1_master.prepare_for_communication();
+}
+
 void setup_queues()
 {
    auto logging_queue_handle = logging_queue.create();
@@ -109,6 +114,8 @@ extern "C"
          // hw & rtos objects
          controller::setup_uart();
          controller::setup_queues();
+
+         controller::setup_spi();
 
          // tasks
          controller::register_tasks();
