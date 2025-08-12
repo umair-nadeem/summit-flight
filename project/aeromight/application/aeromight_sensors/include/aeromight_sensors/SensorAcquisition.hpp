@@ -45,12 +45,13 @@ private:
          {
             m_led.turn_off();
             m_led_on = false;
-            m_logger.print("123-off");
+            m_logger.print("state: off");
          }
          else
          {
             m_led.turn_on();
             m_led_on = true;
+            m_logger.printf("state: %d", 1);
          }
 
          m_led_state_duration_counter = 0;

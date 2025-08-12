@@ -12,7 +12,7 @@ class SensorAcquisitionTest : public testing::Test
 protected:
    mocks::common::Executable mpu_driver_mock{};
    mocks::pcb_component::Led led_mock{};
-   mocks::common::Logger     logger{};
+   mocks::common::Logger     logger{"test"};
    std::size_t               period{1u};
 
    aeromight_sensors::SensorAcquisition<decltype(mpu_driver_mock),
@@ -24,7 +24,7 @@ protected:
                           period};
 };
 
-TEST_F(SensorAcquisitionTest, canEventMsgWhenDeliveryContainerChanges)
+TEST_F(SensorAcquisitionTest, test_run)
 {
    sensor_acquisition.run_once();
 }
