@@ -23,6 +23,12 @@ elseif (TOOLCHAIN STREQUAL "stm_m4")
 
 endif()
 
+
+# boost sml
+add_library(sml INTERFACE)
+target_include_directories(sml SYSTEM INTERFACE sml/include)
+
+
 # printf
 add_library(printf INTERFACE)
 set_property(TARGET printf PROPERTY C_STANDARD 99)

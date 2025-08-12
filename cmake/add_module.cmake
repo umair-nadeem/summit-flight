@@ -18,8 +18,6 @@ function(add_module)
         target_link_libraries(${module_name} INTERFACE ${args_LIBS})
     endif()
 
-    add_common_flags(${module_name})
-
     if (TOOLCHAIN STREQUAL "native")
         if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
             add_subdirectory(test)

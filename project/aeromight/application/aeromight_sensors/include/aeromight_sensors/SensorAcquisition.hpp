@@ -9,12 +9,12 @@
 namespace aeromight_sensors
 {
 
-template <interfaces::peripherals::IImuSensorDriver Mpu6500Driver, interfaces::pcb_component::ILed Led, typename Logger>
+template <interfaces::peripherals::IImuSensorDriver Mpu6500, interfaces::pcb_component::ILed Led, typename Logger>
 class SensorAcquisition
 {
 public:
-   explicit SensorAcquisition(Mpu6500Driver& mpu6500_driver, Led& led, Logger& logger, const std::size_t period_in_ms)
-       : m_mpu6500_driver{mpu6500_driver},
+   explicit SensorAcquisition(Mpu6500& mpu6500, Led& led, Logger& logger, const std::size_t period_in_ms)
+       : m_mpu6500{mpu6500},
          m_led{led},
          m_logger{logger},
          m_period_in_ms{period_in_ms}
@@ -25,7 +25,7 @@ public:
 
    void run_once()
    {
-      m_mpu6500_driver.execute();
+      m_mpu6500.execute();
 
       blink_led();
    }
@@ -59,7 +59,7 @@ private:
 
    static constexpr std::size_t led_state_duration = 2000u;
 
-   Mpu6500Driver&    m_mpu6500_driver;
+   Mpu6500&          m_mpu6500;
    Led&              m_led;
    Logger&           m_logger;
    const std::size_t m_period_in_ms;
