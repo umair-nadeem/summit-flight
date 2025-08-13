@@ -13,4 +13,9 @@ void verify(const bool condition)
    }
 }
 
+void stop_operation()
+{
+   throw AssertFailureException("error: fatal condition");
+}
+
 }   // namespace error

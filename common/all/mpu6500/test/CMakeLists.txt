@@ -1,4 +1,6 @@
-add_module_test(Mpu6500Test.cpp
+add_module_test(
+   SOURCES
+      Mpu6500Test.cpp
    LIBS
       mocks
 )

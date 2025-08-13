@@ -1,14 +1,14 @@
 only_for_toolchain(native)
 
-function(add_module_test test_sources)
-   cmake_parse_arguments(args "" "" "LIBS" ${ARGN})
+function(add_module_test)
+   cmake_parse_arguments(args "" "" "SOURCES;LIBS" ${ARGN})
 
    # get module name
    get_filename_component(module_dir "${CMAKE_CURRENT_SOURCE_DIR}" DIRECTORY)
    get_filename_component(module_name "${module_dir}" NAME)
    set(test_target "${module_name}_test")
 
-   add_executable(${test_target} ${test_sources})
+   add_executable(${test_target} ${args_SOURCES})
    target_link_libraries(${test_target}
       ${module_name}
       gtest

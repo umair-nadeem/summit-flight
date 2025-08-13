@@ -7,12 +7,14 @@
 
   "clangd.path": "/usr/bin/clangd-16",
   "clangd.arguments": [
-    "--compile-commands-dir=${workspaceFolder}/out/build/stm_m4",
+    "--compile-commands-dir=${workspaceFolder}",
     "--completion-style=detailed",
-    "--header-insertion=never"
+    "--header-insertion=never",
+    "--query-driver=/home/umair/workspace/projects/toolchain/stm/14.2/gcc-arm-none-eabi/bin/arm-none-eabi-g++"
   ],
   "clang-format.executable": "/usr/bin/clang-format",
   
+  "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
   "cmake.options.statusBarVisibility": "visible",
   "cmake.sourceDirectory": "${workspaceFolder}",
   "cmake.configureOnOpen": true,

@@ -2,6 +2,7 @@
 
 #include "interfaces/ILogChannel.hpp"
 #include "interfaces/rtos/IQueueReceiver.hpp"
+#include "logging/log_params.hpp"
 
 namespace logging
 {

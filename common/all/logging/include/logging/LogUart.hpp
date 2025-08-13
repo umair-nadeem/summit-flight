@@ -2,6 +2,7 @@
 
 #include <span>
 
+#include "error/error_handler.hpp"
 #include "interfaces/ILogChannel.hpp"
 #include "interfaces/hw/IUartTransmitter.hpp"
 

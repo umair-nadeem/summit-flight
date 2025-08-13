@@ -1,0 +1,9 @@
+add_module_test(
+   SOURCES
+      LogClientTest.cpp
+      LogServerTest.cpp
+      LogUartTest.cpp
+   LIBS
+      error
+      mocks
+)

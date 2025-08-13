@@ -17,6 +17,7 @@ do
       --language=c++ \
       --inline-suppr \
       --suppress=missingInclude \
+      --suppress=unusedFunction \
       -i $project_root/external \
       -i $project_root/platform \
       --quiet \
@@ -26,7 +27,6 @@ do
       # Conditionally add the 'os' suppression for the stm_m4 toolchain
       if [[ "$toolchain" == "stm_m4" ]]; then
          cppcheck_command="$cppcheck_command --suppress=*:*\/os\*"
-         cppcheck_command="$cppcheck_command --suppress=unusedFunction"
       fi
 
       # Execute the final command

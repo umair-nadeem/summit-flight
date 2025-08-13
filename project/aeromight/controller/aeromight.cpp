@@ -128,4 +128,4 @@ extern "C"
          __asm volatile("BKPT #0");
       }
    }
-}
+}   // extern "C"

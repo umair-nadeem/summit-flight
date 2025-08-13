@@ -6,3 +6,4 @@ build/
 
 # CMake
 CMakeUserPresets.json
+compile_commands.json
