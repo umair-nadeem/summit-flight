@@ -12,19 +12,19 @@ struct ClockSource
       // No init needed for std::chrono
    }
 
-   static uint64_t now_us() noexcept
+   static uint32_t now_us() noexcept
    {
       using namespace std::chrono;
       return duration_cast<microseconds>(steady_clock::now().time_since_epoch()).count();
    }
 
-   static uint64_t now_ms() noexcept
+   static uint32_t now_ms() noexcept
    {
       using namespace std::chrono;
       return duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
    }
 
-   static uint64_t now_s() noexcept
+   static uint32_t now_s() noexcept
    {
       using namespace std::chrono;
       return duration_cast<seconds>(steady_clock::now().time_since_epoch()).count();

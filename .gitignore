@@ -4,6 +4,8 @@ build/
 
 .idea/
 
+.cache/
+
 # CMake
 CMakeUserPresets.json
 compile_commands.json

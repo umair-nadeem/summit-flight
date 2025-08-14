@@ -1,13 +1,11 @@
 #pragma once
 
-#include <functional>
-
 #include <boost/sml.hpp>
 
-#include "boundaries/SensorDataStorage.hpp"
+#include "Mpu6500StateHandler.hpp"
+#include "boundaries/SensorData.hpp"
 #include "imu_sensor/ImuData.hpp"
 #include "interfaces/IClockSource.hpp"
-#include "params.hpp"
 
 namespace mpu6500
 {
@@ -15,7 +13,7 @@ namespace mpu6500
 template <interfaces::IClockSource ClockSource, typename SpiMaster>
 class Mpu6500
 {
-   using ImuDataStorage = ::boundaries::SensorDataStorage<imu_sensor::ImuData, ClockSource>;
+   using ImuDataStorage = ::boundaries::SensorData<imu_sensor::ImuData, ClockSource>;
 
    // When using SPI interface, user should use PWR_MGMT_1 (register 107) as well as
    // SIGNAL_PATH_RESET (register 104) to ensure the reset is performed properly. The sequence
