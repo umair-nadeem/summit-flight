@@ -2,12 +2,10 @@
 
 #include <atomic>
 
-#include "interfaces/IClockSource.hpp"
-
 namespace boundaries
 {
 
-template <typename T, interfaces::IClockSource ClockSource>
+template <typename T>
 struct SensorData
 {
    static_assert(std::atomic<uint32_t>::is_always_lock_free, "atomic<uint32_t> must be lock-free on this platform");
@@ -26,10 +24,10 @@ struct SensorData
    uint32_t                                 write_index{1};   // Writer always writes to this buffer, only writer touches it -> non-atomic
    uint32_t                                 spare_index{2};   // Spare buffer waiting to become write buf, only writer touches it -> non-atomic
 
-   inline void update_latest(const T& new_data) noexcept
+   inline void update_latest(const T& new_data, const auto ts_ms) noexcept
    {
       samples[write_index].data         = new_data;
-      samples[write_index].timestamp_ms = ClockSource::now_ms();
+      samples[write_index].timestamp_ms = ts_ms;
 
       // Rotate indices: spare→read, write→spare, read→write
       const uint32_t old_read = read_index.load(std::memory_order_relaxed);
