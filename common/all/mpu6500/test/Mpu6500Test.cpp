@@ -11,7 +11,7 @@ class Mpu6500Test : public testing::Test
 protected:
    void SetUp() override
    {
-      mpu6500.initialize();
+      mpu6500.start();
    }
 
    boundaries::SensorData<imu_sensor::ImuData>                            imu_data{};

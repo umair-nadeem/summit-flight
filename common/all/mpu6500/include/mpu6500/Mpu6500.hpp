@@ -1,7 +1,6 @@
 #pragma once
 
-#include <boost/sml.hpp>
-
+#include "MainSM.hpp"
 #include "Mpu6500StateHandler.hpp"
 #include "interfaces/IClockSource.hpp"
 
@@ -98,19 +97,25 @@ public:
       spi_master.register_transfer_complete_callback(&Mpu6500::spi_isr_trampoline, this);
    }
 
-   void initialize()
-   {
-      m_state_machine.process_event(typename StateMachineDef::EventInit{});
-   }
-
    void execute()
    {
-      m_state_machine.process_event(typename StateMachineDef::EventTick{});
+      m_state_machine.process_event(EventTick{});
+   }
+
+   void start()
+   {
+      m_state_machine.process_event(EventStart{});
+   }
+
+   void stop()
+   {
+      m_state_machine.process_event(EventStop{});
    }
 
    // This is called from ISR via SPI driver (must be ISR-safe)
    void spi_transfer_complete_callback()
    {
+      // m_state_machine.process_event(EventReceiveDone{});
       // m_imu_data_storage.update_latest(m_local_imu_data, ClockSource::now_ms());
       m_state_handler.callback();
    }
@@ -123,67 +128,8 @@ private:
       self->spi_transfer_complete_callback();
    }
 
-   template <typename StateHandler>
-   struct Mpu6500StateMachine
-   {
-      // states
-      static constexpr auto power_reset           = boost::sml::state<class StatePowerReset>;
-      static constexpr auto power_reset_wait      = boost::sml::state<class StatePoweresetWait>;
-      static constexpr auto signal_reset          = boost::sml::state<class StateSignalPathReset>;
-      static constexpr auto signal_reset_wait     = boost::sml::state<class StateSignalPathResetWait>;
-      static constexpr auto set_bus               = boost::sml::state<class StateSetBus>;
-      static constexpr auto read_id               = boost::sml::state<class StateReadId>;
-      static constexpr auto verify_id             = boost::sml::state<class StateVerifyId>;
-      static constexpr auto set_clock             = boost::sml::state<class StateSetClock>;
-      static constexpr auto enable_self_test      = boost::sml::state<class StateEnableSelfTest>;
-      static constexpr auto read_self_test_values = boost::sml::state<class StateReadSelfTestValues>;
-      static constexpr auto evaluate_self_test    = boost::sml::state<class StateEvaluateSelfTest>;
-      static constexpr auto disable_self_test     = boost::sml::state<class StateDisableSelfTest>;
-      static constexpr auto gyro_config           = boost::sml::state<class StateGyroConfig>;
-      static constexpr auto accel_config          = boost::sml::state<class StateAccelConfig>;
-      static constexpr auto config                = boost::sml::state<class StateConfig>;
-      static constexpr auto verify_config         = boost::sml::state<class StateVerify_Config>;
-      static constexpr auto set_sample_rate       = boost::sml::state<class StateSetSampleRate>;
-      static constexpr auto continuous_read       = boost::sml::state<class StateContinuousRead>;
-      static constexpr auto validate_sample       = boost::sml::state<class StateValidateSample>;
-      static constexpr auto soft_recovery         = boost::sml::state<class StateSoftRecovery>;
-      static constexpr auto hard_recovery         = boost::sml::state<class StateHardRecovery>;
-      static constexpr auto failure               = boost::sml::state<class StateFailure>;
-
-      // events
-      struct EventInit
-      {
-      };
-
-      struct EventTick
-      {
-      };
-
-      auto operator()() const
-      {
-         using namespace boost::sml;
-
-         // constexpr auto initModeIsQueued = [](StateHandler& state)
-         // {
-         //    return state.self_test_required();
-         // };
-
-         auto action1 = []([[maybe_unused]] auto e) {};
-
-         static constexpr auto eInit = event<EventInit>;
-         // constexpr auto eTick   = event<EventTick>;
-
-         // clang-format off
-         return make_transition_table(
-            // From State  | Event       | Guard                | Action           | To State
-            *reset         + eInit       / action1                                 = init
-         );
-         // clang-format on
-      }
-   };
-
    using StateHandler    = Mpu6500StateHandler<SpiMaster>;
-   using StateMachineDef = Mpu6500StateMachine<StateHandler>;
+   using StateMachineDef = MainStateMachine<StateHandler>;
 
    StateHandler                    m_state_handler;
    boost::sml::sm<StateMachineDef> m_state_machine{m_state_handler};
