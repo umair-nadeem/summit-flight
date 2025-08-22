@@ -10,7 +10,6 @@ namespace mpu6500
 template <typename StateHandler>
 struct ResetStateMachine
 {
-
    // states
    static constexpr auto s_power_reset       = boost::sml::state<class StatePowerReset>;
    static constexpr auto s_power_reset_wait  = boost::sml::state<class StatePoweresetWait>;
@@ -35,10 +34,10 @@ struct ResetStateMachine
       { state.signal_path_reset(); };
 
       // guards
-      constexpr auto power_reset_wait_over = [](StateHandler& state)
+      constexpr auto power_reset_wait_over = [](const StateHandler& state)
       { return state.power_reset_wait_over(); };
 
-      constexpr auto signal_reset_wait_over = [](StateHandler& state)
+      constexpr auto signal_reset_wait_over = [](const StateHandler& state)
       { return state.signal_reset_wait_over(); };
 
       // events

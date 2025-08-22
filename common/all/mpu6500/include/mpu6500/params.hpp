@@ -45,6 +45,24 @@ static constexpr uint8_t who_am_i_reg          = 0x75;
 static constexpr uint8_t read_mask  = 0x80;
 static constexpr uint8_t write_mask = 0x7f;
 
+struct PwrMgmt1BitMask
+{
+   static constexpr uint8_t device_reset = 0b1000'0000;
+   static constexpr uint8_t clock_sel    = 0b0000'0001;
+};
+
+struct SignalPathResetBitMask
+{
+   static constexpr uint8_t gyro_reset  = 0b0000'0100;
+   static constexpr uint8_t accel_reset = 0b0000'0010;
+   static constexpr uint8_t temp_reset  = 0b0000'0001;
+};
+
+struct UserCtrlBitMask
+{
+   static constexpr uint8_t i2c_if_dis = 0b0001'0000;
+};
+
 // spi transaction bytes
 static constexpr uint8_t num_bytes_register      = 1u;
 static constexpr uint8_t num_bytes_accelerometer = 6u;

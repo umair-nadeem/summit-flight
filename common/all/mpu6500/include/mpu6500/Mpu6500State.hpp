@@ -6,10 +6,13 @@ namespace mpu6500
 enum class Mpu6500State
 {
    stopped,
-   init,
+   reset,
+   validation,
+   self_test,
    config,
    operational,
-   recovery,
+   soft_recovery,
+   hard_recovery,
    failure
 
 };

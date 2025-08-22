@@ -5,12 +5,17 @@
 namespace mocks::hw
 {
 
-template <std::size_t N>
 class SpiMasterWithDma
 {
    using TransferCompleteCallback = void (*)(void*);
 
 public:
+   SpiMasterWithDma(std::span<uint8_t> tx_buffer, std::span<uint8_t> rx_buffer)
+       : m_tx_buffer(tx_buffer),
+         m_rx_buffer(rx_buffer)
+   {
+   }
+
    void transfer(std::span<const uint8_t> tx_buffer, std::span<uint8_t> rx_buffer)
    {
       copy_buffer(m_tx_buffer, tx_buffer);
@@ -29,8 +34,8 @@ public:
       std::copy(dest.begin(), dest.end(), src.begin());
    }
 
-   std::array<uint8_t, N>   m_tx_buffer{};
-   std::array<uint8_t, N>   m_rx_buffer{};
+   std::span<uint8_t>       m_tx_buffer;
+   std::span<uint8_t>       m_rx_buffer;
    TransferCompleteCallback m_transfer_complete_callback{nullptr};
    void*                    m_callback_context{nullptr};
 };

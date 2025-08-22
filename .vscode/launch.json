@@ -27,5 +27,15 @@
             "load"
             ]
         },
+        {
+            "name": "Mpu6500Test",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/out/build/native/common/all/mpu6500/test/mpu6500_test",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {},
+            "stopOnEntry": false
+        }
       ]
 }

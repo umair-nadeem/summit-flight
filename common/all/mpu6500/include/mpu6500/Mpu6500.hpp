@@ -2,7 +2,6 @@
 
 #include "MainSM.hpp"
 #include "Mpu6500StateHandler.hpp"
-#include "interfaces/IClockSource.hpp"
 
 namespace mpu6500
 {
@@ -91,8 +90,11 @@ class Mpu6500
    using ImuData = ::boundaries::SensorData<imu_sensor::ImuData>;
 
 public:
-   explicit Mpu6500(ImuData& imu_data_storage, SpiMaster& spi_master)
-       : m_state_handler{imu_data_storage, spi_master}
+   explicit Mpu6500(ImuData&          imu_data_storage,
+                    SpiMaster&        spi_master,
+                    const std::size_t execution_period_ms,
+                    const std::size_t receive_wait_timeout_ms)
+       : m_state_handler{imu_data_storage, spi_master, execution_period_ms, receive_wait_timeout_ms}
    {
       spi_master.register_transfer_complete_callback(&Mpu6500::spi_isr_trampoline, this);
    }
@@ -115,9 +117,17 @@ public:
    // This is called from ISR via SPI driver (must be ISR-safe)
    void spi_transfer_complete_callback()
    {
-      // m_state_machine.process_event(EventReceiveDone{});
-      // m_imu_data_storage.update_latest(m_local_imu_data, ClockSource::now_ms());
-      m_state_handler.callback();
+      m_state_machine.process_event(EventReceiveDone{});
+   }
+
+   Mpu6500State get_state() const
+   {
+      return m_state_handler.get_state();
+   }
+
+   Mpu6500Error get_error() const
+   {
+      return m_state_handler.get_error();
    }
 
 private:
@@ -128,7 +138,7 @@ private:
       self->spi_transfer_complete_callback();
    }
 
-   using StateHandler    = Mpu6500StateHandler<SpiMaster>;
+   using StateHandler    = Mpu6500StateHandler<ClockSource, SpiMaster>;
    using StateMachineDef = MainStateMachine<StateHandler>;
 
    StateHandler                    m_state_handler;

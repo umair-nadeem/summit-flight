@@ -2,174 +2,188 @@
 
 #include <span>
 
+#include "Mpu6500Error.hpp"
 #include "Mpu6500State.hpp"
 #include "boundaries/SensorData.hpp"
 #include "error/error_handler.hpp"
 #include "imu_sensor/ImuData.hpp"
+#include "interfaces/IClockSource.hpp"
 #include "params.hpp"
 
 namespace mpu6500
 {
 
-template <typename SpiMaster>
+template <interfaces::IClockSource ClockSource, typename SpiMaster>
 class Mpu6500StateHandler
 {
    using ImuData = ::boundaries::SensorData<imu_sensor::ImuData>;
 
 public:
-   explicit Mpu6500StateHandler(ImuData& imu_data_storage, SpiMaster& spi_master)
+   explicit Mpu6500StateHandler(ImuData&          imu_data_storage,
+                                SpiMaster&        spi_master,
+                                const std::size_t execution_period_ms,
+                                const std::size_t receive_wait_timeout_ms)
        : m_imu_data_storage{imu_data_storage},
-         m_spi_master{spi_master}
+         m_spi_master{spi_master},
+         m_execution_period_ms{execution_period_ms},
+         m_receive_wait_timeout_ms{receive_wait_timeout_ms}
    {
    }
 
-   // void tick_timer()
-   // {
-   // }
+   void tick_timer()
+   {
+      m_wait_timer_ms += m_execution_period_ms;
+   }
 
-   // void reset_timer()
-   // {
-   // }
+   void reset_timer()
+   {
+      m_wait_timer_ms = 0;
+   }
 
-   // void power_reset()
-   // {
-   // }
+   void power_reset()
+   {
+      m_tx_buffer[0] = get_write_spi_command(params::pwr_mgmt_1_reg);
+      m_tx_buffer[1] = params::PwrMgmt1BitMask::device_reset;
+      m_spi_master.transfer(std::span{m_tx_buffer.data(), 2u}, std::span{m_rx_buffer.data(), 2u});
+   }
 
-   // void signal_path_reset()
-   // {
-   // }
+   void signal_path_reset()
+   {
+      m_tx_buffer[0] = get_write_spi_command(params::signal_path_reset_reg);
+      m_tx_buffer[1] = params::SignalPathResetBitMask::gyro_reset | params::SignalPathResetBitMask::accel_reset | params::SignalPathResetBitMask::temp_reset;
+      m_spi_master.transfer(std::span{m_tx_buffer.data(), 2u}, std::span{m_rx_buffer.data(), 2u});
+   }
 
-   // void set_bus()
-   // {
-   // }
+   void disable_i2c()
+   {
+      m_tx_buffer[0] = get_write_spi_command(params::user_ctrl_reg);
+      m_tx_buffer[1] = params::UserCtrlBitMask::i2c_if_dis;
+      m_spi_master.transfer(std::span{m_tx_buffer.data(), 2u}, std::span{m_rx_buffer.data(), 2u});
+   }
 
-   // void set_clock_and_wakeup()
-   // {
-   // }
+   void set_clock_and_wakeup()
+   {
+      m_tx_buffer[0] = get_write_spi_command(params::pwr_mgmt_1_reg);
+      m_tx_buffer[1] = params::PwrMgmt1BitMask::clock_sel;
+      m_spi_master.transfer(std::span{m_tx_buffer.data(), 2u}, std::span{m_rx_buffer.data(), 2u});
+   }
 
-   // void read_id()
-   // {
-   // }
+   void read_id()
+   {
+      m_tx_buffer[0] = get_read_spi_command(params::who_am_i_reg);
+      m_tx_buffer[1] = 0;
+      m_spi_master.transfer(std::span{m_tx_buffer.data(), 2u}, std::span{m_rx_buffer.data(), 2u});
+   }
 
-   // void verify_id()
-   // {
-   // }
+   void store_id()
+   {
+      m_device_id = m_rx_buffer[1];
+   }
 
-   // void mark_validation_fail()
-   // {
-   // }
+   void mark_validation_fail()
+   {
+      m_validation_successful = false;
+   }
 
-   // void mark_validation_success()
-   // {
-   // }
+   void mark_validation_success()
+   {
+      m_validation_successful = true;
+   }
 
    void set_state(const Mpu6500State& state)
    {
       m_state = state;
    }
 
-   // bool id_matched()
-   // {
-   //    return false;
-   // }
-
-   // bool power_reset_wait_over()
-   // {
-   //    return false;
-   // }
-
-   // bool signal_reset_wait_over()
-   // {
-   //    return false;
-   // }
-
-   // void process_states()
+   void set_error(const Mpu6500Error& error)
    {
-      // switch (m_state)
-      // {
-      //    case Mpu6500State::reset:
-      //       m_tx_buffer[0] = 0x6B & 0x7F;
-      //       m_tx_buffer[1] = 0x00;
-      //       m_spi_master.transfer(std::span{m_tx_buffer.data(), 2u}, std::span{m_rx_buffer.data(), 2u});
-
-      //       m_state = Mpu6500State::wakeup;
-      //       break;
-
-      //    case Mpu6500State::wakeup:
-      //       m_tx_buffer[0] = 0x75 | 0x80;   // read mode
-      //       m_tx_buffer[1] = 0x00;          // dummy
-      //       m_spi_master.transfer(std::span{m_tx_buffer.data(), 2u}, std::span{m_rx_buffer.data(), 2u});
-
-      //       m_state = Mpu6500State::verify_id;
-      //       break;
-
-      //    case Mpu6500State::verify_id:
-      //       if (m_rx_buffer[1] == 0x70)
-      //       {
-      //          m_state = Mpu6500State::read_data;
-      //       }
-      //       else
-      //       {
-      //          m_state = Mpu6500State::error;
-      //       }
-      //       break;
-
-      //    case Mpu6500State::read_data:
-      //       // Read 14 bytes starting at ACCEL_XOUT_H (0x3B)
-      //       m_tx_buffer[0] = 0x3B | 0x80;                                   // read mode
-      //       std::fill(m_tx_buffer.begin() + 1u, m_tx_buffer.end(), 0x00);   // dummy bytes
-
-      //       m_spi_master.transfer(std::span{m_tx_buffer.data(), 15u}, std::span{m_rx_buffer.data(), 15u});
-
-      //       // rx_buffer[1]..rx_buffer[14] now contain accel, temp, gyro
-      //       m_state = Mpu6500State::done;
-      //       break;
-
-      //    case Mpu6500State::done:
-      //       break;
-
-      //    case Mpu6500State::error:
-      //       break;
-
-      //    default:
-      //       error::stop_operation();
-      //       break;
-      // }
+      m_error = error;
    }
 
-   void callback()
+   Mpu6500State get_state() const
    {
-      read_raw_data_from_rx_buffer();
-
-      m_spi_rx_done.store(true, std::memory_order_release);
+      return m_state;
    }
 
-   inline void read_raw_data_from_rx_buffer()
+   Mpu6500Error get_error() const
    {
-      m_local_imu_data.accel_mps2.x = to_int16(m_rx_buffer[1], m_rx_buffer[2]) * ACCEL_SCALE;
-      m_local_imu_data.accel_mps2.y = to_int16(m_rx_buffer[3], m_rx_buffer[4]) * ACCEL_SCALE;
-      m_local_imu_data.accel_mps2.z = to_int16(m_rx_buffer[5], m_rx_buffer[6]) * ACCEL_SCALE;
+      return m_error;
+   }
 
-      m_local_imu_data.temperature_c = to_int16(m_rx_buffer[7], m_rx_buffer[8]) * TEMP_SCALE + TEMP_OFFSET;
+   bool validation_successful() const
+   {
+      return m_validation_successful;
+   }
 
-      m_local_imu_data.gyro_radps.x = to_int16(m_rx_buffer[9], m_rx_buffer[10]) * GYRO_SCALE;
-      m_local_imu_data.gyro_radps.y = to_int16(m_rx_buffer[11], m_rx_buffer[12]) * GYRO_SCALE;
-      m_local_imu_data.gyro_radps.z = to_int16(m_rx_buffer[13], m_rx_buffer[14]) * GYRO_SCALE;
+   bool id_matched() const
+   {
+      return (m_device_id == params::device_id);
+   }
+
+   bool power_reset_wait_over() const
+   {
+      return m_wait_timer_ms >= params::power_on_reset_wait_ms;
+   }
+
+   bool signal_reset_wait_over() const
+   {
+      return m_wait_timer_ms >= params::signal_path_reset_wait_ms;
+   }
+
+   bool receive_wait_timeout() const
+   {
+      return m_wait_timer_ms >= m_receive_wait_timeout_ms;
    }
 
 private:
-   static constexpr auto to_int16(uint8_t msb, uint8_t lsb) noexcept
+   // void callback()
+   // {
+   //    read_raw_data_from_rx_buffer();
+   //    m_imu_data_storage.update_latest(m_local_imu_data, ClockSource::now_ms());
+   //    m_spi_rx_done.store(true, std::memory_order_release);
+   // }
+
+   // inline void read_raw_data_from_rx_buffer()
+   // {
+   //    m_local_imu_data.accel_mps2.x = to_int16(m_rx_buffer[1], m_rx_buffer[2]) * ACCEL_SCALE;
+   //    m_local_imu_data.accel_mps2.y = to_int16(m_rx_buffer[3], m_rx_buffer[4]) * ACCEL_SCALE;
+   //    m_local_imu_data.accel_mps2.z = to_int16(m_rx_buffer[5], m_rx_buffer[6]) * ACCEL_SCALE;
+
+   //    m_local_imu_data.temperature_c = to_int16(m_rx_buffer[7], m_rx_buffer[8]) * TEMP_SCALE + TEMP_OFFSET;
+
+   //    m_local_imu_data.gyro_radps.x = to_int16(m_rx_buffer[9], m_rx_buffer[10]) * GYRO_SCALE;
+   //    m_local_imu_data.gyro_radps.y = to_int16(m_rx_buffer[11], m_rx_buffer[12]) * GYRO_SCALE;
+   //    m_local_imu_data.gyro_radps.z = to_int16(m_rx_buffer[13], m_rx_buffer[14]) * GYRO_SCALE;
+   // }
+
+   static constexpr uint8_t get_write_spi_command(const uint8_t reg) noexcept
    {
-      return static_cast<int16_t>((msb << 8) | lsb);
+      return (reg & params::write_mask);
    }
+
+   static constexpr uint8_t get_read_spi_command(const uint8_t reg) noexcept
+   {
+      return (reg | params::read_mask);
+   }
+
+   // static constexpr auto to_int16(uint8_t msb, uint8_t lsb) noexcept
+   // {
+   //    return static_cast<int16_t>((msb << 8) | lsb);
+   // }
 
    ImuData&                                           m_imu_data_storage;
    SpiMaster&                                         m_spi_master;
+   const std::size_t                                  m_execution_period_ms;
+   const std::size_t                                  m_receive_wait_timeout_ms;
    std::array<uint8_t, params::num_bytes_transaction> m_tx_buffer{};
    std::array<uint8_t, params::num_bytes_transaction> m_rx_buffer{};
    imu_sensor::ImuData                                m_local_imu_data{};
-   std::atomic<bool>                                  m_spi_rx_done{false};
    Mpu6500State                                       m_state{Mpu6500State::stopped};
+   Mpu6500Error                                       m_error{Mpu6500Error::none};
+   uint8_t                                            m_device_id{};
+   std::atomic<bool>                                  m_spi_rx_done{false};
+   bool                                               m_validation_successful{false};
+   std::size_t                                        m_wait_timer_ms{};
 
    static constexpr float ACCEL_SCALE = 9.81f / 16384.0f;
    static constexpr float GYRO_SCALE  = 3.14159f / (180.0f * 131.0f);
