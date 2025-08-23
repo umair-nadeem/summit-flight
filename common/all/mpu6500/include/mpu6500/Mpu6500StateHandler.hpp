@@ -75,9 +75,47 @@ public:
       m_spi_master.transfer(std::span{m_tx_buffer.data(), 2u}, std::span{m_rx_buffer.data(), 2u});
    }
 
+   void write_config_burst()
+   {
+      constexpr std::size_t burst_len = 1u      // address
+                                        + 5u;   // registers
+
+      // write to sample rate, config, gyro config and accel config registers in single burst
+      m_tx_buffer[0] = get_write_spi_command(params::smplrt_div_reg);
+      m_tx_buffer[1] = params::sample_rate_divider;   // sample rate
+      m_tx_buffer[2] = params::dlpf_config;           // config reg
+      m_tx_buffer[3] = params::gyro_full_scale;       // gyro config reg
+      m_tx_buffer[4] = params::accel_full_scale;      // accel config reg
+      m_tx_buffer[5] = params::accel_a_dlpf_config;   // accel config 2 reg
+      m_spi_master.transfer(std::span{m_tx_buffer.data(), burst_len}, std::span{m_rx_buffer.data(), burst_len});
+   }
+
+   void read_config_burst()
+   {
+      constexpr std::size_t burst_len = 1u      // address
+                                        + 5u;   // registers
+
+      m_tx_buffer[0] = get_read_spi_command(params::smplrt_div_reg);
+      m_tx_buffer[1] = 0x00;
+      m_tx_buffer[2] = 0x00;
+      m_tx_buffer[3] = 0x00;
+      m_tx_buffer[4] = 0x00;
+      m_tx_buffer[5] = 0x00;
+      m_spi_master.transfer(std::span{m_tx_buffer.data(), burst_len}, std::span{m_rx_buffer.data(), burst_len});
+   }
+
    void store_id()
    {
       m_device_id = m_rx_buffer[1];
+   }
+
+   void store_config()
+   {
+      m_config_registers.sample_rate_div = m_rx_buffer[1];
+      m_config_registers.config          = static_cast<uint8_t>(m_rx_buffer[2] & params::ConfigBitMask::dlpf_cfg);
+      m_config_registers.gyro_config     = static_cast<uint8_t>(m_rx_buffer[3] & params::GyroConfigBitMask::gyro_fs_sel);
+      m_config_registers.accel_config    = static_cast<uint8_t>(m_rx_buffer[4] & params::AccelConfigBitMask::accel_fs_sel);
+      m_config_registers.accel_config_2  = static_cast<uint8_t>(m_rx_buffer[5] & params::AccelConfig2BitMask::accel_a_dlpf_config);
    }
 
    void mark_validation_fail()
@@ -88,6 +126,26 @@ public:
    void mark_validation_success()
    {
       m_validation_successful = true;
+   }
+
+   void mark_self_test_fail()
+   {
+      m_self_test_successful = false;
+   }
+
+   void mark_self_test_pass()
+   {
+      m_self_test_successful = true;
+   }
+
+   void mark_config_fail()
+   {
+      m_config_successful = false;
+   }
+
+   void mark_config_success()
+   {
+      m_config_successful = true;
    }
 
    void set_state(const Mpu6500State& state)
@@ -115,9 +173,28 @@ public:
       return m_validation_successful;
    }
 
+   bool self_test_successful() const
+   {
+      return m_self_test_successful;
+   }
+
+   bool config_successful() const
+   {
+      return m_config_successful;
+   }
+
    bool id_matched() const
    {
       return (m_device_id == params::device_id);
+   }
+
+   bool config_matched() const
+   {
+      return ((m_config_registers.sample_rate_div == params::sample_rate_divider) &&
+              (m_config_registers.config == params::dlpf_config) &&
+              (m_config_registers.gyro_config == params::gyro_full_scale) &&
+              (m_config_registers.accel_config == params::accel_full_scale) &&
+              (m_config_registers.accel_config_2 == params::accel_a_dlpf_config));
    }
 
    bool power_reset_wait_over() const
@@ -158,7 +235,7 @@ private:
 
    static constexpr uint8_t get_write_spi_command(const uint8_t reg) noexcept
    {
-      return (reg & params::write_mask);
+      return (reg & static_cast<uint8_t>(~params::read_mask));
    }
 
    static constexpr uint8_t get_read_spi_command(const uint8_t reg) noexcept
@@ -171,6 +248,15 @@ private:
    //    return static_cast<int16_t>((msb << 8) | lsb);
    // }
 
+   struct config_registers
+   {
+      uint8_t sample_rate_div;
+      uint8_t config;
+      uint8_t gyro_config;
+      uint8_t accel_config;
+      uint8_t accel_config_2;
+   };
+
    ImuData&                                           m_imu_data_storage;
    SpiMaster&                                         m_spi_master;
    const std::size_t                                  m_execution_period_ms;
@@ -181,8 +267,11 @@ private:
    Mpu6500State                                       m_state{Mpu6500State::stopped};
    Mpu6500Error                                       m_error{Mpu6500Error::none};
    uint8_t                                            m_device_id{};
+   config_registers                                   m_config_registers{};
    std::atomic<bool>                                  m_spi_rx_done{false};
    bool                                               m_validation_successful{false};
+   bool                                               m_self_test_successful{false};
+   bool                                               m_config_successful{false};
    std::size_t                                        m_wait_timer_ms{};
 
    static constexpr float ACCEL_SCALE = 9.81f / 16384.0f;

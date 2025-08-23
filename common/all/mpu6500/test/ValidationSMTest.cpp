@@ -58,7 +58,7 @@ TEST_F(ValidationSMTest, check_read_id_wait_timeout)
    test_buffer[1] = 0x00;
 
    EXPECT_THAT(tx_buffer, testing::ElementsAreArray(test_buffer.begin(), test_buffer.end()));
-   EXPECT_TRUE(sm.is(StateMachineDef::s_receive_wait));
+   EXPECT_TRUE(sm.is(StateMachineDef::s_id_receive_wait));
 
    EXPECT_EQ(mpu6500_handler.get_error(), mpu6500::Mpu6500Error::none);
    // passage of time will cause timeout

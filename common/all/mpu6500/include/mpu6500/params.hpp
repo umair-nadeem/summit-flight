@@ -41,9 +41,42 @@ static constexpr uint8_t user_ctrl_reg         = 0x6a;
 static constexpr uint8_t pwr_mgmt_1_reg        = 0x6b;
 static constexpr uint8_t who_am_i_reg          = 0x75;
 
-// bit masks
-static constexpr uint8_t read_mask  = 0x80;
-static constexpr uint8_t write_mask = 0x7f;
+// register values
+static constexpr uint8_t sample_rate_divider = 0x03;
+static constexpr uint8_t dlpf_config         = 0x02;   // @TODO: confirm later
+static constexpr uint8_t gyro_full_scale     = 0x18;   // @TODO: confirm later
+static constexpr uint8_t accel_full_scale    = 0x18;   // @TODO: confirm later
+static constexpr uint8_t accel_a_dlpf_config = 0x03;   // @TODO: confirm later
+
+// register value bit masks
+static constexpr uint8_t read_mask = 0x80;
+
+struct SampleRateDividerBitMask
+{
+   static constexpr uint8_t smplrt_div = 0b1111'1111;
+};
+
+struct ConfigBitMask
+{
+   static constexpr uint8_t dlpf_cfg = 0b0000'0111;
+};
+
+struct GyroConfigBitMask
+{
+   static constexpr uint8_t gyro_fs_sel = 0b0001'1000;
+   static constexpr uint8_t f_choice_b  = 0b0000'0011;
+};
+
+struct AccelConfigBitMask
+{
+   static constexpr uint8_t accel_fs_sel = 0b0001'1000;
+};
+
+struct AccelConfig2BitMask
+{
+   static constexpr uint8_t accel_f_choice_b    = 0b0000'1000;
+   static constexpr uint8_t accel_a_dlpf_config = 0b0000'0111;
+};
 
 struct PwrMgmt1BitMask
 {

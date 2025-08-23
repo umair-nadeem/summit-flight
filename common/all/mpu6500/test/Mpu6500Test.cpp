@@ -48,6 +48,41 @@ protected:
       }
    }
 
+   void run_through_self_test_state()
+   {
+      EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::self_test);
+
+      mpu6500.execute();
+      mpu6500.execute();
+   }
+
+   void run_through_config_state(const bool config_success)
+   {
+      EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::config);
+
+      mpu6500.execute();
+
+      if (config_success)
+      {
+         rx_buffer[0] = 0;
+         rx_buffer[1] = 0x03;
+         rx_buffer[2] = 0xe2;
+         rx_buffer[3] = 0b1101'1010;
+         rx_buffer[4] = 0b1111'1101;
+         rx_buffer[5] = 0xf3;
+
+         mpu6500.execute();
+         mpu6500.spi_transfer_complete_callback();
+         mpu6500.execute();
+      }
+      else
+      {
+         mpu6500.execute();
+         mpu6500.execute();
+         mpu6500.execute();
+      }
+   }
+
    mpu6500::Mpu6500<sys_time::ClockSource, decltype(spi_master_with_dma)> mpu6500{imu_data,
                                                                                   spi_master_with_dma,
                                                                                   execution_period_ms,
@@ -89,4 +124,42 @@ TEST_F(Mpu6500Test, check_successful_validation)
    run_through_validation_state(true);
 
    EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::self_test);
+}
+
+TEST_F(Mpu6500Test, check_self_test)
+{
+   // run through reset and validation sub-state machines
+   mpu6500.start();
+   run_through_reset_state();
+   run_through_validation_state(true);
+
+   run_through_self_test_state();
+
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::config);
+}
+
+TEST_F(Mpu6500Test, check_failed_config)
+{
+   // run through reset and validation sub-state machines
+   mpu6500.start();
+   run_through_reset_state();
+   run_through_validation_state(true);
+   run_through_self_test_state();
+
+   run_through_config_state(false);
+
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::failure);
+}
+
+TEST_F(Mpu6500Test, check_successful_config)
+{
+   // run through reset and validation sub-state machines
+   mpu6500.start();
+   run_through_reset_state();
+   run_through_validation_state(true);
+   run_through_self_test_state();
+
+   run_through_config_state(true);
+
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::operational);
 }
