@@ -9,7 +9,7 @@ protected:
    using StateHandler    = mpu6500::Mpu6500StateHandler<sys_time::ClockSource, decltype(spi_master_with_dma)>;
    using StateMachineDef = mpu6500::ValidationStateMachine<StateHandler>;
 
-   StateHandler                    mpu6500_handler{imu_data, spi_master_with_dma, execution_period_ms, receive_wait_timeout_ms};
+   StateHandler                    mpu6500_handler{imu_data, imu_health, spi_master_with_dma, execution_period_ms, receive_wait_timeout_ms};
    boost::sml::sm<StateMachineDef> sm{mpu6500_handler};
 };
 
@@ -60,12 +60,12 @@ TEST_F(ValidationSMTest, check_read_id_wait_timeout)
    EXPECT_THAT(tx_buffer, testing::ElementsAreArray(test_buffer.begin(), test_buffer.end()));
    EXPECT_TRUE(sm.is(StateMachineDef::s_id_receive_wait));
 
-   EXPECT_EQ(mpu6500_handler.get_error(), mpu6500::Mpu6500Error::none);
+   EXPECT_EQ(mpu6500_handler.get_error(), imu_sensor::ImuSensorError::none);
    // passage of time will cause timeout
    sm.process_event(mpu6500::EventTick{});
    sm.process_event(mpu6500::EventTick{});
 
-   EXPECT_EQ(mpu6500_handler.get_error(), mpu6500::Mpu6500Error::bus_error);
+   EXPECT_EQ(mpu6500_handler.get_error(), imu_sensor::ImuSensorError::bus_error);
    EXPECT_FALSE(mpu6500_handler.validation_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
@@ -90,7 +90,7 @@ TEST_F(ValidationSMTest, check_read_id_mismatch)
    // id verification fails
    sm.process_event(mpu6500::EventTick{});
 
-   EXPECT_EQ(mpu6500_handler.get_error(), mpu6500::Mpu6500Error::none);
+   EXPECT_EQ(mpu6500_handler.get_error(), imu_sensor::ImuSensorError::none);
    EXPECT_FALSE(mpu6500_handler.validation_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
@@ -115,7 +115,7 @@ TEST_F(ValidationSMTest, verify_id_successfully)
    // id verification fails
    sm.process_event(mpu6500::EventTick{});
 
-   EXPECT_EQ(mpu6500_handler.get_error(), mpu6500::Mpu6500Error::none);
+   EXPECT_EQ(mpu6500_handler.get_error(), imu_sensor::ImuSensorError::none);
    EXPECT_TRUE(mpu6500_handler.validation_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }

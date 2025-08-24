@@ -12,7 +12,7 @@ class Mpu6500Test : public Mpu6500BaseTest
 protected:
    void run_through_reset_state()
    {
-      EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::reset);
+      EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::reset);
 
       const std::size_t wait_ticks_needed = (mpu6500::params::power_on_reset_wait_ms + mpu6500::params::signal_path_reset_wait_ms) / execution_period_ms;
       for (std::size_t i = 0; i < wait_ticks_needed; i++)
@@ -28,7 +28,7 @@ protected:
 
    void run_through_validation_state(const bool validation_success)
    {
-      EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::validation);
+      EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::validation);
 
       mpu6500.execute();
       mpu6500.execute();
@@ -37,7 +37,7 @@ protected:
       {
          rx_buffer[1] = mpu6500::params::device_id;
          mpu6500.execute();
-         mpu6500.spi_transfer_complete_callback();
+         mpu6500.signal_receive_complete();
          mpu6500.execute();
       }
       else
@@ -50,7 +50,7 @@ protected:
 
    void run_through_self_test_state()
    {
-      EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::self_test);
+      EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::self_test);
 
       mpu6500.execute();
       mpu6500.execute();
@@ -58,7 +58,7 @@ protected:
 
    void run_through_config_state(const bool config_success)
    {
-      EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::config);
+      EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::config);
 
       mpu6500.execute();
 
@@ -72,7 +72,7 @@ protected:
          rx_buffer[5] = 0xf3;
 
          mpu6500.execute();
-         mpu6500.spi_transfer_complete_callback();
+         mpu6500.signal_receive_complete();
          mpu6500.execute();
       }
       else
@@ -84,6 +84,7 @@ protected:
    }
 
    mpu6500::Mpu6500<sys_time::ClockSource, decltype(spi_master_with_dma)> mpu6500{imu_data,
+                                                                                  imu_health,
                                                                                   spi_master_with_dma,
                                                                                   execution_period_ms,
                                                                                   receive_wait_timeout_ms};
@@ -91,7 +92,7 @@ protected:
 
 TEST_F(Mpu6500Test, check_reset_process)
 {
-   EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::stopped);
+   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
 
    // move to reset state
    mpu6500.start();
@@ -99,7 +100,7 @@ TEST_F(Mpu6500Test, check_reset_process)
    // run through reset sub-state machine
    run_through_reset_state();
 
-   EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::validation);
+   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::validation);
 }
 
 TEST_F(Mpu6500Test, check_failed_validation)
@@ -111,7 +112,7 @@ TEST_F(Mpu6500Test, check_failed_validation)
    // run through validation sub-state machine with failure
    run_through_validation_state(false);
 
-   EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::failure);
+   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::failure);
 }
 
 TEST_F(Mpu6500Test, check_successful_validation)
@@ -123,7 +124,7 @@ TEST_F(Mpu6500Test, check_successful_validation)
    // run through validation sub-state machine with failure
    run_through_validation_state(true);
 
-   EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::self_test);
+   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::self_test);
 }
 
 TEST_F(Mpu6500Test, check_self_test)
@@ -135,7 +136,7 @@ TEST_F(Mpu6500Test, check_self_test)
 
    run_through_self_test_state();
 
-   EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::config);
+   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::config);
 }
 
 TEST_F(Mpu6500Test, check_failed_config)
@@ -148,7 +149,7 @@ TEST_F(Mpu6500Test, check_failed_config)
 
    run_through_config_state(false);
 
-   EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::failure);
+   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::failure);
 }
 
 TEST_F(Mpu6500Test, check_successful_config)
@@ -161,5 +162,5 @@ TEST_F(Mpu6500Test, check_successful_config)
 
    run_through_config_state(true);
 
-   EXPECT_EQ(mpu6500.get_state(), mpu6500::Mpu6500State::operational);
+   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
 }

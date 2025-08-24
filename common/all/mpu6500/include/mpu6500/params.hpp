@@ -5,6 +5,7 @@
 namespace mpu6500::params
 {
 
+// from datasheet
 static constexpr uint8_t device_id = 0x70;
 
 // registers
@@ -41,12 +42,14 @@ static constexpr uint8_t user_ctrl_reg         = 0x6a;
 static constexpr uint8_t pwr_mgmt_1_reg        = 0x6b;
 static constexpr uint8_t who_am_i_reg          = 0x75;
 
-// register values
-static constexpr uint8_t sample_rate_divider = 0x03;
-static constexpr uint8_t dlpf_config         = 0x02;   // @TODO: confirm later
-static constexpr uint8_t gyro_full_scale     = 0x18;   // @TODO: confirm later
-static constexpr uint8_t accel_full_scale    = 0x18;   // @TODO: confirm later
-static constexpr uint8_t accel_a_dlpf_config = 0x03;   // @TODO: confirm later
+// sensor specs
+static constexpr uint16_t gyro_abs_full_scale_range_dps[4u] = {250u, 500u, 1000u, 2000u};            // degrees/s
+static constexpr uint16_t accel_abs_full_scale_range_g[4u]  = {2u, 4u, 8u, 16u};                     // g
+
+static constexpr float gyro_sensitivity_scale_factor[4u]  = {131.0f, 65.5f, 32.8f, 16.4f};           // LSB/(degrees/s)
+static constexpr float accel_sensitivity_scale_factor[4u] = {16384.0f, 8192.0f, 4096.0f, 2048.0f};   // LSB/g
+static constexpr float temp_sensitivity                   = 333.87f;                                 // LSB/Degree-C
+static constexpr float temp_offset                        = 21.0f;                                   // LSB
 
 // register value bit masks
 static constexpr uint8_t read_mask = 0x80;
@@ -96,15 +99,22 @@ struct UserCtrlBitMask
    static constexpr uint8_t i2c_if_dis = 0b0001'0000;
 };
 
+// wait duration
+static constexpr uint8_t power_on_reset_wait_ms    = 100;
+static constexpr uint8_t signal_path_reset_wait_ms = 100;
+
+// parameter values
+static constexpr uint8_t sample_rate_divider = 0x03;
+static constexpr uint8_t dlpf_config         = 0x02;   // @TODO: confirm later
+static constexpr uint8_t gyro_full_scale     = 0x03;   // @TODO: confirm later
+static constexpr uint8_t accel_full_scale    = 0x03;   // @TODO: confirm later
+static constexpr uint8_t accel_a_dlpf_config = 0x03;   // @TODO: confirm later
+
 // spi transaction bytes
 static constexpr uint8_t num_bytes_register      = 1u;
 static constexpr uint8_t num_bytes_accelerometer = 6u;
 static constexpr uint8_t num_bytes_gyroscope     = 6u;
 static constexpr uint8_t num_bytes_temperature   = 2u;
-static constexpr uint8_t num_bytes_transaction   = num_bytes_register + num_bytes_accelerometer + num_bytes_gyroscope + num_bytes_temperature + 1u;
-
-// wait duration
-static constexpr uint8_t power_on_reset_wait_ms    = 100;
-static constexpr uint8_t signal_path_reset_wait_ms = 100;
+static constexpr uint8_t num_bytes_transaction   = num_bytes_register + num_bytes_accelerometer + num_bytes_gyroscope + num_bytes_temperature;
 
 }   // namespace mpu6500::params

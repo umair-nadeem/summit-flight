@@ -7,6 +7,7 @@
 #include "mpu6500/Mpu6500.hpp"
 #include "rtos/QueueSender.hpp"
 #include "rtos/periodic_task.hpp"
+#include "sys_time/ClockSource.hpp"
 #include "task_params.hpp"
 
 namespace logging
@@ -26,12 +27,18 @@ extern "C"
 
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
+      constexpr auto task_execution_period_ms        = controller::task::sensor_acq_task_period_in_ms;
+      constexpr auto mpu6500_receive_wait_timeout_ms = 2 * task_execution_period_ms;
+
       LogClient logger_sensor_acq{logging::logging_queue_sender, "snsr_acq"};
 
       mpu6500::Mpu6500<sys_time::ClockSource,
                        decltype(data->spi1_master)>
           mpu6500{aeromight_boundaries::aeromight_sensor_data.imu_sensor_data_storage,
-                  data->spi1_master};
+                  aeromight_boundaries::aeromight_sensor_data.imu_sensor_health_storage,
+                  data->spi1_master,
+                  task_execution_period_ms,
+                  mpu6500_receive_wait_timeout_ms};
 
       aeromight_sensors::SensorAcquisition<
           decltype(mpu6500),

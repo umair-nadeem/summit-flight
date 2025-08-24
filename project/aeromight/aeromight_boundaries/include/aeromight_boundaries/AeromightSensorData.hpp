@@ -1,15 +1,16 @@
 #pragma once
 
-#include "boundaries/SensorData.hpp"
+#include "boundaries/SharedData.hpp"
 #include "imu_sensor/ImuData.hpp"
-#include "sys_time/ClockSource.hpp"
+#include "imu_sensor/ImuHealth.hpp"
 
 namespace aeromight_boundaries
 {
 
 struct AeromightSensorData
 {
-   boundaries::SensorData<imu_sensor::ImuData, sys_time::ClockSource> imu_sensor_data_storage{};
+   boundaries::SharedData<imu_sensor::ImuData>   imu_sensor_data_storage{};
+   boundaries::SharedData<imu_sensor::ImuHealth> imu_sensor_health_storage{};
 };
 
 extern AeromightSensorData aeromight_sensor_data;

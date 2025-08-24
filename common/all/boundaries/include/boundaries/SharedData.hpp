@@ -6,10 +6,10 @@ namespace boundaries
 {
 
 template <typename T>
-struct SensorData
+struct SharedData
 {
    static_assert(std::atomic<uint32_t>::is_always_lock_free, "atomic<uint32_t> must be lock-free on this platform");
-   static_assert(std::is_trivially_copyable_v<T>, "SensorData<T>: T must be trivially copyable");
+   static_assert(std::is_trivially_copyable_v<T>, "SharedData<T>: T must be trivially copyable");
 
    struct Sample
    {

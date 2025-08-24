@@ -3,7 +3,7 @@
 #include <boost/sml.hpp>
 
 #include "Events.hpp"
-#include "Mpu6500Error.hpp"
+#include "imu_sensor/ImuSensorError.hpp"
 
 namespace mpu6500
 {
@@ -44,7 +44,7 @@ struct ConfigStateMachine
       { state.mark_config_success(); };
 
       constexpr auto set_bus_error = [](StateHandler& state)
-      { state.set_error(Mpu6500Error::bus_error); };
+      { state.set_error(imu_sensor::ImuSensorError::bus_error); };
 
       // guards
       constexpr auto receive_wait_timeout = [](const StateHandler& state)

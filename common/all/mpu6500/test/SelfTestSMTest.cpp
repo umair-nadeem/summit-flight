@@ -9,7 +9,7 @@ protected:
    using StateHandler    = mpu6500::Mpu6500StateHandler<sys_time::ClockSource, decltype(spi_master_with_dma)>;
    using StateMachineDef = mpu6500::SelfTestStateMachine<StateHandler>;
 
-   StateHandler                    mpu6500_handler{imu_data, spi_master_with_dma, execution_period_ms, receive_wait_timeout_ms};
+   StateHandler                    mpu6500_handler{imu_data, imu_health, spi_master_with_dma, execution_period_ms, receive_wait_timeout_ms};
    boost::sml::sm<StateMachineDef> sm{mpu6500_handler};
 };
 

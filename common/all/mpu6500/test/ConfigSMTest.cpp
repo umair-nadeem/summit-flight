@@ -9,7 +9,7 @@ protected:
    using StateHandler    = mpu6500::Mpu6500StateHandler<sys_time::ClockSource, decltype(spi_master_with_dma)>;
    using StateMachineDef = mpu6500::ConfigStateMachine<StateHandler>;
 
-   StateHandler                    mpu6500_handler{imu_data, spi_master_with_dma, execution_period_ms, receive_wait_timeout_ms};
+   StateHandler                    mpu6500_handler{imu_data, imu_health, spi_master_with_dma, execution_period_ms, receive_wait_timeout_ms};
    boost::sml::sm<StateMachineDef> sm{mpu6500_handler};
 };
 
@@ -83,7 +83,7 @@ TEST_F(ConfigSMTest, check_read_burst_wait_timeout)
 
    sm.process_event(mpu6500::EventTick{});
 
-   EXPECT_EQ(mpu6500_handler.get_error(), mpu6500::Mpu6500Error::bus_error);
+   EXPECT_EQ(mpu6500_handler.get_error(), imu_sensor::ImuSensorError::bus_error);
    EXPECT_FALSE(mpu6500_handler.config_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
@@ -112,7 +112,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_smplrt_mismatch)
    // provide tick for verification state to complete with fail
    sm.process_event(mpu6500::EventTick{});
 
-   EXPECT_EQ(mpu6500_handler.get_error(), mpu6500::Mpu6500Error::none);
+   EXPECT_EQ(mpu6500_handler.get_error(), imu_sensor::ImuSensorError::none);
    EXPECT_FALSE(mpu6500_handler.config_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
@@ -141,7 +141,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_config_mismatch)
    // provide tick for verification state to complete with fail
    sm.process_event(mpu6500::EventTick{});
 
-   EXPECT_EQ(mpu6500_handler.get_error(), mpu6500::Mpu6500Error::none);
+   EXPECT_EQ(mpu6500_handler.get_error(), imu_sensor::ImuSensorError::none);
    EXPECT_FALSE(mpu6500_handler.config_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
@@ -170,7 +170,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_gyro_config_mismatch)
    // provide tick for verification state to complete with fail
    sm.process_event(mpu6500::EventTick{});
 
-   EXPECT_EQ(mpu6500_handler.get_error(), mpu6500::Mpu6500Error::none);
+   EXPECT_EQ(mpu6500_handler.get_error(), imu_sensor::ImuSensorError::none);
    EXPECT_FALSE(mpu6500_handler.config_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
@@ -199,7 +199,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_accel_config_mismatch)
    // provide tick for verification state to complete with fail
    sm.process_event(mpu6500::EventTick{});
 
-   EXPECT_EQ(mpu6500_handler.get_error(), mpu6500::Mpu6500Error::none);
+   EXPECT_EQ(mpu6500_handler.get_error(), imu_sensor::ImuSensorError::none);
    EXPECT_FALSE(mpu6500_handler.config_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
@@ -228,7 +228,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_accel_config_2_mismatch)
    // provide tick for verification state to complete with fail
    sm.process_event(mpu6500::EventTick{});
 
-   EXPECT_EQ(mpu6500_handler.get_error(), mpu6500::Mpu6500Error::none);
+   EXPECT_EQ(mpu6500_handler.get_error(), imu_sensor::ImuSensorError::none);
    EXPECT_FALSE(mpu6500_handler.config_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
@@ -257,7 +257,7 @@ TEST_F(ConfigSMTest, check_successful_config_read_back)
    // provide tick for verification state to complete with fail
    sm.process_event(mpu6500::EventTick{});
 
-   EXPECT_EQ(mpu6500_handler.get_error(), mpu6500::Mpu6500Error::none);
+   EXPECT_EQ(mpu6500_handler.get_error(), imu_sensor::ImuSensorError::none);
    EXPECT_TRUE(mpu6500_handler.config_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
