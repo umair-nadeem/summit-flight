@@ -51,6 +51,9 @@ static constexpr float accel_sensitivity_scale_factor[4u] = {16384.0f, 8192.0f, 
 static constexpr float temp_sensitivity                   = 333.87f;                                 // LSB/Degree-C
 static constexpr float temp_offset                        = 21.0f;                                   // LSB
 
+static constexpr float temp_min_plauisble_range = -25.0f;
+static constexpr float temp_max_plauisble_range = 85.0f;
+
 // register value bit masks
 static constexpr uint8_t read_mask = 0x80;
 
@@ -102,13 +105,6 @@ struct UserCtrlBitMask
 // wait duration
 static constexpr uint8_t power_on_reset_wait_ms    = 100;
 static constexpr uint8_t signal_path_reset_wait_ms = 100;
-
-// parameter values
-static constexpr uint8_t sample_rate_divider = 0x03;
-static constexpr uint8_t dlpf_config         = 0x02;   // @TODO: confirm later
-static constexpr uint8_t gyro_full_scale     = 0x03;   // @TODO: confirm later
-static constexpr uint8_t accel_full_scale    = 0x03;   // @TODO: confirm later
-static constexpr uint8_t accel_a_dlpf_config = 0x03;   // @TODO: confirm later
 
 // spi transaction bytes
 static constexpr uint8_t num_bytes_register      = 1u;

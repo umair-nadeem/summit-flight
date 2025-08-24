@@ -23,13 +23,33 @@ public:
    explicit Mpu6500StateHandler(ImuData&          imu_data_storage,
                                 ImuHealth&        imu_health_storage,
                                 SpiMaster&        spi_master,
+                                const uint8_t     read_failures_limit,
                                 const std::size_t execution_period_ms,
-                                const std::size_t receive_wait_timeout_ms)
+                                const std::size_t receive_wait_timeout_ms,
+                                const uint8_t     sample_rate_divider,
+                                const uint8_t     dlpf_config,
+                                const uint8_t     gyro_full_scale,
+                                const uint8_t     accel_full_scale,
+                                const uint8_t     accel_a_dlpf_config,
+                                const float       gyro_range_plausibility_margin_radps,
+                                const float       accel_range_plausibility_margin_mps2)
        : m_imu_data_storage{imu_data_storage},
          m_imu_health_storage{imu_health_storage},
          m_spi_master{spi_master},
+         m_read_failures_limit{read_failures_limit},
          m_execution_period_ms{execution_period_ms},
-         m_receive_wait_timeout_ms{receive_wait_timeout_ms}
+         m_receive_wait_timeout_ms{receive_wait_timeout_ms},
+         m_sample_rate_divider{sample_rate_divider},
+         m_dlpf_config{dlpf_config},
+         m_gyro_full_scale{gyro_full_scale},
+         m_accel_full_scale{accel_full_scale},
+         m_accel_a_dlpf_config{accel_a_dlpf_config},
+         m_gyro_range_plausibility_margin_radps{gyro_range_plausibility_margin_radps},
+         m_accel_range_plausibility_margin_mps2{accel_range_plausibility_margin_mps2},
+         m_gyro_scale{deg_to_rad / params::gyro_sensitivity_scale_factor[m_gyro_full_scale]},
+         m_accel_scale{g_to_mps2 / params::accel_sensitivity_scale_factor[m_accel_full_scale]},
+         m_gyro_absolute_plausibility_limit_radps{(params::gyro_abs_full_scale_range_dps[m_gyro_full_scale] * deg_to_rad) + m_gyro_range_plausibility_margin_radps},
+         m_accel_absolute_plausibility_limit_mps2{(params::accel_abs_full_scale_range_g[m_accel_full_scale] * g_to_mps2) + m_accel_range_plausibility_margin_mps2}
    {
    }
 
@@ -95,11 +115,11 @@ public:
 
       // write to sample rate, config, gyro config and accel config registers in single burst
       m_tx_buffer[0] = get_write_spi_command(params::smplrt_div_reg);
-      m_tx_buffer[1] = params::sample_rate_divider;                                                                  // sample rate
-      m_tx_buffer[2] = params::dlpf_config & params::ConfigBitMask::dlpf_cfg;                                        // config reg
-      m_tx_buffer[3] = ((params::gyro_full_scale << three_bit_shift) & params::GyroConfigBitMask::gyro_fs_sel);      // gyro config reg
-      m_tx_buffer[4] = ((params::accel_full_scale << three_bit_shift) & params::AccelConfigBitMask::accel_fs_sel);   // accel config reg
-      m_tx_buffer[5] = params::accel_a_dlpf_config & params::AccelConfig2BitMask::accel_a_dlpf_config;               // accel config 2 reg
+      m_tx_buffer[1] = m_sample_rate_divider;                                                                  // sample rate
+      m_tx_buffer[2] = m_dlpf_config & params::ConfigBitMask::dlpf_cfg;                                        // config reg
+      m_tx_buffer[3] = ((m_gyro_full_scale << three_bit_shift) & params::GyroConfigBitMask::gyro_fs_sel);      // gyro config reg
+      m_tx_buffer[4] = ((m_accel_full_scale << three_bit_shift) & params::AccelConfigBitMask::accel_fs_sel);   // accel config reg
+      m_tx_buffer[5] = m_accel_a_dlpf_config & params::AccelConfig2BitMask::accel_a_dlpf_config;               // accel config 2 reg
 
       m_spi_master.transfer(std::span{m_tx_buffer.data(), burst_len}, std::span{m_rx_buffer.data(), burst_len});
    }
@@ -141,15 +161,15 @@ public:
 
    void convert_raw_data()
    {
-      m_local_imu_data.accel_mps2.x = to_int16(m_rx_buffer[1], m_rx_buffer[2]) * accel_scale;
-      m_local_imu_data.accel_mps2.y = to_int16(m_rx_buffer[3], m_rx_buffer[4]) * accel_scale;
-      m_local_imu_data.accel_mps2.z = to_int16(m_rx_buffer[5], m_rx_buffer[6]) * accel_scale;
+      m_local_imu_data.accel_mps2.x = to_int16(m_rx_buffer[1], m_rx_buffer[2]) * m_accel_scale;
+      m_local_imu_data.accel_mps2.y = to_int16(m_rx_buffer[3], m_rx_buffer[4]) * m_accel_scale;
+      m_local_imu_data.accel_mps2.z = to_int16(m_rx_buffer[5], m_rx_buffer[6]) * m_accel_scale;
 
       m_local_imu_data.temperature_c = (to_int16(m_rx_buffer[7], m_rx_buffer[8]) / params::temp_sensitivity) + params::temp_offset;
 
-      m_local_imu_data.gyro_radps.x = to_int16(m_rx_buffer[9], m_rx_buffer[10]) * gyro_scale;
-      m_local_imu_data.gyro_radps.y = to_int16(m_rx_buffer[11], m_rx_buffer[12]) * gyro_scale;
-      m_local_imu_data.gyro_radps.z = to_int16(m_rx_buffer[13], m_rx_buffer[14]) * gyro_scale;
+      m_local_imu_data.gyro_radps.x = to_int16(m_rx_buffer[9], m_rx_buffer[10]) * m_gyro_scale;
+      m_local_imu_data.gyro_radps.y = to_int16(m_rx_buffer[11], m_rx_buffer[12]) * m_gyro_scale;
+      m_local_imu_data.gyro_radps.z = to_int16(m_rx_buffer[13], m_rx_buffer[14]) * m_gyro_scale;
    }
 
    void publish_data()
@@ -252,11 +272,11 @@ public:
       const uint8_t accel_fs_sel        = (m_config_registers.accel_config & params::AccelConfigBitMask::accel_fs_sel) >> three_bit_shift;
       const uint8_t accel_a_dlpf_config = m_config_registers.accel_config_2 & params::AccelConfig2BitMask::accel_a_dlpf_config;
 
-      return ((m_config_registers.sample_rate_div == params::sample_rate_divider) &&
-              (dlpf_config == params::dlpf_config) &&
-              (gyro_fs_sel == params::gyro_full_scale) &&
-              (accel_fs_sel == params::accel_full_scale) &&
-              (accel_a_dlpf_config == params::accel_a_dlpf_config));
+      return ((m_config_registers.sample_rate_div == m_sample_rate_divider) &&
+              (dlpf_config == m_dlpf_config) &&
+              (gyro_fs_sel == m_gyro_full_scale) &&
+              (accel_fs_sel == m_accel_full_scale) &&
+              (accel_a_dlpf_config == m_accel_a_dlpf_config));
    }
 
    bool is_buffer_non_zero() const
@@ -294,7 +314,7 @@ public:
 
    bool read_failures_below_limit() const
    {
-      return (m_local_imu_health.read_failure_count < read_failures_limit);
+      return (m_local_imu_health.read_failure_count < m_read_failures_limit);
    }
 
 private:
@@ -316,17 +336,17 @@ private:
    bool is_gyro_range_plausible() const
    {
       const auto& g = m_local_imu_data.gyro_radps;
-      return ((std::fabs(g.x) <= gyro_absolute_plausibility_limit_radps) &&
-              (std::fabs(g.y) <= gyro_absolute_plausibility_limit_radps) &&
-              (std::fabs(g.z) <= gyro_absolute_plausibility_limit_radps));
+      return ((std::fabs(g.x) <= m_gyro_absolute_plausibility_limit_radps) &&
+              (std::fabs(g.y) <= m_gyro_absolute_plausibility_limit_radps) &&
+              (std::fabs(g.z) <= m_gyro_absolute_plausibility_limit_radps));
    }
 
    bool is_accel_range_plausible() const
    {
       const auto& a = m_local_imu_data.accel_mps2;
-      return ((std::fabs(a.x) <= accel_absolute_plausibility_limit_mps2) &&
-              (std::fabs(a.y) <= accel_absolute_plausibility_limit_mps2) &&
-              (std::fabs(a.z) <= accel_absolute_plausibility_limit_mps2));
+      return ((std::fabs(a.x) <= m_accel_absolute_plausibility_limit_mps2) &&
+              (std::fabs(a.y) <= m_accel_absolute_plausibility_limit_mps2) &&
+              (std::fabs(a.z) <= m_accel_absolute_plausibility_limit_mps2));
    }
 
    bool is_temp_plausible() const
@@ -336,8 +356,8 @@ private:
          return true;   // nothing to check
       }
 
-      return ((temp_min_plauisble_range < m_local_imu_data.temperature_c.value()) &&
-              (m_local_imu_data.temperature_c.value() < temp_max_plauisble_range));
+      return ((params::temp_min_plauisble_range < m_local_imu_data.temperature_c.value()) &&
+              (m_local_imu_data.temperature_c.value() < params::temp_max_plauisble_range));
    }
 
    struct config_registers
@@ -349,32 +369,28 @@ private:
       uint8_t accel_config_2;
    };
 
-   static constexpr uint8_t read_failures_limit = 5u;
-
    static constexpr uint8_t one_byte_shift  = 8u;
    static constexpr uint8_t three_bit_shift = 3u;
-
-   static constexpr float deg_to_rad = 3.14159265358979323846f / 180.0f;
-   static constexpr float g_to_mps2  = 9.80665f;
-
-   static constexpr float gyro_range_plausibility_margin_radps = 6.0f;
-   static constexpr float accel_range_plausibility_margin_mps2 = 4.0f;
-   static constexpr float temp_min_plauisble_range             = -25.0f;
-   static constexpr float temp_max_plauisble_range             = 85.0f;
-
-   static constexpr float gyro_scale  = deg_to_rad / params::gyro_sensitivity_scale_factor[params::gyro_full_scale];
-   static constexpr float accel_scale = g_to_mps2 / params::accel_sensitivity_scale_factor[params::accel_full_scale];
-
-   static constexpr float gyro_absolute_plausibility_limit_radps = (params::gyro_abs_full_scale_range_dps[params::gyro_full_scale] * deg_to_rad) +
-                                                                   gyro_range_plausibility_margin_radps;
-   static constexpr float accel_absolute_plausibility_limit_mps2 = (params::accel_abs_full_scale_range_g[params::accel_full_scale] * g_to_mps2) +
-                                                                   accel_range_plausibility_margin_mps2;
+   static constexpr float   deg_to_rad      = 3.14159265358979323846f / 180.0f;
+   static constexpr float   g_to_mps2       = 9.80665f;
 
    ImuData&                                           m_imu_data_storage;
    ImuHealth&                                         m_imu_health_storage;
    SpiMaster&                                         m_spi_master;
+   const uint8_t                                      m_read_failures_limit;
    const std::size_t                                  m_execution_period_ms;
    const std::size_t                                  m_receive_wait_timeout_ms;
+   const uint8_t                                      m_sample_rate_divider;
+   const uint8_t                                      m_dlpf_config;
+   const uint8_t                                      m_gyro_full_scale;
+   const uint8_t                                      m_accel_full_scale;
+   const uint8_t                                      m_accel_a_dlpf_config;
+   const float                                        m_gyro_range_plausibility_margin_radps;
+   const float                                        m_accel_range_plausibility_margin_mps2;
+   const float                                        m_gyro_scale;
+   const float                                        m_accel_scale;
+   const float                                        m_gyro_absolute_plausibility_limit_radps;
+   const float                                        m_accel_absolute_plausibility_limit_mps2;
    std::array<uint8_t, params::num_bytes_transaction> m_tx_buffer{};
    std::array<uint8_t, params::num_bytes_transaction> m_rx_buffer{};
    imu_sensor::ImuData                                m_local_imu_data{};

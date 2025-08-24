@@ -188,7 +188,7 @@ struct MainStateMachine
           s_init_config                           [!config_successful]                                                         = s_failure,
 
           // operational
-          s_measurement         + e_tick                                       / (reset_timer, read_data) = s_data_read_wait,
+          s_measurement         + e_tick                                       / (reset_timer, read_data)                      = s_data_read_wait,
 
           s_data_read_wait      + e_receive_done  [is_buffer_non_zero]         / convert_raw_data                              = s_data_verification,
           s_data_read_wait      + e_receive_done  [!is_buffer_non_zero]        / (set_sensor_error, count_read_failure)        = s_data_read_fail,
@@ -219,7 +219,7 @@ struct MainStateMachine
           s_hard_validation                       [!validation_successful]                                                     = s_failure,
 
           s_hard_config                           [config_successful]         / (set_operational_state, publish_health)        = s_measurement,
-          s_hard_config                           [!config_successful]        / set_hard_recovery_state                        = s_failure,
+          s_hard_config                           [!config_successful]                                                         = s_failure,
 
           // failure
           s_failure             + boost::sml::on_entry<_>                     / (set_failure_state, publish_health, reset_data),
