@@ -21,7 +21,6 @@ public:
        : m_spi_config{spi_config},
          m_chip_select{chip_select}
    {
-      disable_chip_select();
    }
 
    void prepare_for_communication()

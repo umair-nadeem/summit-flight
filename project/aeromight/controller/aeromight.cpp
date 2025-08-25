@@ -83,6 +83,11 @@ void register_tasks()
    logging_task_handle = rtos::create_task(logging_task_config);
 }
 
+void init_hardware()
+{
+   imu_task_data.spi1_chip_select.disable();
+}
+
 void setup_uart()
 {
    // logging uart (No need to call start_rx() for logging uart)
@@ -121,6 +126,8 @@ extern "C"
    {
       if (error::has_no_error())
       {
+         controller::init_hardware();
+
          // hw & rtos objects
          controller::setup_uart();
          controller::setup_queues();
