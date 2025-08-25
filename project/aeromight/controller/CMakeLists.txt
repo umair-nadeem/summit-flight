@@ -13,7 +13,7 @@ target_sources(aeromight_lib INTERFACE
 
    aeromight.cpp
    logging_task.cpp
-   sensor_acquisition_task.cpp
+   imu_task.cpp
 )
 
 target_link_libraries(aeromight_lib INTERFACE
@@ -23,7 +23,7 @@ target_link_libraries(aeromight_lib INTERFACE
    sml
 
    aeromight_boundaries
-   aeromight_sensors
+   aeromight_imu
    error
    interfaces
    mpu6500

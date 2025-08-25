@@ -1,1 +1,1 @@
-add_subdirectory(aeromight_sensors)
+add_subdirectory(aeromight_imu)

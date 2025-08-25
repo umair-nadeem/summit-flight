@@ -3,8 +3,8 @@
 #include <cstring>
 #include <stdlib.h>
 
+#include "ImuTaskData.hpp"
 #include "LoggingTaskData.hpp"
-#include "SensorAcquisitionTaskData.hpp"
 #include "aeromight_boundaries/AeromightSensorData.hpp"
 #include "error/error_record.hpp"
 #include "hw/uart/uart.hpp"
@@ -29,16 +29,16 @@ namespace controller
 {
 
 // all data
-GlobalData                global_data{};
-SensorAcquisitionTaskData sensor_acq_task_data{};
-LoggingTaskData           logging_task_data{};
+GlobalData      global_data{};
+ImuTaskData     imu_task_data{};
+LoggingTaskData logging_task_data{};
 
 // task control blocks
-rtos::TCB sensor_acq_task_tcb{};
+rtos::TCB imu_task_tcb{};
 rtos::TCB logging_task_tcb{};
 
 // task stack
-alignas(std::max_align_t) uint32_t sensor_acq_task_stack_buffer[controller::task::sensor_acq_task_stack_depth_in_words];
+alignas(std::max_align_t) uint32_t imu_task_stack_buffer[controller::task::imu_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t logging_task_stack_buffer[controller::task::logging_task_stack_depth_in_words];
 
 // queue
@@ -51,18 +51,18 @@ rtos::Semaphore logging_uart_semaphore{};
 void register_tasks()
 {
    // sensor acquisition task
-   std::memset(sensor_acq_task_stack_buffer, 0, sizeof(sensor_acq_task_stack_buffer));
+   std::memset(imu_task_stack_buffer, 0, sizeof(imu_task_stack_buffer));
 
-   rtos::RtosTaskConfig sensor_acq_task_config{
-       .func                 = sensor_acquisition_task,
-       .name                 = controller::task::sensor_acq_task_name,
-       .stack_depth_in_words = controller::task::sensor_acq_task_stack_depth_in_words,
-       .params               = static_cast<void*>(&sensor_acq_task_data),
-       .priority             = controller::task::sensor_acq_task_priority,
-       .stack_buffer         = sensor_acq_task_stack_buffer,
-       .task_block           = sensor_acq_task_tcb};
+   rtos::RtosTaskConfig imu_task_config{
+       .func                 = imu_task,
+       .name                 = controller::task::imu_task_name,
+       .stack_depth_in_words = controller::task::imu_task_stack_depth_in_words,
+       .params               = static_cast<void*>(&imu_task_data),
+       .priority             = controller::task::imu_task_priority,
+       .stack_buffer         = imu_task_stack_buffer,
+       .task_block           = imu_task_tcb};
 
-   rtos::create_task(sensor_acq_task_config);
+   rtos::create_task(imu_task_config);
 
    // logging task
    std::memset(logging_task_stack_buffer, 0, sizeof(logging_task_stack_buffer));
@@ -93,7 +93,7 @@ void setup_uart()
 
 void setup_spi()
 {
-   sensor_acq_task_data.spi1_master.prepare_for_communication();
+   imu_task_data.spi1_master.prepare_for_communication();
 }
 
 void setup_queues()

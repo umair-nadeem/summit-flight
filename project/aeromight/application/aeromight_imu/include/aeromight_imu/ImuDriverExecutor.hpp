@@ -6,14 +6,14 @@
 #include "interfaces/pcb_component/ILed.hpp"
 #include "interfaces/peripherals/IImuSensorDriver.hpp"
 
-namespace aeromight_sensors
+namespace aeromight_imu
 {
 
 template <interfaces::peripherals::IImuSensorDriver Mpu6500, interfaces::pcb_component::ILed Led, typename Logger>
-class SensorAcquisition
+class ImuDriverExecutor
 {
 public:
-   explicit SensorAcquisition(Mpu6500& mpu6500, Led& led, Logger& logger, const std::size_t period_in_ms)
+   explicit ImuDriverExecutor(Mpu6500& mpu6500, Led& led, Logger& logger, const std::size_t period_in_ms)
        : m_mpu6500{mpu6500},
          m_led{led},
          m_logger{logger},
@@ -68,4 +68,4 @@ private:
    bool              m_led_on{false};
 };
 
-}   // namespace aeromight_sensors
+}   // namespace aeromight_imu
