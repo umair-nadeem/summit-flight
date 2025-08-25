@@ -172,19 +172,19 @@ struct MainStateMachine
 
       // clang-format off
       return make_transition_table(
-          // From State          | Event          | Guard                     | Action                                         | To State
+          // From State          | Event          | Guard                      | Action                                        | To State
           // init orchestrates reset, valiation, and config composite SMs to bring sensor up
-          *s_stopped             + e_start                                    / set_reset_state                                = s_init_reset,
+          *s_stopped             + e_start                                     / set_reset_state                               = s_init_reset,
 
-          s_init_reset                                                        / set_validation_state                           = s_init_validation,
+          s_init_reset                                                         / set_validation_state                          = s_init_validation,
 
-          s_init_validation                       [validation_successful]     / set_self_test_state                            = s_self_test,
+          s_init_validation                       [validation_successful]      / set_self_test_state                           = s_self_test,
           s_init_validation                       [!validation_successful]                                                     = s_failure,
 
-          s_self_test                             [self_test_successful]      / set_config_state                               = s_init_config,
+          s_self_test                             [self_test_successful]       / set_config_state                              = s_init_config,
           s_self_test                             [!self_test_successful]                                                      = s_failure,
 
-          s_init_config                           [config_successful]         / (set_operational_state, publish_health)        = s_measurement,
+          s_init_config                           [config_successful]          / (set_operational_state, publish_health)       = s_measurement,
           s_init_config                           [!config_successful]                                                         = s_failure,
 
           // operational
@@ -205,10 +205,10 @@ struct MainStateMachine
           s_soft_recovery       + e_tick                                                                                       = s_soft_validation,
 
           s_soft_validation                       [validation_successful]                                                      = s_soft_config,
-          s_soft_validation                       [!validation_successful]                                                     = s_hard_recovery,
+          s_soft_validation                       [!validation_successful]     / (set_hard_recovery_state, publish_health)     = s_hard_recovery,
 
-          s_soft_config                           [config_successful]         / (set_operational_state, publish_health)        = s_measurement,
-          s_soft_config                           [!config_successful]        / (set_hard_recovery_state, publish_health)      = s_hard_recovery,
+          s_soft_config                           [config_successful]          / (set_operational_state, publish_health)       = s_measurement,
+          s_soft_config                           [!config_successful]         / (set_hard_recovery_state, publish_health)     = s_hard_recovery,
 
           // hard recovery re-orchestrates reset, validation and config composite SMs
           s_hard_recovery       + e_tick                                                                                       = s_hard_reset,
@@ -218,27 +218,27 @@ struct MainStateMachine
           s_hard_validation                       [validation_successful]                                                      = s_hard_config,
           s_hard_validation                       [!validation_successful]                                                     = s_failure,
 
-          s_hard_config                           [config_successful]         / (set_operational_state, publish_health)        = s_measurement,
+          s_hard_config                           [config_successful]          / (set_operational_state, publish_health)       = s_measurement,
           s_hard_config                           [!config_successful]                                                         = s_failure,
 
           // failure
-          s_failure             + boost::sml::on_entry<_>                     / (set_failure_state, publish_health, reset_data),
+          s_failure             + boost::sml::on_entry<_>                      / (set_failure_state, publish_health, reset_data),
 
-          s_self_test           + e_stop                                      / set_stopped_state                              = s_stopped,
-          s_init_reset          + e_stop                                      / set_stopped_state                              = s_stopped,
-          s_hard_reset          + e_stop                                      / set_stopped_state                              = s_stopped,
-          s_init_validation     + e_stop                                      / set_stopped_state                              = s_stopped,
-          s_soft_validation     + e_stop                                      / set_stopped_state                              = s_stopped,
-          s_hard_validation     + e_stop                                      / set_stopped_state                              = s_stopped,
-          s_init_config         + e_stop                                      / set_stopped_state                              = s_stopped,
-          s_soft_config         + e_stop                                      / set_stopped_state                              = s_stopped,
-          s_hard_config         + e_stop                                      / set_stopped_state                              = s_stopped,
-          s_measurement         + e_stop                                      / set_stopped_state                              = s_stopped,
-          s_data_read_wait      + e_stop                                      / set_stopped_state                              = s_stopped,
-          s_data_verification   + e_stop                                      / set_stopped_state                              = s_stopped,
-          s_data_read_fail      + e_stop                                      / set_stopped_state                              = s_stopped,
-          s_soft_recovery       + e_stop                                      / set_stopped_state                              = s_stopped,
-          s_hard_recovery       + e_stop                                      / set_stopped_state                              = s_stopped);
+          s_self_test           + e_stop                                       / set_stopped_state                             = s_stopped,
+          s_init_reset          + e_stop                                       / set_stopped_state                             = s_stopped,
+          s_hard_reset          + e_stop                                       / set_stopped_state                             = s_stopped,
+          s_init_validation     + e_stop                                       / set_stopped_state                             = s_stopped,
+          s_soft_validation     + e_stop                                       / set_stopped_state                             = s_stopped,
+          s_hard_validation     + e_stop                                       / set_stopped_state                             = s_stopped,
+          s_init_config         + e_stop                                       / set_stopped_state                             = s_stopped,
+          s_soft_config         + e_stop                                       / set_stopped_state                             = s_stopped,
+          s_hard_config         + e_stop                                       / set_stopped_state                             = s_stopped,
+          s_measurement         + e_stop                                       / set_stopped_state                             = s_stopped,
+          s_data_read_wait      + e_stop                                       / set_stopped_state                             = s_stopped,
+          s_data_verification   + e_stop                                       / set_stopped_state                             = s_stopped,
+          s_data_read_fail      + e_stop                                       / set_stopped_state                             = s_stopped,
+          s_soft_recovery       + e_stop                                       / set_stopped_state                             = s_stopped,
+          s_hard_recovery       + e_stop                                       / set_stopped_state                             = s_stopped);
    }
    // clang-format on
 };

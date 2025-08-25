@@ -18,8 +18,8 @@ protected:
    // parameter values
    static constexpr uint8_t sample_rate_divider                  = 0x03;
    static constexpr uint8_t dlpf_config                          = 0x02;
-   static constexpr uint8_t gyro_full_scale                      = 0x03;
-   static constexpr uint8_t accel_full_scale                     = 0x03;
+   static constexpr uint8_t gyro_full_scale                      = 0x02;
+   static constexpr uint8_t accel_full_scale                     = 0x01;
    static constexpr uint8_t accel_a_dlpf_config                  = 0x03;
    static constexpr float   gyro_range_plausibility_margin_radps = 6.0f;
    static constexpr float   accel_range_plausibility_margin_mps2 = 20.0f;

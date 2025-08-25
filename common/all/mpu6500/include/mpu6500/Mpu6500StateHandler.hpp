@@ -245,6 +245,11 @@ public:
       return m_local_imu_health.error;
    }
 
+   std::size_t get_read_failure_count() const
+   {
+      return m_local_imu_health.read_failure_count;
+   }
+
    bool validation_successful() const
    {
       return m_local_imu_health.validation_ok;

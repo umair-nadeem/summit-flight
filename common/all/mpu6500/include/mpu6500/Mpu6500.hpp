@@ -73,6 +73,11 @@ public:
    {
       return m_state_handler.get_error();
    }
+   
+   std::size_t get_read_failure_count() const
+   {
+      return m_state_handler.get_read_failure_count();
+   }
 
 private:
    static void spi_transfer_complete_callback(void* ctx)
