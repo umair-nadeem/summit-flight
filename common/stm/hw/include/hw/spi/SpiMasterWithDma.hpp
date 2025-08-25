@@ -88,9 +88,10 @@ public:
 
          m_transfer_in_progress.store(false, std::memory_order_release);
 
-         error::verify(m_transfer_complete_callback != nullptr);
-
-         m_transfer_complete_callback(m_callback_context);
+         if (m_transfer_complete_callback != nullptr)
+         {
+            m_transfer_complete_callback(m_callback_context);
+         }
       }
    }
 

@@ -41,6 +41,10 @@ rtos::TCB logging_task_tcb{};
 alignas(std::max_align_t) uint32_t imu_task_stack_buffer[controller::task::imu_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t logging_task_stack_buffer[controller::task::logging_task_stack_depth_in_words];
 
+// task handles
+TaskHandle_t imu_task_handle;
+TaskHandle_t logging_task_handle;
+
 // queue
 rtos::Queue<logging::params::logging_queue_len, sizeof(logging::params::LogBuffer)> logging_queue{};
 
@@ -62,7 +66,7 @@ void register_tasks()
        .stack_buffer         = imu_task_stack_buffer,
        .task_block           = imu_task_tcb};
 
-   rtos::create_task(imu_task_config);
+   imu_task_handle = rtos::create_task(imu_task_config);
 
    // logging task
    std::memset(logging_task_stack_buffer, 0, sizeof(logging_task_stack_buffer));
@@ -76,7 +80,7 @@ void register_tasks()
        .stack_buffer         = logging_task_stack_buffer,
        .task_block           = logging_task_tcb};
 
-   rtos::create_task(logging_task_config);
+   logging_task_handle = rtos::create_task(logging_task_config);
 }
 
 void setup_uart()
@@ -103,6 +107,12 @@ void setup_queues()
    logging_task_data.logging_queue_receiver.set_handle(logging_queue_handle);
 }
 
+void setup_task_notifications()
+{
+   imu_task_data.imu_task_notification_waiter.set_handle(imu_task_handle);
+   imu_task_data.imu_task_notifier_from_isr.set_handle(imu_task_handle);
+}
+
 }   // namespace controller
 
 extern "C"
@@ -119,6 +129,8 @@ extern "C"
 
          // tasks
          controller::register_tasks();
+
+         controller::setup_task_notifications();
 
          // start scheduler
          rtos::start_scheduler();

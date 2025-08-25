@@ -26,8 +26,8 @@ struct LoggingTaskData
           .tx_dma_stream = LL_DMA_STREAM_7,
           .rx_dma_stream = LL_DMA_STREAM_2};
 
-      std::array<uint8_t, 64u> dma_tx_buffer{};
-      std::array<uint8_t, 1u>  dummy_dma_rx_buffer{};
+      std::array<uint8_t, logging::params::max_log_len> dma_tx_buffer{};
+      std::array<uint8_t, 1u>                           dummy_dma_rx_buffer{};
 
       rtos::SemaphoreTaker  transmitter_sem_taker{};
       rtos::SemaphoreGiver  isr_sem_giver{};

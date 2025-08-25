@@ -2,11 +2,14 @@
 
 #include <array>
 
+#include "aeromight_boundaries/ImuTaskEvents.hpp"
 #include "hardware_bindings.hpp"
 #include "hw/gpio/DigitalOutput.hpp"
 #include "hw/pcb_component/Enabler.hpp"
 #include "hw/pcb_component/Led.hpp"
 #include "hw/spi/SpiMasterWithDma.hpp"
+#include "rtos/NotificationWaiter.hpp"
+#include "rtos/Notifier.hpp"
 
 extern "C"
 {
@@ -25,6 +28,12 @@ struct ImuTaskData
    hw::pcb_component::Enabler<decltype(spi1_chip_select_gpio)> spi1_chip_select{spi1_chip_select_gpio};
 
    hw::spi::SpiMasterWithDma<decltype(spi1_chip_select)> spi1_master{global_data.spi.spi1_config, spi1_chip_select};
+
+   // task notification
+   aeromight_boundaries::NotificationFlags imu_rx_complete_notification{aeromight_boundaries::pos_to_value(aeromight_boundaries::ImuTaskEvents::rx_complete)};
+
+   rtos::NotificationWaiter<aeromight_boundaries::NotificationFlags> imu_task_notification_waiter{};
+   rtos::Notifier<aeromight_boundaries::NotificationFlags>           imu_task_notifier_from_isr{imu_rx_complete_notification};
 };
 
 extern ImuTaskData imu_task_data;

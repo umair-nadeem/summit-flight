@@ -38,13 +38,16 @@ extern "C"
       constexpr float       mpu6500_gyro_range_plausibility_margin_radps = 6.0f;
       constexpr float       mpu6500_accel_range_plausibility_margin_mps2 = 20.0f;
 
-      LogClient logger_imu_driver_executor{logging::logging_queue_sender, "imu_task"};
+      LogClient logger_imu_driver_executor{logging::logging_queue_sender, "imu_runner"};
+      LogClient logger_mpu6500{logging::logging_queue_sender, "mpu6500"};
 
       mpu6500::Mpu6500<sys_time::ClockSource,
-                       decltype(data->spi1_master)>
+                       decltype(data->spi1_master),
+                       decltype(logger_mpu6500)>
           mpu6500{aeromight_boundaries::aeromight_sensor_data.imu_sensor_data_storage,
                   aeromight_boundaries::aeromight_sensor_data.imu_sensor_health_storage,
                   data->spi1_master,
+                  logger_mpu6500,
                   mpu6500_read_failures_limit,
                   task_execution_period_ms,
                   mpu6500_receive_wait_timeout_ms,
@@ -58,14 +61,23 @@ extern "C"
 
       aeromight_imu::ImuDriverExecutor<
           decltype(mpu6500),
+          decltype(data->imu_task_notification_waiter),
           decltype(data->blue_led),
           LogClient>
           imu_driver_executor{mpu6500,
+                              data->imu_task_notification_waiter,
                               data->blue_led,
                               logger_imu_driver_executor,
                               controller::task::imu_task_period_in_ms};
 
-      rtos::run_periodic_task(imu_driver_executor);
+      imu_driver_executor.start();
+
+      while (true)
+      {
+         imu_driver_executor.run_once();
+
+         vTaskDelay(pdMS_TO_TICKS(imu_driver_executor.get_period_ms()));
+      }
    }
 }
 
@@ -75,5 +87,6 @@ extern "C"
    {
       auto& data = controller::imu_task_data;
       data.spi1_master.handle_spi_transfer_complete_interrupt();
+      data.imu_task_notifier_from_isr.notify_from_isr(false);
    }
 }

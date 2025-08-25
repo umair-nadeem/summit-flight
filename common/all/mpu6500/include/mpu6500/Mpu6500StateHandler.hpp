@@ -13,7 +13,7 @@
 namespace mpu6500
 {
 
-template <interfaces::IClockSource ClockSource, typename SpiMaster>
+template <interfaces::IClockSource ClockSource, typename SpiMaster, typename Logger>
 class Mpu6500StateHandler
 {
    using ImuData   = ::boundaries::SharedData<imu_sensor::ImuData>;
@@ -23,6 +23,7 @@ public:
    explicit Mpu6500StateHandler(ImuData&          imu_data_storage,
                                 ImuHealth&        imu_health_storage,
                                 SpiMaster&        spi_master,
+                                Logger&           logger,
                                 const uint8_t     read_failures_limit,
                                 const std::size_t execution_period_ms,
                                 const std::size_t receive_wait_timeout_ms,
@@ -36,6 +37,7 @@ public:
        : m_imu_data_storage{imu_data_storage},
          m_imu_health_storage{imu_health_storage},
          m_spi_master{spi_master},
+         m_logger{logger},
          m_read_failures_limit{read_failures_limit},
          m_execution_period_ms{execution_period_ms},
          m_receive_wait_timeout_ms{receive_wait_timeout_ms},
@@ -51,6 +53,7 @@ public:
          m_gyro_absolute_plausibility_limit_radps{(params::gyro_abs_full_scale_range_dps[m_gyro_full_scale] * deg_to_rad) + m_gyro_range_plausibility_margin_radps},
          m_accel_absolute_plausibility_limit_mps2{(params::accel_abs_full_scale_range_g[m_accel_full_scale] * g_to_mps2) + m_accel_range_plausibility_margin_mps2}
    {
+      m_logger.enable();
    }
 
    void tick_timer()
@@ -66,6 +69,7 @@ public:
    void count_read_failure()
    {
       m_local_imu_health.read_failure_count++;
+      m_logger.print("read failure");
    }
 
    void reset_read_failures()
@@ -148,6 +152,7 @@ public:
    void store_id()
    {
       m_device_id = m_rx_buffer[1];
+      m_logger.printf("device id: 0x%x", m_device_id);
    }
 
    void store_config()
@@ -175,6 +180,19 @@ public:
    void publish_data()
    {
       m_imu_data_storage.update_latest(m_local_imu_data, ClockSource::now_ms());
+
+      m_data_log_counter++;
+      if ((m_data_log_counter % 250) == 0)
+      {
+         m_logger.printf("accel x: %.2f, y: %.2f, z: %.2f         gyro: x: %.2f, y: %.2f, z: %.2f, temp: %.4f",
+                         m_local_imu_data.accel_mps2.x,
+                         m_local_imu_data.accel_mps2.y,
+                         m_local_imu_data.accel_mps2.z,
+                         m_local_imu_data.gyro_radps.x,
+                         m_local_imu_data.gyro_radps.y,
+                         m_local_imu_data.gyro_radps.z,
+                         m_local_imu_data.temperature_c.value());
+      }
    }
 
    void publish_health()
@@ -198,41 +216,100 @@ public:
    void mark_validation_fail()
    {
       m_local_imu_health.validation_ok = false;
+      m_logger.print("validation failed");
    }
 
    void mark_validation_success()
    {
       m_local_imu_health.validation_ok = true;
+      m_logger.print("validation successful");
    }
 
    void mark_self_test_fail()
    {
       m_local_imu_health.self_test_ok = false;
+      m_logger.print("self-test failed");
    }
 
    void mark_self_test_pass()
    {
       m_local_imu_health.self_test_ok = true;
+      m_logger.print("self-test successful");
    }
 
    void mark_config_fail()
    {
       m_local_imu_health.config_ok = false;
+      m_logger.print("config failed");
    }
 
    void mark_config_success()
    {
       m_local_imu_health.config_ok = true;
+      m_logger.print("config successful");
    }
 
    void set_state(const imu_sensor::ImuSensorState& state)
    {
       m_local_imu_health.state = state;
+
+      switch (m_local_imu_health.state)
+      {
+         case imu_sensor::ImuSensorState::stopped:
+            m_logger.print("entered state->stopped");
+            break;
+         case imu_sensor::ImuSensorState::reset:
+            m_logger.print("entered state->reset");
+            break;
+         case imu_sensor::ImuSensorState::validation:
+            m_logger.print("entered state->validation");
+            break;
+         case imu_sensor::ImuSensorState::self_test:
+            m_logger.print("entered state->self_test");
+            break;
+         case imu_sensor::ImuSensorState::config:
+            m_logger.print("entered state->config");
+            break;
+         case imu_sensor::ImuSensorState::operational:
+            m_logger.print("entered state->operational");
+            break;
+         case imu_sensor::ImuSensorState::soft_recovery:
+            m_logger.print("entered state->soft_recovery");
+            break;
+         case imu_sensor::ImuSensorState::hard_recovery:
+            m_logger.print("entered state->hard_recovery");
+            break;
+         case imu_sensor::ImuSensorState::failure:
+            m_logger.print("entered state->failure");
+            break;
+         default:
+            error::stop_operation();
+            break;
+      }
    }
 
    void set_error(const imu_sensor::ImuSensorError& error)
    {
       m_local_imu_health.error = error;
+
+      switch (m_local_imu_health.error)
+      {
+         case imu_sensor::ImuSensorError::bus_error:
+            m_logger.print("encountered error->bus_error");
+            break;
+         case imu_sensor::ImuSensorError::sensor_error:
+            m_logger.print("entered state->sensor_error");
+            break;
+         case imu_sensor::ImuSensorError::data_error:
+            m_logger.print("entered state->data_error");
+            break;
+         case imu_sensor::ImuSensorError::none:
+            m_logger.print("entered state->none");
+            break;
+         default:
+            error::stop_operation();
+            break;
+      }
    }
 
    imu_sensor::ImuSensorState get_state() const
@@ -382,6 +459,7 @@ private:
    ImuData&                                           m_imu_data_storage;
    ImuHealth&                                         m_imu_health_storage;
    SpiMaster&                                         m_spi_master;
+   Logger&                                            m_logger;
    const uint8_t                                      m_read_failures_limit;
    const std::size_t                                  m_execution_period_ms;
    const std::size_t                                  m_receive_wait_timeout_ms;
@@ -403,6 +481,7 @@ private:
    uint8_t                                            m_device_id{};
    config_registers                                   m_config_registers{};
    std::size_t                                        m_wait_timer_ms{};
+   std::size_t                                        m_data_log_counter{};
 };
 
 }   // namespace mpu6500

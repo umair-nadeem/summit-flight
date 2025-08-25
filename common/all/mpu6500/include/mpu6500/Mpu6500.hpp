@@ -7,7 +7,7 @@
 namespace mpu6500
 {
 
-template <interfaces::IClockSource ClockSource, typename SpiMaster>
+template <interfaces::IClockSource ClockSource, typename SpiMaster, typename Logger>
 class Mpu6500
 {
    using ImuData   = ::boundaries::SharedData<imu_sensor::ImuData>;
@@ -17,6 +17,7 @@ public:
    explicit Mpu6500(ImuData&          imu_data_storage,
                     ImuHealth&        imu_health_storage,
                     SpiMaster&        spi_master,
+                    Logger&           logger,
                     const uint8_t     read_failures_limit,
                     const std::size_t execution_period_ms,
                     const std::size_t receive_wait_timeout_ms,
@@ -30,6 +31,7 @@ public:
        : m_state_handler{imu_data_storage,
                          imu_health_storage,
                          spi_master,
+                         logger,
                          read_failures_limit,
                          execution_period_ms,
                          receive_wait_timeout_ms,
@@ -41,7 +43,6 @@ public:
                          gyro_range_plausibility_margin_radps,
                          accel_range_plausibility_margin_mps2}
    {
-      spi_master.register_transfer_complete_callback(&Mpu6500::spi_transfer_complete_callback, this);
    }
 
    void execute()
@@ -80,13 +81,7 @@ public:
    }
 
 private:
-   static void spi_transfer_complete_callback(void* ctx)
-   {
-      auto* self = static_cast<Mpu6500*>(ctx);
-      self->notify_receive_complete();
-   }
-
-   using StateHandler    = Mpu6500StateHandler<ClockSource, SpiMaster>;
+   using StateHandler    = Mpu6500StateHandler<ClockSource, SpiMaster, Logger>;
    using StateMachineDef = MainStateMachine<StateHandler>;
 
    StateHandler                    m_state_handler;

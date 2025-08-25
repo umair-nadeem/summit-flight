@@ -1,0 +1,48 @@
+#pragma once
+
+#include <cstring>
+
+#include "FreeRTOS.h"
+#include "error/freertos_errors.hpp"
+#include "task.h"
+
+namespace rtos
+{
+
+template <typename EventFlags>
+class Notifier
+{
+public:
+   explicit Notifier(EventFlags flag)
+   {
+      static_assert(sizeof(EventFlags) == sizeof(uint32_t));
+      static_assert(std::is_trivially_copyable_v<EventFlags>);
+      std::memcpy(&m_flag, &flag, sizeof(m_flag));
+   }
+
+   void notify()
+   {
+      const BaseType_t result = xTaskNotify(m_task_handle, m_flag, eSetBits);
+      error::freertos_assert(result == pdTRUE);
+   }
+
+   void notify_from_isr(const bool higher_priority_task_woken)
+   {
+      BaseType_t       task_woken = (higher_priority_task_woken ? pdTRUE : pdFALSE);
+      const BaseType_t result     = xTaskNotifyFromISR(m_task_handle, m_flag, eSetBits, &task_woken);
+      portYIELD_FROM_ISR(task_woken);
+      error::freertos_assert(result == pdTRUE);
+   }
+
+   void set_handle(TaskHandle_t handle)
+   {
+      error::freertos_assert(handle != nullptr);
+      m_task_handle = handle;
+   }
+
+private:
+   uint32_t     m_flag{0};
+   TaskHandle_t m_task_handle{nullptr};
+};
+
+}   // namespace rtos

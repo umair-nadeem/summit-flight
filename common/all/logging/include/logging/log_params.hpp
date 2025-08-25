@@ -5,7 +5,7 @@
 namespace logging::params
 {
 
-static constexpr std::size_t max_log_len         = 64u;
+static constexpr std::size_t max_log_len         = 128u;
 static constexpr std::size_t logging_queue_len   = 20u;
 static constexpr std::size_t max_logger_name_len = 10u;
 
