@@ -16,7 +16,7 @@
 #define configUSE_TIME_SLICING                     1
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION    0
 #define configUSE_TICKLESS_IDLE                    0
-#define configMAX_PRIORITIES                       5
+#define configMAX_PRIORITIES                       10
 #define configMINIMAL_STACK_SIZE                   128
 #define configMAX_TASK_NAME_LEN                    16
 #define configTICK_TYPE_WIDTH_IN_BITS              TICK_TYPE_WIDTH_32_BITS
