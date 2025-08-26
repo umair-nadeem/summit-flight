@@ -83,26 +83,11 @@ void register_tasks()
    logging_task_handle = rtos::create_task(logging_task_config);
 }
 
-void init_hardware()
+void setup_semaphores()
 {
-   imu_task_data.spi1_chip_select.disable();
-}
-
-void setup_uart()
-{
-   // logging uart (No need to call start_rx() for logging uart)
    auto logging_uart_sem_handle = logging_uart_semaphore.create();
    logging_task_data.logging_uart.transmitter_sem_taker.set_handle(logging_uart_sem_handle);
    logging_task_data.logging_uart.isr_sem_giver.set_handle(logging_uart_sem_handle);
-
-   hw::uart::prepare_for_communication(logging_task_data.logging_uart.config,
-                                       std::as_bytes(std::span{logging_task_data.logging_uart.dma_tx_buffer}),
-                                       std::as_bytes(std::span{logging_task_data.logging_uart.dummy_dma_rx_buffer}));
-}
-
-void setup_spi()
-{
-   imu_task_data.spi1_master.prepare_for_communication();
 }
 
 void setup_queues()
@@ -118,6 +103,24 @@ void setup_task_notifications()
    imu_task_data.imu_task_notifier_from_isr.set_handle(imu_task_handle);
 }
 
+void init_hardware()
+{
+   imu_task_data.spi1_chip_select.disable();
+}
+
+void setup_uart()
+{
+   // logging uart (No need to call start_rx() for logging uart)
+   hw::uart::prepare_for_communication(logging_task_data.logging_uart.config,
+                                       std::as_bytes(std::span{logging_task_data.logging_uart.dma_tx_buffer}),
+                                       std::as_bytes(std::span{logging_task_data.logging_uart.dummy_dma_rx_buffer}));
+}
+
+void setup_spi()
+{
+   imu_task_data.spi1_master.prepare_for_communication();
+}
+
 }   // namespace controller
 
 extern "C"
@@ -126,17 +129,19 @@ extern "C"
    {
       if (error::has_no_error())
       {
-         controller::init_hardware();
-
-         // hw & rtos objects
-         controller::setup_uart();
+         // rtos objects
+         controller::setup_semaphores();
          controller::setup_queues();
 
+         // hw objects
+         controller::init_hardware();
+         controller::setup_uart();
          controller::setup_spi();
 
          // tasks
          controller::register_tasks();
 
+         // task notifications
          controller::setup_task_notifications();
 
          // start scheduler
