@@ -110,7 +110,7 @@ void init_hardware()
 
 void setup_uart()
 {
-   // logging uart (No need to call start_rx() for logging uart)
+   // USART1, logging uart (No need to call start_rx() for logging uart)
    hw::uart::prepare_for_communication(logging_task_data.logging_uart.config,
                                        std::as_bytes(std::span{logging_task_data.logging_uart.dma_tx_buffer}),
                                        std::as_bytes(std::span{logging_task_data.logging_uart.dummy_dma_rx_buffer}));

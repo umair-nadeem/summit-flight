@@ -26,8 +26,7 @@ struct ImuTaskData
    // SPI 1
    hw::gpio::DigitalOutput                                     spi1_chip_select_gpio{global_data.spi.spi1_chip_select, true};
    hw::pcb_component::Enabler<decltype(spi1_chip_select_gpio)> spi1_chip_select{spi1_chip_select_gpio};
-
-   hw::spi::SpiMasterWithDma<decltype(spi1_chip_select)> spi1_master{global_data.spi.spi1_config, spi1_chip_select};
+   hw::spi::SpiMasterWithDma<decltype(spi1_chip_select)>       spi1_master{global_data.spi.spi1_config, spi1_chip_select};
 
    // task notification
    aeromight_boundaries::NotificationFlags imu_rx_complete_notification{aeromight_boundaries::pos_to_value(aeromight_boundaries::ImuTaskEvents::rx_complete)};
