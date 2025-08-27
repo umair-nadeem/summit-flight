@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <cstdint>
 
 namespace interfaces
@@ -7,11 +8,6 @@ namespace interfaces
 
 template <typename T>
 concept IClockSource = requires {
-   {
-      T::now_us()
-   }
-   -> std::same_as<uint32_t>;
-
    {
       T::now_ms()
    }

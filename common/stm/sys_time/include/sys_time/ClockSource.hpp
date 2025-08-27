@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include "interfaces/IClockSource.hpp"
 
 namespace sys_time
@@ -7,24 +9,39 @@ namespace sys_time
 
 struct ClockSource
 {
-   static uint32_t now_ms() noexcept
+   static_assert(std::atomic<uint32_t>::is_always_lock_free, "atomic<uint32_t> must be lock-free on this platform");
+
+   static void init()
    {
-      return 0;
-      // return static_cast<uint64_t>(xTaskGetTickCount()) * portTICK_PERIOD_MS;
+      clock_ms.store(0, std::memory_order_relaxed);
    }
 
-   static uint32_t now_us() noexcept
+   static void tick_clock()
    {
-      return 0;
-      // Convert FreeRTOS ticks to microseconds
-      // return static_cast<uint64_t>(xTaskGetTickCount()) * portTICK_PERIOD_MS * 1000ULL;
+      clock_ms.fetch_add(1u, std::memory_order_relaxed);
+   }
+
+   static uint32_t now_ms() noexcept
+   {
+      return clock_ms.load(std::memory_order_acquire);
    }
 
    static uint32_t now_s() noexcept
    {
-      return 0;
-      // return static_cast<uint64_t>(xTaskGetTickCount()) * portTICK_PERIOD_MS / 1000ULL;
+      return (now_ms() / 1000u);
    }
+
+   static uint32_t elapsed_since(const uint32_t start_ms)
+   {
+      return now_ms() - start_ms;
+   }
+
+   static bool has_elapsed(const uint32_t start_ms, const uint32_t delta_ms)
+   {
+      return elapsed_since(start_ms) >= delta_ms;
+   }
+
+   static std::atomic<uint32_t> clock_ms;
 };
 
 static_assert(interfaces::IClockSource<ClockSource>);

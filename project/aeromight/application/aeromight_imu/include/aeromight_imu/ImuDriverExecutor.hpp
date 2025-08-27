@@ -24,6 +24,7 @@ public:
          m_led{led},
          m_logger{logger},
          m_period_in_ms{period_in_ms},
+         m_tick_notification{static_cast<uint32_t>(aeromight_boundaries::ImuTaskEvents::tick)},
          m_rx_complete_notification{static_cast<uint32_t>(aeromight_boundaries::ImuTaskEvents::rx_complete)}
    {
       error::verify(m_period_in_ms > 0);
@@ -44,14 +45,19 @@ public:
 
    void run_once()
    {
-      m_mpu6500.execute();
-
       const auto flags = m_notify_waiter.wait(m_period_in_ms);
       if (flags.has_value())
       {
+         // send rx complete event
          if (flags.value().test(m_rx_complete_notification))
          {
             m_mpu6500.notify_receive_complete();
+         }
+
+         // send tick event
+         if (flags.value().test(m_tick_notification))
+         {
+            m_mpu6500.execute();
          }
       }
 
@@ -91,6 +97,7 @@ private:
    Led&                m_led;
    Logger&             m_logger;
    const std::size_t   m_period_in_ms;
+   const uint32_t      m_tick_notification;
    const uint32_t      m_rx_complete_notification;
    std::size_t         m_led_state_duration_counter{0u};
    bool                m_led_on{false};

@@ -71,22 +71,33 @@ extern "C"
                               controller::task::imu_task_period_in_ms};
 
       imu_driver_executor.start();
+      data->imu_task_tick_timer.start();
 
       while (true)
       {
          imu_driver_executor.run_once();
-
-         vTaskDelay(pdMS_TO_TICKS(imu_driver_executor.get_period_ms()));
       }
    }
 }
 
 extern "C"
 {
+   // SPI1 RX DMA
    void DMA2_Stream0_IRQHandler()
    {
       auto& data = controller::imu_task_data;
       data.spi1_master.handle_spi_transfer_complete_interrupt();
-      data.imu_task_notifier_from_isr.notify_from_isr(false);
+      data.imu_task_rx_complete_notifier_from_isr.notify_from_isr(false);
+   }
+
+   // TIM3 (imu task tick timer)
+   void TIM3_IRQHandler(void)
+   {
+      auto& data = controller::imu_task_data;
+      if (data.imu_task_tick_timer.is_update_flag_active())
+      {
+         data.imu_task_tick_timer.clear_update_flag();
+         data.imu_task_tick_notifier_from_isr.notify_from_isr(false);
+      }
    }
 }

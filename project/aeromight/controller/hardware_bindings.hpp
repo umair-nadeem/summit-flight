@@ -2,6 +2,7 @@
 
 #include "hw/HwPin.hpp"
 #include "hw/spi/SpiConfig.hpp"
+#include "hw/timer/TimerConfig.hpp"
 
 namespace controller
 {
@@ -24,6 +25,15 @@ struct GlobalData
 
       hw::HwPin spi1_chip_select{GPIOA, LL_GPIO_PIN_4};
    } spi;
+
+   struct Timer
+   {
+      // TIM2
+      hw::timer::TimerConfig tim2_config{.timer_handle = TIM2};
+
+      // TIM3
+      hw::timer::TimerConfig tim3_config{.timer_handle = TIM3};
+   } timer;
 };
 
 extern GlobalData global_data;

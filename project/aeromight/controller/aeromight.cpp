@@ -5,6 +5,7 @@
 
 #include "ImuTaskData.hpp"
 #include "LoggingTaskData.hpp"
+#include "SysClockData.hpp"
 #include "aeromight_boundaries/AeromightSensorData.hpp"
 #include "error/error_record.hpp"
 #include "hw/uart/uart.hpp"
@@ -13,6 +14,7 @@
 #include "rtos/RtosTaskConfig.hpp"
 #include "rtos/Semaphore.hpp"
 #include "rtos/task_api.hpp"
+#include "sys_time/ClockSource.hpp"
 #include "task_params.hpp"
 
 namespace logging
@@ -32,6 +34,7 @@ namespace controller
 GlobalData      global_data{};
 ImuTaskData     imu_task_data{};
 LoggingTaskData logging_task_data{};
+SysClockData    sys_clock_data{};
 
 // task control blocks
 rtos::TCB imu_task_tcb{};
@@ -100,7 +103,8 @@ void setup_queues()
 void setup_task_notifications()
 {
    imu_task_data.imu_task_notification_waiter.set_handle(imu_task_handle);
-   imu_task_data.imu_task_notifier_from_isr.set_handle(imu_task_handle);
+   imu_task_data.imu_task_tick_notifier_from_isr.set_handle(imu_task_handle);
+   imu_task_data.imu_task_rx_complete_notifier_from_isr.set_handle(imu_task_handle);
 }
 
 void init_hardware()
@@ -121,6 +125,12 @@ void setup_spi()
    imu_task_data.spi1_master.prepare_for_communication();
 }
 
+void start_sys_clock()
+{
+   sys_time::ClockSource::init();
+   sys_clock_data.syc_clock_timer.start();
+}
+
 }   // namespace controller
 
 extern "C"
@@ -137,6 +147,9 @@ extern "C"
          controller::init_hardware();
          controller::setup_uart();
          controller::setup_spi();
+
+         // start sys clock
+         controller::start_sys_clock();
 
          // tasks
          controller::register_tasks();

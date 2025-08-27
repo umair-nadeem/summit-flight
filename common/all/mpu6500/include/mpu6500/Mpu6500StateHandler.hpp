@@ -179,12 +179,14 @@ public:
 
    void publish_data()
    {
-      m_imu_data_storage.update_latest(m_local_imu_data, ClockSource::now_ms());
+      volatile const uint32_t clock = ClockSource::now_ms();
+      m_imu_data_storage.update_latest(m_local_imu_data, clock);
 
       m_data_log_counter++;
-      if ((m_data_log_counter % 250) == 0)
+      if ((m_data_log_counter % 250u) == 0)
       {
-         m_logger.printf("accel x: %.2f, y: %.2f, z: %.2f         gyro: x: %.2f, y: %.2f, z: %.2f, temp: %.4f",
+         m_logger.printf("clock: %u   accel x: %.2f, y: %.2f, z: %.2f     |     gyro: x: %.2f, y: %.2f, z: %.2f     |     temp: %.4f",
+                         clock,
                          m_local_imu_data.accel_mps2.x,
                          m_local_imu_data.accel_mps2.y,
                          m_local_imu_data.accel_mps2.z,
