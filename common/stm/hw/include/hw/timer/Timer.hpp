@@ -1,8 +1,8 @@
 #pragma once
 
 #include "TimerConfig.hpp"
-#include "stm32f4xx_ll_tim.h"
 #include "error/error_handler.hpp"
+#include "stm32f4xx_ll_tim.h"
 
 namespace hw::timer
 {

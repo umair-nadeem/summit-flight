@@ -179,7 +179,7 @@ public:
 
    void publish_data()
    {
-      volatile const uint32_t clock = ClockSource::now_ms();
+      const volatile uint32_t clock = ClockSource::now_ms();
       m_imu_data_storage.update_latest(m_local_imu_data, clock);
 
       m_data_log_counter++;
