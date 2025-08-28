@@ -6,7 +6,7 @@
 namespace hw::spi
 {
 
-struct SpiConfig
+struct SpiWithDmaConfig
 {
    SPI_TypeDef* spi_handle;
    DMA_TypeDef* dma_handle;

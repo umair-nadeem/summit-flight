@@ -1,7 +1,7 @@
 #pragma once
 
 #include "hw/HwPin.hpp"
-#include "hw/spi/SpiConfig.hpp"
+#include "hw/spi/SpiWithDmaConfig.hpp"
 #include "hw/timer/TimerConfig.hpp"
 
 namespace controller
@@ -17,7 +17,7 @@ struct GlobalData
    struct Spi
    {
       // spi 1
-      hw::spi::SpiConfig spi1_config{
+      hw::spi::SpiWithDmaConfig spi1_config{
           .spi_handle    = SPI1,
           .dma_handle    = DMA2,
           .tx_dma_stream = LL_DMA_STREAM_3,

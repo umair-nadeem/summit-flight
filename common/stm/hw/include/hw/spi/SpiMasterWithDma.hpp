@@ -5,7 +5,7 @@
 
 #include "error/error_handler.hpp"
 #include "hw/dma/dma.hpp"
-#include "hw/spi/SpiConfig.hpp"
+#include "hw/spi/SpiWithDmaConfig.hpp"
 #include "interfaces/pcb_component/IEnabler.hpp"
 
 namespace hw::spi
@@ -17,7 +17,7 @@ class SpiMasterWithDma
    using TransferCompleteCallback = void (*)(void*);
 
 public:
-   explicit SpiMasterWithDma(SpiConfig& spi_config, ChipSelect& chip_select)
+   explicit SpiMasterWithDma(SpiWithDmaConfig& spi_config, ChipSelect& chip_select)
        : m_spi_config{spi_config},
          m_chip_select{chip_select}
    {
@@ -114,7 +114,7 @@ private:
       ::hw::dma::clear_dma_te_flag(m_spi_config.dma_handle, m_spi_config.tx_dma_stream);
    }
 
-   SpiConfig&               m_spi_config;
+   SpiWithDmaConfig&        m_spi_config;
    ChipSelect&              m_chip_select;
    TransferCompleteCallback m_transfer_complete_callback{nullptr};
    void*                    m_callback_context{nullptr};
