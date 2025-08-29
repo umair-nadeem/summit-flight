@@ -7,7 +7,7 @@
 namespace bmp390
 {
 
-template <interfaces::IClockSource ClockSource, typename SpiMaster, typename Logger>
+template <interfaces::IClockSource ClockSource, typename I2cDriver, typename Logger>
 class Bmp390
 {
    using BarometerData   = ::boundaries::SharedData<barometer_sensor::BarometerData>;
@@ -16,13 +16,13 @@ class Bmp390
 public:
    explicit Bmp390(BarometerData&    barometer_data_storage,
                    BarometerHealth&  barometer_health_storage,
-                   SpiMaster&        spi_master,
+                   I2cDriver&        i2c_driver,
                    Logger&           logger,
                    const uint8_t     read_failures_limit,
                    const std::size_t execution_period_ms)
        : m_state_handler{barometer_data_storage,
                          barometer_health_storage,
-                         spi_master,
+                         i2c_driver,
                          logger,
                          read_failures_limit,
                          execution_period_ms},
@@ -130,7 +130,7 @@ private:
       }
    };
 
-   using StateHandler    = Bmp390StateHandler<ClockSource, SpiMaster, Logger>;
+   using StateHandler    = Bmp390StateHandler<ClockSource, I2cDriver, Logger>;
    using StateMachineDef = Bmp390StateMachine<StateHandler>;
 
    StateHandler                    m_state_handler;

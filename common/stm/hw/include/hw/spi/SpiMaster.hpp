@@ -23,7 +23,10 @@ public:
    void prepare_for_communication()
    {
       // enable spi
-      LL_SPI_Enable(m_spi_config.spi_handle);
+      while (LL_SPI_IsEnabled(m_spi_config.spi_handle) == 0u)
+      {
+         LL_SPI_Enable(m_spi_config.spi_handle);
+      }
    }
 
    bool transfer8(std::span<const uint8_t> tx_buffer,
@@ -81,36 +84,6 @@ public:
       disable_chip_select();
       return true;
    }
-
-   // void spi2_test()
-   // {
-   //    // enable SPI2
-   //    LL_SPI_Enable(SPI2);
-
-   //    enable_chip_select();
-
-   //    // wait until TXE=1
-   //    while (!LL_SPI_IsActiveFlag_TXE(SPI2))
-   //    {
-   //    }
-
-   //    // write one byte
-   //    LL_SPI_TransmitData8(SPI2, 0x9A);
-
-   //    while (!LL_SPI_IsActiveFlag_RXNE(SPI2))
-   //    {
-   //    }
-
-   //    LL_SPI_ReceiveData8(SPI2);
-
-   //    // wait until BSY=0 (shifting finished)
-   //    while (LL_SPI_IsActiveFlag_BSY(SPI2))
-   //    {
-   //    }
-
-   //    // pull CS high
-   //    disable_chip_select();
-   // }
 
 private:
    void enable_chip_select()

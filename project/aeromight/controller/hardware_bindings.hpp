@@ -1,7 +1,7 @@
 #pragma once
 
 #include "hw/HwPin.hpp"
-#include "hw/spi/SpiConfig.hpp"
+#include "hw/i2c/I2cConfig.hpp"
 #include "hw/spi/SpiWithDmaConfig.hpp"
 #include "hw/timer/TimerConfig.hpp"
 
@@ -25,13 +25,14 @@ struct GlobalData
           .rx_dma_stream = LL_DMA_STREAM_0};
 
       hw::HwPin spi1_chip_select{GPIOA, LL_GPIO_PIN_4};
-
-      // SPI2
-      hw::spi::SpiConfig spi2_config{
-          .spi_handle = SPI2};
-
-      hw::HwPin spi2_chip_select{GPIOB, LL_GPIO_PIN_2};
    } spi;
+
+   struct I2c
+   {
+      // I2C1
+      hw::i2c::I2cConfig i2c1_config{
+          .i2c_handle = I2C1};
+   } i2c;
 
    struct Timer
    {

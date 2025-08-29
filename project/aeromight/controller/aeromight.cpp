@@ -129,7 +129,6 @@ void setup_task_notifications()
 void init_hardware()
 {
    imu_task_data.spi1_chip_select.disable();
-   barometer_task_data.spi2_chip_select.disable();
 }
 
 void setup_uart()
@@ -143,7 +142,7 @@ void setup_uart()
 void setup_spi()
 {
    imu_task_data.spi1_master.prepare_for_communication();
-   barometer_task_data.spi2_master.prepare_for_communication();
+   barometer_task_data.i2c_driver.prepare_for_communication();
 }
 
 void start_sys_clock()

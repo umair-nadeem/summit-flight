@@ -3,13 +3,14 @@
 #include "barometer_sensor/BarometerData.hpp"
 #include "barometer_sensor/BarometerHealth.hpp"
 #include "boundaries/SharedData.hpp"
+#include "error/error_handler.hpp"
 #include "interfaces/IClockSource.hpp"
 #include "params.hpp"
 
 namespace bmp390
 {
 
-template <interfaces::IClockSource ClockSource, typename SpiMaster, typename Logger>
+template <interfaces::IClockSource ClockSource, typename I2cDriver, typename Logger>
 class Bmp390StateHandler
 {
    using BarometerData   = ::boundaries::SharedData<barometer_sensor::BarometerData>;
@@ -18,13 +19,13 @@ class Bmp390StateHandler
 public:
    explicit Bmp390StateHandler(BarometerData&    barometer_data_storage,
                                BarometerHealth&  barometer_health_storage,
-                               SpiMaster&        spi_master,
+                               I2cDriver&        i2c_driver,
                                Logger&           logger,
                                const uint8_t     read_failures_limit,
                                const std::size_t execution_period_ms)
        : m_barometer_data_storage{barometer_data_storage},
          m_barometer_health_storage{barometer_health_storage},
-         m_spi_master{spi_master},
+         m_i2c_driver{i2c_driver},
          m_logger{logger},
          m_read_failures_limit{read_failures_limit},
          m_execution_period_ms{execution_period_ms}
@@ -33,7 +34,7 @@ public:
 
    void reset()
    {
-      m_spi_error = false;
+      m_i2c_error = false;
    }
 
    void tick_timer()
@@ -45,8 +46,7 @@ public:
    {
       m_tx_buffer[0] = 0x80 | 0x00;
       m_tx_buffer[1] = 0x00;
-      m_spi_error    = !m_spi_master.transfer8(std::span{m_tx_buffer.data(), 2u}, std::span{m_rx_buffer.data(), 2u}, 2u, 0);
-      // m_spi_master.spi2_test();
+      m_i2c_driver.read();
    }
 
    void store_id()
@@ -91,13 +91,13 @@ public:
 
    bool bus_error() const
    {
-      return m_spi_error;
+      return m_i2c_error;
    }
 
 private:
    BarometerData&                                     m_barometer_data_storage;
    BarometerHealth&                                   m_barometer_health_storage;
-   SpiMaster&                                         m_spi_master;
+   I2cDriver&                                         m_i2c_driver;
    Logger&                                            m_logger;
    const uint8_t                                      m_read_failures_limit;
    const std::size_t                                  m_execution_period_ms;
@@ -106,7 +106,7 @@ private:
    std::array<uint8_t, params::num_bytes_transaction> m_tx_buffer{};
    std::array<uint8_t, params::num_bytes_transaction> m_rx_buffer{};
    uint8_t                                            m_device_id{};
-   bool                                               m_spi_error{false};
+   bool                                               m_i2c_error{false};
    bool                                               m_state{false};
 };
 

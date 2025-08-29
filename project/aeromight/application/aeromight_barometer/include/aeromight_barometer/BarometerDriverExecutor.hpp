@@ -1,5 +1,6 @@
 #pragma once
 
+#include "error/error_handler.hpp"
 #include "interfaces/peripherals/ISensorDriver.hpp"
 
 namespace aeromight_barometer

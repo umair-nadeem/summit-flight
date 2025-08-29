@@ -29,11 +29,11 @@ extern "C"
       LogClient logger_bmp390{logging::logging_queue_sender, "bmp390"};
 
       bmp390::Bmp390<sys_time::ClockSource,
-                     decltype(data->spi2_master),
+                     decltype(data->i2c_driver),
                      LogClient>
           bmp390{aeromight_boundaries::aeromight_sensor_data.barometer_sensor_data_storage,
                  aeromight_boundaries::aeromight_sensor_data.barometer_sensor_health_storage,
-                 data->spi2_master,
+                 data->i2c_driver,
                  logger_bmp390,
                  mpu6500_read_failures_limit,
                  controller::task::barometer_task_period_in_ms};

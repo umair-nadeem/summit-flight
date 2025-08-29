@@ -27,7 +27,10 @@ public:
    {
       LL_DMA_EnableIT_TC(m_spi_config.dma_handle, m_spi_config.rx_dma_stream);
 
-      LL_SPI_Enable(m_spi_config.spi_handle);
+      while (LL_SPI_IsEnabled(m_spi_config.spi_handle) == 0u)
+      {
+         LL_SPI_Enable(m_spi_config.spi_handle);
+      }
    }
 
    void transfer(std::span<const uint8_t> tx_buffer, std::span<uint8_t> rx_buffer)
