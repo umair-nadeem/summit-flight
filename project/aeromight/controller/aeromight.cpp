@@ -3,6 +3,7 @@
 #include <cstring>
 #include <stdlib.h>
 
+#include "BarometerTaskData.hpp"
 #include "ImuTaskData.hpp"
 #include "LoggingTaskData.hpp"
 #include "SysClockData.hpp"
@@ -31,21 +32,25 @@ namespace controller
 {
 
 // all data
-GlobalData      global_data{};
-ImuTaskData     imu_task_data{};
-LoggingTaskData logging_task_data{};
-SysClockData    sys_clock_data{};
+GlobalData        global_data{};
+ImuTaskData       imu_task_data{};
+BarometerTaskData barometer_task_data{};
+LoggingTaskData   logging_task_data{};
+SysClockData      sys_clock_data{};
 
 // task control blocks
 rtos::TCB imu_task_tcb{};
+rtos::TCB barometer_task_tcb{};
 rtos::TCB logging_task_tcb{};
 
 // task stack
 alignas(std::max_align_t) uint32_t imu_task_stack_buffer[controller::task::imu_task_stack_depth_in_words];
+alignas(std::max_align_t) uint32_t barometer_task_stack_buffer[controller::task::barometer_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t logging_task_stack_buffer[controller::task::logging_task_stack_depth_in_words];
 
 // task handles
 TaskHandle_t imu_task_handle;
+TaskHandle_t barometer_task_handle;
 TaskHandle_t logging_task_handle;
 
 // queue
@@ -57,7 +62,7 @@ rtos::Semaphore logging_uart_semaphore{};
 // tasks
 void register_tasks()
 {
-   // sensor acquisition task
+   // imu task
    std::memset(imu_task_stack_buffer, 0, sizeof(imu_task_stack_buffer));
 
    rtos::RtosTaskConfig imu_task_config{
@@ -70,6 +75,20 @@ void register_tasks()
        .task_block           = imu_task_tcb};
 
    imu_task_handle = rtos::create_task(imu_task_config);
+
+   // barometer task
+   std::memset(barometer_task_stack_buffer, 0, sizeof(barometer_task_stack_buffer));
+
+   rtos::RtosTaskConfig barometer_task_config{
+       .func                 = barometer_task,
+       .name                 = controller::task::barometer_task_name,
+       .stack_depth_in_words = controller::task::barometer_task_stack_depth_in_words,
+       .params               = static_cast<void*>(&barometer_task_data),
+       .priority             = controller::task::barometer_task_priority,
+       .stack_buffer         = barometer_task_stack_buffer,
+       .task_block           = barometer_task_tcb};
+
+   barometer_task_handle = rtos::create_task(barometer_task_config);
 
    // logging task
    std::memset(logging_task_stack_buffer, 0, sizeof(logging_task_stack_buffer));
@@ -110,6 +129,7 @@ void setup_task_notifications()
 void init_hardware()
 {
    imu_task_data.spi1_chip_select.disable();
+   barometer_task_data.spi2_chip_select.disable();
 }
 
 void setup_uart()
@@ -123,6 +143,7 @@ void setup_uart()
 void setup_spi()
 {
    imu_task_data.spi1_master.prepare_for_communication();
+   barometer_task_data.spi2_master.prepare_for_communication();
 }
 
 void start_sys_clock()

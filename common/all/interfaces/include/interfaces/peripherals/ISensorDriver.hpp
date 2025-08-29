@@ -6,7 +6,7 @@ namespace interfaces::peripherals
 {
 
 template <typename C>
-concept IImuSensorDriver = requires(C c) {
+concept ISensorDriver = requires(C c) {
    {
       c.start()
    }
@@ -19,11 +19,6 @@ concept IImuSensorDriver = requires(C c) {
 
    {
       c.execute()
-   }
-   -> std::same_as<void>;
-
-   {
-      c.notify_receive_complete()
    }
    -> std::same_as<void>;
 };

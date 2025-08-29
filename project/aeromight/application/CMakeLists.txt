@@ -1,1 +1,2 @@
+add_subdirectory(aeromight_barometer)
 add_subdirectory(aeromight_imu)

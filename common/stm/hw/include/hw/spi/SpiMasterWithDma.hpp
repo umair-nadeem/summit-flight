@@ -33,6 +33,7 @@ public:
    void transfer(std::span<const uint8_t> tx_buffer, std::span<uint8_t> rx_buffer)
    {
       error::verify(!m_transfer_in_progress.load(std::memory_order_acquire));
+      error::verify(tx_buffer.data() != rx_buffer.data());
       error::verify(tx_buffer.size() == rx_buffer.size());
       error::verify(!tx_buffer.empty());
       m_transfer_in_progress.store(true, std::memory_order_release);

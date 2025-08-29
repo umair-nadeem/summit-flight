@@ -5,13 +5,14 @@
 #include "aeromight_boundaries/ImuTaskEvents.hpp"
 #include "error/error_handler.hpp"
 #include "interfaces/pcb_component/ILed.hpp"
-#include "interfaces/peripherals/IImuSensorDriver.hpp"
+#include "interfaces/peripherals/ISensorDriver.hpp"
 #include "interfaces/rtos/INotificationWaiter.hpp"
+#include "sys_time/ClockSource.hpp"
 
 namespace aeromight_imu
 {
 
-template <interfaces::peripherals::IImuSensorDriver                                      Mpu6500,
+template <interfaces::peripherals::ISensorDriver                                         Mpu6500,
           interfaces::rtos::INotificationWaiter<aeromight_boundaries::NotificationFlags> NotificationWaiter,
           interfaces::pcb_component::ILed                                                Led,
           typename Logger>
@@ -58,10 +59,9 @@ public:
          if (flags.value().test(m_tick_notification))
          {
             m_mpu6500.execute();
+            blink_led();
          }
       }
-
-      blink_led();
    }
 
    std::size_t get_period_ms() const

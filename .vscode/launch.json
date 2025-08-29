@@ -15,7 +15,7 @@
             "interface": "swd",
             "servertype": "openocd",
             "runToEntryPoint": "main",
-            "svdFile": "${workspaceFolder}/platform/stm32f411/STM32F411.svd",
+            "svdFile": "${workspaceFolder}/external/stm32f411/STM32F411.svd",
             "configFiles": [
             "interface/stlink.cfg",
             "target/stm32f4x.cfg"
