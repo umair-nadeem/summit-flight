@@ -25,7 +25,8 @@ void CpuCycleTimer::start_measurement()
 
 bool CpuCycleTimer::timeout_occurred() const
 {
-   return (static_cast<uint32_t>(DWT->CYCCNT - m_start_cycle_count) > m_delay_cycle_count);
+   const uint32_t elapsed_cycles = static_cast<uint32_t>(DWT->CYCCNT - m_start_cycle_count);
+   return (elapsed_cycles > m_delay_cycle_count);
 }
 
 }   // namespace hw::timer
