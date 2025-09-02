@@ -145,6 +145,7 @@ public:
    void read_data()
    {
       m_tx_buffer.fill(0);
+      m_rx_buffer.fill(0);
       m_tx_buffer[0] = get_read_spi_command(params::accel_xout_h_reg);
       m_spi_master.transfer(std::span{m_tx_buffer}, std::span{m_rx_buffer});
    }

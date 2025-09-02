@@ -44,9 +44,7 @@ public:
 
    void read_id()
    {
-      m_tx_buffer[0] = 0x80 | 0x00;
-      m_tx_buffer[1] = 0x00;
-      m_i2c_driver.read();
+      m_i2c_driver.read(params::default_i2c_address, 0x00, std::span{m_rx_buffer.data(), 1u});
    }
 
    void store_id()

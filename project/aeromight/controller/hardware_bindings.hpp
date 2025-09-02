@@ -31,7 +31,8 @@ struct GlobalData
    {
       // I2C1
       hw::i2c::I2cConfig i2c1_config{
-          .i2c_handle = I2C1};
+          .i2c_handle   = I2C1,
+          .frequency_hz = 100'000u};
    } i2c;
 
    struct Timer

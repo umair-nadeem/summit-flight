@@ -96,9 +96,16 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
+  // set fault masks
   SCB->SHCSR |= (SCB_SHCSR_MEMFAULTENA_Msk |
                  SCB_SHCSR_BUSFAULTENA_Msk |
                  SCB_SHCSR_USGFAULTENA_Msk);
+
+  // enable DWT cycle counter
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  DWT->CYCCNT = 0;                       // reset
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;   // enable
+
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
