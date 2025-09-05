@@ -12,9 +12,9 @@
 namespace aeromight_imu
 {
 
-template <interfaces::peripherals::ISensorDriver                                         Mpu6500,
-          interfaces::rtos::INotificationWaiter<aeromight_boundaries::NotificationFlags> NotificationWaiter,
-          interfaces::pcb_component::ILed                                                Led,
+template <interfaces::peripherals::ISensorDriver                                            Mpu6500,
+          interfaces::rtos::INotificationWaiter<aeromight_boundaries::ImuNotificationFlags> NotificationWaiter,
+          interfaces::pcb_component::ILed                                                   Led,
           typename Logger>
 class ImuDriverExecutor
 {
@@ -25,8 +25,8 @@ public:
          m_led{led},
          m_logger{logger},
          m_period_in_ms{period_in_ms},
-         m_tick_notification{static_cast<uint32_t>(aeromight_boundaries::ImuTaskEvents::tick)},
-         m_rx_complete_notification{static_cast<uint32_t>(aeromight_boundaries::ImuTaskEvents::rx_complete)}
+         m_tick_notification{static_cast<uint8_t>(aeromight_boundaries::ImuTaskEvents::tick)},
+         m_rx_complete_notification{static_cast<uint8_t>(aeromight_boundaries::ImuTaskEvents::rx_complete)}
    {
       error::verify(m_period_in_ms > 0);
       m_logger.enable();
@@ -97,8 +97,8 @@ private:
    Led&                m_led;
    Logger&             m_logger;
    const std::size_t   m_period_in_ms;
-   const uint32_t      m_tick_notification;
-   const uint32_t      m_rx_complete_notification;
+   const uint8_t       m_tick_notification;
+   const uint8_t       m_rx_complete_notification;
    std::size_t         m_led_state_duration_counter{0u};
    bool                m_led_on{false};
 };

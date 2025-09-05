@@ -27,9 +27,8 @@ extern "C"
 
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
-      constexpr std::size_t task_execution_period_ms                     = controller::task::imu_task_period_in_ms;
-      constexpr std::size_t mpu6500_receive_wait_timeout_ms              = 2u * task_execution_period_ms;
-      constexpr uint8_t     mpu6500_read_failures_limit                  = 5;
+      constexpr std::size_t mpu6500_receive_wait_timeout_ms              = 2u * controller::task::imu_task_period_in_ms;
+      constexpr uint8_t     mpu6500_read_failures_limit                  = 5u;
       constexpr uint8_t     mpu6500_sample_rate_divider                  = 0x03;
       constexpr uint8_t     mpu6500_dlpf_config                          = 0x02;
       constexpr uint8_t     mpu6500_gyro_full_scale                      = 0x03;
@@ -49,7 +48,7 @@ extern "C"
                   data->spi1_master,
                   logger_mpu6500,
                   mpu6500_read_failures_limit,
-                  task_execution_period_ms,
+                  controller::task::imu_task_period_in_ms,
                   mpu6500_receive_wait_timeout_ms,
                   mpu6500_sample_rate_divider,
                   mpu6500_dlpf_config,

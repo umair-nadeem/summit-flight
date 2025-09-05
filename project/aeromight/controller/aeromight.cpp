@@ -121,9 +121,14 @@ void setup_queues()
 
 void setup_task_notifications()
 {
+   // imu task
    imu_task_data.imu_task_notification_waiter.set_handle(imu_task_handle);
    imu_task_data.imu_task_tick_notifier_from_isr.set_handle(imu_task_handle);
    imu_task_data.imu_task_rx_complete_notifier_from_isr.set_handle(imu_task_handle);
+
+   // barometer task
+   barometer_task_data.barometer_task_notification_waiter.set_handle(barometer_task_handle);
+   barometer_task_data.barometer_task_rx_complete_notifier_from_isr.set_handle(barometer_task_handle);
 }
 
 void init_hardware()
@@ -142,6 +147,10 @@ void setup_uart()
 void setup_spi()
 {
    imu_task_data.spi1_master.prepare_for_communication();
+}
+
+void setup_i2c()
+{
    barometer_task_data.i2c_driver.prepare_for_communication();
 }
 
@@ -167,6 +176,7 @@ extern "C"
          controller::init_hardware();
          controller::setup_uart();
          controller::setup_spi();
+         controller::setup_i2c();
 
          // start sys clock
          controller::start_sys_clock();

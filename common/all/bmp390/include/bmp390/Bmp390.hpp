@@ -19,13 +19,15 @@ public:
                    I2cDriver&        i2c_driver,
                    Logger&           logger,
                    const uint8_t     read_failures_limit,
-                   const std::size_t execution_period_ms)
+                   const std::size_t execution_period_ms,
+                   const std::size_t receive_wait_timeout_ms)
        : m_state_handler{barometer_data_storage,
                          barometer_health_storage,
                          i2c_driver,
                          logger,
                          read_failures_limit,
-                         execution_period_ms},
+                         execution_period_ms,
+                         receive_wait_timeout_ms},
          m_logger{logger}
    {
       m_logger.enable();
@@ -46,6 +48,11 @@ public:
    void execute()
    {
       m_state_machine.process_event(typename StateMachineDef::EventTick{});
+   }
+
+   void notify_receive_complete()
+   {
+      m_state_machine.process_event(typename StateMachineDef::EventReceiveDone{});
    }
 
 private:
@@ -76,6 +83,10 @@ private:
       };
 
       struct EventStop
+      {
+      };
+
+      struct EventReceiveDone
       {
       };
 

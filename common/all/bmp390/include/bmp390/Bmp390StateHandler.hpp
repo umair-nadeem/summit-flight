@@ -22,13 +22,15 @@ public:
                                I2cDriver&        i2c_driver,
                                Logger&           logger,
                                const uint8_t     read_failures_limit,
-                               const std::size_t execution_period_ms)
+                               const std::size_t execution_period_ms,
+                               const std::size_t receive_wait_timeout_ms)
        : m_barometer_data_storage{barometer_data_storage},
          m_barometer_health_storage{barometer_health_storage},
          m_i2c_driver{i2c_driver},
          m_logger{logger},
          m_read_failures_limit{read_failures_limit},
-         m_execution_period_ms{execution_period_ms}
+         m_execution_period_ms{execution_period_ms},
+         m_receive_wait_timeout_ms{receive_wait_timeout_ms}
    {
    }
 
@@ -190,6 +192,7 @@ private:
    Logger&                                            m_logger;
    const uint8_t                                      m_read_failures_limit;
    const std::size_t                                  m_execution_period_ms;
+   const std::size_t                                  m_receive_wait_timeout_ms;
    barometer_sensor::BarometerData                    m_local_barometer_data{};
    barometer_sensor::BarometerHealth                  m_local_barometer_health{};
    std::array<uint8_t, params::num_bytes_transaction> m_tx_buffer{};

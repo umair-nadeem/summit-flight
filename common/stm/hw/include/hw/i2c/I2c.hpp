@@ -12,6 +12,8 @@ namespace hw::i2c
 
 class I2c
 {
+   using ReceiveCompleteCallback = void (*)(void*);
+
 public:
    explicit I2c(I2cConfig& config)
        : m_i2c_config{config}
@@ -216,6 +218,11 @@ public:
                if (m_rx_index == rx_length)
                {
                   stop(true);   // rx data read complete
+
+                  if (m_receive_complete_callback != nullptr)
+                  {
+                     m_receive_complete_callback(m_callback_context);
+                  }
                }
             }
             else
@@ -251,6 +258,13 @@ public:
    bool has_error() const
    {
       return (m_state == I2cState::error);
+   }
+
+   void register_receive_complete_callback(const ReceiveCompleteCallback callback, void* context)
+   {
+      error::verify(callback != nullptr);
+      m_receive_complete_callback = callback;
+      m_callback_context          = context;
    }
 
 private:
@@ -334,6 +348,8 @@ private:
 
    // transaction context
    I2cConfig&               m_i2c_config;
+   ReceiveCompleteCallback  m_receive_complete_callback{nullptr};
+   void*                    m_callback_context{nullptr};
    uint8_t                  m_current_i2c_addr{0};
    std::span<const uint8_t> m_tx_buffer{};
    std::span<uint8_t>       m_rx_buffer{};

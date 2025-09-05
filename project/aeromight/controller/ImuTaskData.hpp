@@ -33,12 +33,12 @@ struct ImuTaskData
    hw::spi::SpiMasterWithDma<decltype(spi1_chip_select)>       spi1_master{global_data.spi.spi1_config, spi1_chip_select};
 
    // task notification
-   aeromight_boundaries::NotificationFlags imu_task_tick_notification{aeromight_boundaries::pos_to_value(aeromight_boundaries::ImuTaskEvents::tick)};
-   aeromight_boundaries::NotificationFlags imu_rx_complete_notification{aeromight_boundaries::pos_to_value(aeromight_boundaries::ImuTaskEvents::rx_complete)};
+   aeromight_boundaries::ImuNotificationFlags imu_task_tick_notification{aeromight_boundaries::pos_to_value(aeromight_boundaries::ImuTaskEvents::tick)};
+   aeromight_boundaries::ImuNotificationFlags imu_rx_complete_notification{aeromight_boundaries::pos_to_value(aeromight_boundaries::ImuTaskEvents::rx_complete)};
 
-   rtos::NotificationWaiter<aeromight_boundaries::NotificationFlags> imu_task_notification_waiter{};
-   rtos::Notifier<aeromight_boundaries::NotificationFlags>           imu_task_tick_notifier_from_isr{imu_task_tick_notification};
-   rtos::Notifier<aeromight_boundaries::NotificationFlags>           imu_task_rx_complete_notifier_from_isr{imu_rx_complete_notification};
+   rtos::NotificationWaiter<aeromight_boundaries::ImuNotificationFlags> imu_task_notification_waiter{};
+   rtos::Notifier<aeromight_boundaries::ImuNotificationFlags>           imu_task_tick_notifier_from_isr{imu_task_tick_notification};
+   rtos::Notifier<aeromight_boundaries::ImuNotificationFlags>           imu_task_rx_complete_notifier_from_isr{imu_rx_complete_notification};
 };
 
 extern ImuTaskData imu_task_data;

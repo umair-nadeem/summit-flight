@@ -6,6 +6,7 @@
 #include "rtos/QueueSender.hpp"
 #include "rtos/periodic_task.hpp"
 #include "sys_time/ClockSource.hpp"
+#include "task_params.hpp"
 
 namespace logging
 {
@@ -24,7 +25,8 @@ extern "C"
 
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
-      constexpr uint8_t mpu6500_read_failures_limit = 5;
+      constexpr std::size_t bmp390_receive_wait_timeout_ms = 2u * controller::task::barometer_task_period_in_ms;
+      constexpr uint8_t     bmp390_read_failures_limit     = 5u;
 
       LogClient logger_bmp390{logging::logging_queue_sender, "bmp390"};
 
@@ -35,15 +37,27 @@ extern "C"
                  aeromight_boundaries::aeromight_sensor_data.barometer_sensor_health_storage,
                  data->i2c_driver,
                  logger_bmp390,
-                 mpu6500_read_failures_limit,
-                 controller::task::barometer_task_period_in_ms};
+                 bmp390_read_failures_limit,
+                 controller::task::barometer_task_period_in_ms,
+                 bmp390_receive_wait_timeout_ms};
 
-      aeromight_barometer::BarometerDriverExecutor<decltype(bmp390)> barometer_driver_executor{bmp390,
-                                                                                               controller::task::barometer_task_period_in_ms};
+      aeromight_barometer::BarometerDriverExecutor<decltype(bmp390),
+                                                   decltype(data->barometer_task_notification_waiter)>
+          barometer_driver_executor{bmp390,
+                                    data->barometer_task_notification_waiter,
+                                    controller::task::barometer_task_period_in_ms};
 
+      data->i2c_driver.register_receive_complete_callback(&i2c1_receive_complete_callback, nullptr);
       barometer_driver_executor.start();
       rtos::run_periodic_task(barometer_driver_executor);
    }
+}
+
+// I2C1 rx complete (called from ISR)
+void i2c1_receive_complete_callback([[maybe_unused]] void* p)
+{
+   auto& data = controller::barometer_task_data;
+   data.barometer_task_rx_complete_notifier_from_isr.notify_from_isr(false);
 }
 
 extern "C"
