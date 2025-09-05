@@ -15,7 +15,7 @@ static constexpr std::size_t       imu_task_period_in_ms{4u};
 
 // Barometer Task
 static constexpr const char* const barometer_task_name{"baro_task"};
-static constexpr std::size_t       barometer_task_stack_size_in_bytes{2048u};
+static constexpr std::size_t       barometer_task_stack_size_in_bytes{4096u};
 static constexpr std::size_t       barometer_task_stack_depth_in_words{barometer_task_stack_size_in_bytes / sizeof(uint32_t)};
 static constexpr std::size_t       barometer_task_priority{4u};
 static constexpr std::size_t       barometer_task_period_in_ms{40u};

@@ -32,24 +32,51 @@ public:
    {
    }
 
-   void reset()
-   {
-      m_i2c_error = false;
-   }
-
    void tick_timer()
    {
-      m_state = true;
+      m_wait_timer_ms += m_execution_period_ms;
+   }
+
+   void reset_timer()
+   {
+      m_wait_timer_ms = 0;
+   }
+
+   void count_read_failure()
+   {
+      m_local_barometer_health.read_failure_count++;
+      m_logger.print("read failure");
+   }
+
+   void reset_read_failures()
+   {
+      m_local_barometer_health.read_failure_count = 0;
+   }
+
+   void soft_reset()
+   {
+      m_tx_buffer[0] = params::cmd_reg;
+      m_tx_buffer[1] = params::CmdReg::soft_reset;
+      m_i2c_error    = !m_i2c_driver.write(params::default_i2c_address, std::span{m_tx_buffer.data(), 2u});
    }
 
    void read_id()
    {
-      m_i2c_error = !m_i2c_driver.read(params::default_i2c_address, std::span{m_rx_buffer.data(), 1u}, 0x00);
+      m_i2c_error = !m_i2c_driver.read(params::default_i2c_address, std::span{m_rx_buffer.data(), 1u}, params::chip_id_reg);
+   }
+
+   void write_config()
+   {
+      m_tx_buffer[0] = params::pwr_ctrl_reg;
+      m_tx_buffer[1] = params::PwrCtrlReg::pressure_sensor_enable_mask |
+                       params::PwrCtrlReg::temperature_sensor_enable_mask |
+                       params::PwrCtrlReg::normal_mode_mask;
+      m_i2c_error = !m_i2c_driver.write(params::default_i2c_address, std::span{m_tx_buffer.data(), 2u});
    }
 
    void read_data()
    {
-      m_i2c_error = !m_i2c_driver.read(params::default_i2c_address, std::span{m_rx_buffer.data(), 6u}, 0x04);
+      m_i2c_error = !m_i2c_driver.read(params::default_i2c_address, std::span{m_rx_buffer.data(), params::num_bytes_data}, params::pressure_xlsb_reg);
    }
 
    void store_id()
@@ -168,7 +195,7 @@ private:
    std::array<uint8_t, params::num_bytes_transaction> m_rx_buffer{};
    uint8_t                                            m_device_id{};
    bool                                               m_i2c_error{false};
-   bool                                               m_state{false};
+   std::size_t                                        m_wait_timer_ms{};
    std::size_t                                        m_data_log_counter{};
 };
 

@@ -175,10 +175,10 @@ public:
          case I2cState::addr_flag_wait_for_data:
             if (LL_I2C_IsActiveFlag_ADDR(m_i2c_config.i2c_handle) == 1u)
             {
+               LL_I2C_ClearFlag_ADDR(m_i2c_config.i2c_handle);
+
                if (read_transaction)
                {
-                  LL_I2C_ClearFlag_ADDR(m_i2c_config.i2c_handle);
-
                   // for single-byte read, NACK is made before ADDR is cleared
                   if (m_rx_buffer.size() == 1u)
                   {
@@ -229,7 +229,10 @@ public:
 
                if (m_tx_index == tx_length)
                {
-                  stop(true);   // tx data write complete
+                  if (LL_I2C_IsActiveFlag_BTF(m_i2c_config.i2c_handle))
+                  {
+                     stop(true);   // tx data write complete
+                  }
                }
             }
             break;
@@ -253,6 +256,7 @@ public:
 private:
    void stop(const bool success)
    {
+      LL_I2C_GenerateStopCondition(m_i2c_config.i2c_handle);
       clear_status();
 
       // clear any spurious byte lingering around
