@@ -100,4 +100,4 @@ extern "C"
          data.imu_task_tick_notifier_from_isr.notify_from_isr(false);
       }
    }
-}
+}   // extern "C"

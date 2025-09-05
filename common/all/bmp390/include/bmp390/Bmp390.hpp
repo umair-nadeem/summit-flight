@@ -53,11 +53,13 @@ private:
    struct Bmp390StateMachine
    {
       // states
-      static constexpr auto s_stopped   = boost::sml::state<class StateStopped>;
-      static constexpr auto s_read_id   = boost::sml::state<class StateReadId>;
-      static constexpr auto s_verify_id = boost::sml::state<class StateVerifyId>;
-      static constexpr auto s_config    = boost::sml::state<class StateConfig>;
-      static constexpr auto s_failure   = boost::sml::state<class StateFailure>;
+      static constexpr auto s_stopped        = boost::sml::state<class StateStopped>;
+      static constexpr auto s_read_id        = boost::sml::state<class StateReadId>;
+      static constexpr auto s_verify_id      = boost::sml::state<class StateVerifyId>;
+      static constexpr auto s_config         = boost::sml::state<class StateConfig>;
+      static constexpr auto s_measurement    = boost::sml::state<class StateMeasurement>;
+      static constexpr auto s_data_read_wait = boost::sml::state<class StateDataReadWait>;
+      static constexpr auto s_failure        = boost::sml::state<class StateFailure>;
 
       // events
       struct EventTick
@@ -89,8 +91,17 @@ private:
          static constexpr auto store_id = [](StateHandler& state)
          { state.store_id(); };
 
-         static constexpr auto set_config_state = [](StateHandler& state)
-         { state.set_config_state(); };
+         static constexpr auto read_data = [](StateHandler& state)
+         { state.read_data(); };
+
+         static constexpr auto convert_raw_data = [](StateHandler& state)
+         { state.convert_raw_data(); };
+
+         static constexpr auto set_validation_state = [](StateHandler& state)
+         { state.set_state(barometer_sensor::BarometerSensorState::validation); };
+
+         static constexpr auto set_operational_state = [](StateHandler& state)
+         { state.set_state(barometer_sensor::BarometerSensorState::operational); };
 
          static constexpr auto set_bus_error = [](StateHandler& state)
          { state.set_error(barometer_sensor::BarometerSensorError::bus_error); };
@@ -115,16 +126,18 @@ private:
          // clang-format off
          return make_transition_table(
              // From State  | Event   | Guard                    | Action                                  | To State
-             *s_stopped     + e_start               / reset                          = s_read_id,
+             *s_stopped         + e_start                / (reset, set_validation_state)                      = s_read_id,
 
-             s_read_id      + e_tick                / read_id                         = s_verify_id,
+             s_read_id          + e_tick                 / read_id                         = s_verify_id,
 
-             s_verify_id              [bus_error]    / set_bus_error                = s_failure,
-             s_verify_id              [!id_matched] / (store_id, set_sensor_error)       = s_failure,
-             s_verify_id              [id_matched]   / (store_id, set_config_state)     = s_config,
+             s_verify_id        + e_tick  [bus_error]    / set_bus_error                = s_failure,
+             s_verify_id        + e_tick  [!id_matched]  / (store_id, set_sensor_error)       = s_failure,
+             s_verify_id        + e_tick  [id_matched]   / (store_id, set_operational_state)     = s_measurement,
 
-             s_config        + e_tick                 / tick_timer,
-             s_failure      + e_tick                 / tick_timer
+             s_measurement           + e_tick                 / read_data                        = s_data_read_wait,
+             s_data_read_wait   + e_tick                 / convert_raw_data                 = s_measurement,
+
+             s_failure          + e_tick                 / tick_timer
             );
          // clang-format on
       }

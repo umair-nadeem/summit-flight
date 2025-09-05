@@ -45,3 +45,21 @@ extern "C"
       rtos::run_periodic_task(barometer_driver_executor);
    }
 }
+
+extern "C"
+{
+   // I2C1 Event
+   void I2C1_EV_IRQHandler(void)
+   {
+      auto& data = controller::barometer_task_data;
+      data.i2c_driver.handle_i2c_event_interrupt();
+   }
+
+   // I2C1 Error
+   void I2C1_ER_IRQHandler(void)
+   {
+      auto& data = controller::barometer_task_data;
+      data.i2c_driver.handle_i2c_error_interrupt();
+   }
+
+}   // extern "C"

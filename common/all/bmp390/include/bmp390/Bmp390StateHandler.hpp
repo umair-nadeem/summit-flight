@@ -44,7 +44,12 @@ public:
 
    void read_id()
    {
-      m_i2c_driver.read(params::default_i2c_address, 0x00, std::span{m_rx_buffer.data(), 1u});
+      m_i2c_error = !m_i2c_driver.read(params::default_i2c_address, std::span{m_rx_buffer.data(), 1u}, 0x00);
+   }
+
+   void read_data()
+   {
+      m_i2c_error = !m_i2c_driver.read(params::default_i2c_address, std::span{m_rx_buffer.data(), 6u}, 0x04);
    }
 
    void store_id()
@@ -53,9 +58,67 @@ public:
       m_logger.printf("device id: 0x%x", m_device_id);
    }
 
-   void set_config_state()
+   void convert_raw_data()
    {
-      m_state = true;
+      uint32_t press_raw = (static_cast<uint32_t>(m_rx_buffer[2]) << 16) |
+                           (static_cast<uint32_t>(m_rx_buffer[1]) << 8) |
+                           (static_cast<uint32_t>(m_rx_buffer[0]));
+
+      uint32_t temp_raw = (static_cast<uint32_t>(m_rx_buffer[5]) << 16) |
+                          (static_cast<uint32_t>(m_rx_buffer[4]) << 8) |
+                          (static_cast<uint32_t>(m_rx_buffer[3]));
+
+      m_local_barometer_data.pressure_hpa  = static_cast<float>(press_raw >> 4u);
+      m_local_barometer_data.temperature_c = static_cast<float>(temp_raw >> 4u);
+
+      const volatile uint32_t clock = ClockSource::now_ms();
+      m_data_log_counter++;
+      if ((m_data_log_counter % 25u) == 0)
+      {
+         m_logger.printf("clock: %u   pressure: %.2f     |     temperature: %.2f",
+                         clock,
+                         m_local_barometer_data.pressure_hpa,
+                         m_local_barometer_data.temperature_c.value());
+      }
+   }
+
+   void set_state(const barometer_sensor::BarometerSensorState state)
+   {
+      m_local_barometer_health.state = state;
+
+      switch (m_local_barometer_health.state)
+      {
+         case barometer_sensor::BarometerSensorState::stopped:
+            m_logger.print("entered state->stopped");
+            break;
+         case barometer_sensor::BarometerSensorState::reset:
+            m_logger.print("entered state->reset");
+            break;
+         case barometer_sensor::BarometerSensorState::validation:
+            m_logger.print("entered state->validation");
+            break;
+         case barometer_sensor::BarometerSensorState::self_test:
+            m_logger.print("entered state->self_test");
+            break;
+         case barometer_sensor::BarometerSensorState::config:
+            m_logger.print("entered state->config");
+            break;
+         case barometer_sensor::BarometerSensorState::operational:
+            m_logger.print("entered state->operational");
+            break;
+         case barometer_sensor::BarometerSensorState::soft_recovery:
+            m_logger.print("entered state->soft_recovery");
+            break;
+         case barometer_sensor::BarometerSensorState::hard_recovery:
+            m_logger.print("entered state->hard_recovery");
+            break;
+         case barometer_sensor::BarometerSensorState::failure:
+            m_logger.print("entered state->failure");
+            break;
+         default:
+            error::stop_operation();
+            break;
+      }
    }
 
    void set_error(const barometer_sensor::BarometerSensorError error)
@@ -84,7 +147,7 @@ public:
 
    bool id_matched() const
    {
-      return (m_rx_buffer[1] == params::device_id);
+      return (m_rx_buffer[0] == params::device_id);
    }
 
    bool bus_error() const
@@ -106,6 +169,7 @@ private:
    uint8_t                                            m_device_id{};
    bool                                               m_i2c_error{false};
    bool                                               m_state{false};
+   std::size_t                                        m_data_log_counter{};
 };
 
 }   // namespace bmp390
