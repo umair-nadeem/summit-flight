@@ -286,6 +286,7 @@ public:
             m_logger.print("entered state->failure");
             break;
          default:
+            m_logger.print("entered unexpected state");
             error::stop_operation();
             break;
       }
@@ -293,23 +294,22 @@ public:
 
    void set_error(const imu_sensor::ImuSensorError& error)
    {
-      m_local_imu_health.error = error;
+      m_local_imu_health.error.set(static_cast<uint8_t>(error));
 
-      switch (m_local_imu_health.error)
+      switch (error)
       {
          case imu_sensor::ImuSensorError::bus_error:
             m_logger.print("encountered error->bus_error");
             break;
          case imu_sensor::ImuSensorError::sensor_error:
-            m_logger.print("entered state->sensor_error");
+            m_logger.print("encountered error->sensor_error");
             break;
          case imu_sensor::ImuSensorError::data_error:
-            m_logger.print("entered state->data_error");
+            m_logger.print("encountered error->data_error");
             break;
-         case imu_sensor::ImuSensorError::none:
-            m_logger.print("entered state->none");
-            break;
+         case imu_sensor::ImuSensorError::max_error:
          default:
+            m_logger.print("encountered unexpected error");
             error::stop_operation();
             break;
       }
@@ -320,7 +320,7 @@ public:
       return m_local_imu_health.state;
    }
 
-   imu_sensor::ImuSensorError get_error() const
+   imu_sensor::ImuHealth::ErrorBits get_error() const
    {
       return m_local_imu_health.error;
    }

@@ -143,6 +143,7 @@ public:
             m_logger.print("entered state->failure");
             break;
          default:
+            m_logger.print("entered unexpected state");
             error::stop_operation();
             break;
       }
@@ -150,23 +151,23 @@ public:
 
    void set_error(const barometer_sensor::BarometerSensorError error)
    {
-      m_local_barometer_health.error = error;
+      m_local_barometer_health.error.set(static_cast<uint8_t>(error));
 
-      switch (m_local_barometer_health.error)
+      switch (error)
       {
          case barometer_sensor::BarometerSensorError::bus_error:
             m_logger.print("encountered error->bus_error");
             break;
          case barometer_sensor::BarometerSensorError::sensor_error:
-            m_logger.print("entered state->sensor_error");
+            m_logger.print("encountered error->sensor_error");
             break;
          case barometer_sensor::BarometerSensorError::data_error:
-            m_logger.print("entered state->data_error");
+            m_logger.print("encountered error->data_error");
             break;
-         case barometer_sensor::BarometerSensorError::none:
-            m_logger.print("entered state->none");
+         case barometer_sensor::BarometerSensorError::max_error:
             break;
          default:
+            m_logger.print("encountered unexpected error");
             error::stop_operation();
             break;
       }

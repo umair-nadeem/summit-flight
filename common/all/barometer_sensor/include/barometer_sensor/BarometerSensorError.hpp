@@ -3,12 +3,12 @@
 namespace barometer_sensor
 {
 
-enum class BarometerSensorError
+enum class BarometerSensorError : uint8_t
 {
-   none,
-   bus_error,      // bus communication failure
-   sensor_error,   // all zeros etc.
-   data_error,     // non-zero but implausible data
+   bus_error    = 0,   // bus communication failure
+   sensor_error = 1,   // all zeros etc.
+   data_error   = 2,   // non-zero but implausible data
+   max_error
 };
 
 }   // namespace barometer_sensor
