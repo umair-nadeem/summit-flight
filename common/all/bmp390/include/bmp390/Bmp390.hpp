@@ -3,6 +3,7 @@
 #include <boost/sml.hpp>
 
 #include "Bmp390StateHandler.hpp"
+#include "SetupSM.hpp"
 
 namespace bmp390
 {
@@ -35,98 +36,98 @@ public:
 
    void start()
    {
-      m_state_machine.process_event(typename StateMachineDef::EventStart{});
+      m_state_machine.process_event(EventStart{});
       m_logger.print("starting barometer driver");
    }
 
    void stop()
    {
-      m_state_machine.process_event(typename StateMachineDef::EventStop{});
+      m_state_machine.process_event(EventStop{});
       m_logger.print("stopping barometer driver");
    }
 
    void execute()
    {
-      m_state_machine.process_event(typename StateMachineDef::EventTick{});
+      m_state_machine.process_event(EventTick{});
    }
 
    void notify_receive_complete()
    {
-      m_state_machine.process_event(typename StateMachineDef::EventReceiveDone{});
+      m_state_machine.process_event(EventReceiveDone{});
    }
 
 private:
    template <typename StateHandler>
    struct Bmp390StateMachine
    {
-      // states
-      static constexpr auto s_stopped    = boost::sml::state<class StateStopped>;
-      static constexpr auto s_init_reset = boost::sml::state<class StateInitReset>;
-
-      static constexpr auto s_init_read_id = boost::sml::state<class StateInitReadId>;
-      static constexpr auto s_init_verify  = boost::sml::state<class StateInitVerifyId>;
-
-      static constexpr auto s_init_config       = boost::sml::state<class StateInitConfig>;
-      static constexpr auto s_init_config_check = boost::sml::state<class StateInitConfigCheck>;
-
-      static constexpr auto s_measurement    = boost::sml::state<class StateMeasurement>;
-      static constexpr auto s_data_read_wait = boost::sml::state<class StateDataReadWait>;
-      static constexpr auto s_failure        = boost::sml::state<class StateFailure>;
-
-      // events
-      struct EventTick
+      // wrappers for setup substate machine
+      template <typename H>
+      struct InitSetupSM : SetupStateMachine<H>
       {
       };
 
-      struct EventStart
-      {
-      };
+      // composite state machines
+      static constexpr auto s_init_setup = boost::sml::state<InitSetupSM<StateHandler>>;
 
-      struct EventStop
-      {
-      };
-
-      struct EventReceiveDone
-      {
-      };
+      // leaf states
+      static constexpr auto s_stopped                = boost::sml::state<class StateStopped>;
+      static constexpr auto s_read_coefficients      = boost::sml::state<class StateReadCoefficients>;
+      static constexpr auto s_read_coefficients_wait = boost::sml::state<class StateReadCoefficientsWait>;
+      static constexpr auto s_measurement            = boost::sml::state<class StateMeasurement>;
+      static constexpr auto s_data_read_wait         = boost::sml::state<class StateDataReadWait>;
+      static constexpr auto s_data_verification      = boost::sml::state<class StateDataVerification>;
+      static constexpr auto s_data_read_fail         = boost::sml::state<class StateDataReadFailure>;
+      static constexpr auto s_failure                = boost::sml::state<class StateFailure>;
 
       auto operator()() const
       {
          using namespace boost::sml;
 
          // actions
+         static constexpr auto reset_timer = [](StateHandler& state)
+         { state.reset_timer(); };
+
          static constexpr auto tick_timer = [](StateHandler& state)
          { state.tick_timer(); };
 
-         static constexpr auto soft_reset = [](StateHandler& state)
-         { state.soft_reset(); };
+         constexpr auto reset_read_failures = [](StateHandler& state)
+         { state.reset_read_failures(); };
 
-         static constexpr auto read_id = [](StateHandler& state)
-         { state.read_id(); };
+         constexpr auto count_read_failure = [](StateHandler& state)
+         { state.count_read_failure(); };
 
-         static constexpr auto write_config = [](StateHandler& state)
-         { state.write_config(); };
+         static constexpr auto read_coefficients = [](StateHandler& state)
+         { state.read_coefficients(); };
 
          static constexpr auto read_data = [](StateHandler& state)
          { state.read_data(); };
 
-         static constexpr auto store_id = [](StateHandler& state)
-         { state.store_id(); };
+         static constexpr auto store_coefficients = [](StateHandler& state)
+         { state.store_coefficients(); };
+
+         static constexpr auto process_error_register = [](StateHandler& state)
+         { state.process_error_register(); };
 
          static constexpr auto convert_raw_data = [](StateHandler& state)
          { state.convert_raw_data(); };
 
-         static constexpr auto set_reset_state = [](StateHandler& state)
-         { state.set_state(barometer_sensor::BarometerSensorState::reset); };
+         constexpr auto publish_data = [](StateHandler& state)
+         { state.publish_data(); };
 
-         static constexpr auto set_validation_state = [](StateHandler& state)
-         { state.set_state(barometer_sensor::BarometerSensorState::validation); };
+         constexpr auto publish_health = [](StateHandler& state)
+         { state.publish_health(); };
 
-         static constexpr auto set_config_state = [](StateHandler& state)
-         { state.set_state(barometer_sensor::BarometerSensorState::config); };
+         constexpr auto reset_data = [](StateHandler& state)
+         { state.reset_data(); };
+
+         static constexpr auto set_setup_state = [](StateHandler& state)
+         { state.set_state(barometer_sensor::BarometerSensorState::setup); };
 
          static constexpr auto set_operational_state = [](StateHandler& state)
          { state.set_state(barometer_sensor::BarometerSensorState::operational); };
+
+         static constexpr auto set_failure_state = [](StateHandler& state)
+         { state.set_state(barometer_sensor::BarometerSensorState::failure); };
 
          static constexpr auto set_bus_error = [](StateHandler& state)
          { state.set_error(barometer_sensor::BarometerSensorError::bus_error); };
@@ -134,44 +135,64 @@ private:
          static constexpr auto set_sensor_error = [](StateHandler& state)
          { state.set_error(barometer_sensor::BarometerSensorError::sensor_error); };
 
-         // static constexpr auto set_data_error = [](StateHandler& state)
-         // { state.set_error(barometer_sensor::BarometerSensorError::data_error); };
+         static constexpr auto set_data_error = [](StateHandler& state)
+         { state.set_error(barometer_sensor::BarometerSensorError::data_error); };
 
          // guards
-         static constexpr auto bus_error = [](StateHandler& state)
-         { return state.bus_error(); };
+         constexpr auto validation_successful = [](StateHandler& state)
+         { return state.validation_successful(); };
 
-         constexpr auto id_matched = [](const StateHandler& state)
-         { return state.id_matched(); };
+         constexpr auto config_successful = [](StateHandler& state)
+         { return state.config_successful(); };
+
+         constexpr auto is_buffer_non_zero = [](const StateHandler& state)
+         { return state.is_buffer_non_zero(); };
+
+         constexpr auto sensor_error_reported = [](const StateHandler& state)
+         { return state.sensor_error_reported(); };
+
+         constexpr auto is_data_valid = [](const StateHandler& state)
+         { return state.is_data_valid(); };
+
+         static constexpr auto receive_wait_timeout = [](StateHandler& state)
+         { return state.receive_wait_timeout(); };
+
+         // static constexpr auto bus_error = [](StateHandler& state)
+         // { return state.bus_error(); };
 
          // events
-         static constexpr auto e_start = event<EventStart>;
-         static constexpr auto e_tick  = event<EventTick>;
+         static constexpr auto e_start        = event<EventStart>;
+         static constexpr auto e_tick         = event<EventTick>;
+         static constexpr auto e_receive_done = event<EventReceiveDone>;
 
-         // clang-format off
          return make_transition_table(
              // From State  | Event   | Guard                    | Action                                  | To State
-             *s_stopped         + e_start                     / set_reset_state                          = s_init_reset,
+             *s_stopped + e_start / set_setup_state = s_init_setup,
 
-             s_init_reset       + e_tick                      / (soft_reset, set_validation_state)       = s_init_read_id,
+             // setup
+             s_init_setup[!validation_successful]                     = s_failure,
+             s_init_setup[!config_successful]                         = s_failure,
+             s_init_setup[validation_successful && config_successful] = s_read_coefficients,
 
-             s_init_read_id     + e_tick                      / read_id                                  = s_init_verify,
+             // read coefficients
+             s_read_coefficients + e_tick / (reset_timer, read_coefficients)                         = s_read_coefficients_wait,
+             s_read_coefficients_wait + e_receive_done / (store_coefficients, set_operational_state) = s_measurement,
+             s_read_coefficients_wait + e_tick[!receive_wait_timeout] / tick_timer,
+             s_read_coefficients_wait + e_tick[receive_wait_timeout] / set_bus_error = s_failure,
 
-             s_init_verify      + e_tick  [bus_error]    / set_bus_error                             = s_failure,
-             s_init_verify      + e_tick  [!id_matched]  / (store_id, set_sensor_error)              = s_failure,
-             s_init_verify      + e_tick  [id_matched]   / (store_id, set_config_state)              = s_init_config,
+             // operational
+             s_measurement + e_tick / (reset_timer, read_data) = s_data_read_wait,
 
-             s_init_config      + e_tick                 / write_config                             = s_init_config_check,
+             s_data_read_wait + e_receive_done[is_buffer_non_zero] / (process_error_register, convert_raw_data) = s_data_verification,
+             s_data_read_wait + e_receive_done[!is_buffer_non_zero] / (set_sensor_error, count_read_failure)    = s_data_read_fail,
+             s_data_read_wait + e_tick[!receive_wait_timeout] / tick_timer,
+             s_data_read_wait + e_tick[receive_wait_timeout] / (set_bus_error, count_read_failure) = s_data_read_fail,
 
-             s_init_config_check          [bus_error]    / set_bus_error                             = s_failure,
-             s_init_config_check          [!bus_error]    / set_operational_state                    = s_measurement,
+             s_data_verification[sensor_error_reported] / set_sensor_error              = s_failure,
+             s_data_verification[is_data_valid] / (reset_read_failures, publish_data)   = s_measurement,
+             s_data_verification[!is_data_valid] / (set_data_error, count_read_failure) = s_data_read_fail,
 
-             s_measurement      + e_tick                 / read_data                        = s_data_read_wait,
-             s_data_read_wait   + e_tick                 / convert_raw_data                 = s_measurement,
-
-             s_failure          + e_tick                 / tick_timer
-            );
-         // clang-format on
+             s_failure + boost::sml::on_entry<_> / (set_failure_state, publish_health, reset_data));
       }
    };
 

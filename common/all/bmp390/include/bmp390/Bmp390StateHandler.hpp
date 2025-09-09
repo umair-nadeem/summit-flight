@@ -57,6 +57,7 @@ public:
 
    void soft_reset()
    {
+      m_tx_buffer.fill(0);
       m_tx_buffer[0] = params::cmd_reg;
       m_tx_buffer[1] = params::CmdReg::soft_reset;
       m_i2c_error    = !m_i2c_driver.write(params::default_i2c_address, std::span{m_tx_buffer.data(), 2u});
@@ -64,51 +65,168 @@ public:
 
    void read_id()
    {
+      m_rx_buffer.fill(0);
       m_i2c_error = !m_i2c_driver.read(params::default_i2c_address, std::span{m_rx_buffer.data(), 1u}, params::chip_id_reg);
    }
 
-   void write_config()
+   void set_oversampling()
    {
+      m_tx_buffer.fill(0);
+      m_tx_buffer[0] = params::osr_reg;
+      m_tx_buffer[1] = params::OsrReg::press_x8_oversampling_mask;   // osr
+      m_i2c_error    = !m_i2c_driver.write(params::default_i2c_address, std::span{m_tx_buffer.data(), 2u});
+   }
+
+   void set_data_rate()
+   {
+      m_tx_buffer.fill(0);
+      m_tx_buffer[0] = params::odr_reg;
+      m_tx_buffer[1] = params::OdrReg::odr_25hz;   // odr
+      m_i2c_error    = !m_i2c_driver.write(params::default_i2c_address, std::span{m_tx_buffer.data(), 2u});
+   }
+
+   void write_irr_config()
+   {
+      m_tx_buffer.fill(0);
+      m_tx_buffer[0] = params::config_reg;
+      m_tx_buffer[1] = params::ConfigReg::iir_coef3_mask;
+      m_i2c_error    = !m_i2c_driver.write(params::default_i2c_address, std::span{m_tx_buffer.data(), 2u});
+   }
+
+   void set_normal_mode()
+   {
+      m_tx_buffer.fill(0);
       m_tx_buffer[0] = params::pwr_ctrl_reg;
-      m_tx_buffer[1] = params::PwrCtrlReg::pressure_sensor_enable_mask |
+      m_tx_buffer[1] = params::PwrCtrlReg::pressure_sensor_enable_mask |   // power control
                        params::PwrCtrlReg::temperature_sensor_enable_mask |
                        params::PwrCtrlReg::normal_mode_mask;
       m_i2c_error = !m_i2c_driver.write(params::default_i2c_address, std::span{m_tx_buffer.data(), 2u});
    }
 
+   void read_config_burst()
+   {
+      m_rx_buffer.fill(0);
+      // read 5 registers from 0x1b through 0x1f
+      m_i2c_error = !m_i2c_driver.read(params::default_i2c_address, std::span{m_rx_buffer.data(), 5u}, params::pwr_ctrl_reg);
+   }
+
+   void read_coefficients()
+   {
+      m_rx_buffer.fill(0);
+      // read 21 bytes of trimmming coefficients
+      m_i2c_error = !m_i2c_driver.read(params::default_i2c_address, std::span{m_rx_buffer.data(), params::num_bytes_calibration_data}, params::calibration_data_reg);
+   }
+
    void read_data()
    {
-      m_i2c_error = !m_i2c_driver.read(params::default_i2c_address, std::span{m_rx_buffer.data(), params::num_bytes_data}, params::pressure_xlsb_reg);
+      m_rx_buffer.fill(0);
+      m_i2c_error = !m_i2c_driver.read(params::default_i2c_address, std::span{m_rx_buffer.data(), params::num_bytes_data}, params::err_reg);
    }
 
    void store_id()
    {
-      m_device_id = m_rx_buffer[1];
+      m_device_id = m_rx_buffer[0];
       m_logger.printf("device id: 0x%x", m_device_id);
+   }
+
+   void store_config()
+   {
+      m_config_registers.pwr_ctrl = m_rx_buffer[0];   // 0x1b
+      m_config_registers.osr      = m_rx_buffer[1];   // 0x1c
+      m_config_registers.odr      = m_rx_buffer[2];   // 0x1d
+      m_config_registers.config   = m_rx_buffer[4];   // 0x1f (0x1e -> reserved)
+   }
+
+   void store_coefficients()
+   {
+      // temp coefficients
+      m_raw_coefficients.par_t1 = to_uint16(m_rx_buffer[1], m_rx_buffer[0]);
+      m_raw_coefficients.par_t2 = to_uint16(m_rx_buffer[3], m_rx_buffer[2]);
+      m_raw_coefficients.par_t3 = static_cast<int8_t>(m_rx_buffer[4]);
+
+      m_quantized_coefficients.par_t1 = static_cast<float>(m_raw_coefficients.par_t1) / scale_t1;
+      m_quantized_coefficients.par_t2 = static_cast<float>(m_raw_coefficients.par_t2) / scale_t2;
+      m_quantized_coefficients.par_t3 = static_cast<float>(m_raw_coefficients.par_t3) / scale_t3;
+
+      // pressure coefficients
+      m_raw_coefficients.par_p1  = to_int16(m_rx_buffer[6], m_rx_buffer[5]);
+      m_raw_coefficients.par_p2  = to_int16(m_rx_buffer[8], m_rx_buffer[7]);
+      m_raw_coefficients.par_p3  = static_cast<int8_t>(m_rx_buffer[9]);
+      m_raw_coefficients.par_p4  = static_cast<int8_t>(m_rx_buffer[10]);
+      m_raw_coefficients.par_p5  = to_uint16(m_rx_buffer[12], m_rx_buffer[11]);
+      m_raw_coefficients.par_p6  = to_uint16(m_rx_buffer[14], m_rx_buffer[13]);
+      m_raw_coefficients.par_p7  = static_cast<int8_t>(m_rx_buffer[15]);
+      m_raw_coefficients.par_p8  = static_cast<int8_t>(m_rx_buffer[16]);
+      m_raw_coefficients.par_p9  = to_int16(m_rx_buffer[18], m_rx_buffer[17]);
+      m_raw_coefficients.par_p10 = static_cast<int8_t>(m_rx_buffer[19]);
+      m_raw_coefficients.par_p11 = static_cast<int8_t>(m_rx_buffer[20]);
+   }
+
+   void process_error_register()
+   {
+      m_error_register = m_rx_buffer[0];
    }
 
    void convert_raw_data()
    {
-      uint32_t press_raw = (static_cast<uint32_t>(m_rx_buffer[2]) << 16) |
-                           (static_cast<uint32_t>(m_rx_buffer[1]) << 8) |
-                           (static_cast<uint32_t>(m_rx_buffer[0]));
+      // data was read out in burst from err_register (0x02) -> m_rx_buffer[0]
+      int32_t press_raw = to_int24(m_rx_buffer[4], m_rx_buffer[3], m_rx_buffer[2]);
+      int32_t temp_raw  = to_int24(m_rx_buffer[7], m_rx_buffer[6], m_rx_buffer[5]);
 
-      uint32_t temp_raw = (static_cast<uint32_t>(m_rx_buffer[5]) << 16) |
-                          (static_cast<uint32_t>(m_rx_buffer[4]) << 8) |
-                          (static_cast<uint32_t>(m_rx_buffer[3]));
+      m_local_barometer_data.temperature_c = compensate_temperature(static_cast<float>(temp_raw));
+      m_local_barometer_data.pressure_pa   = static_cast<float>(press_raw);
+   }
 
-      m_local_barometer_data.pressure_hpa  = static_cast<float>(press_raw >> 4u);
-      m_local_barometer_data.temperature_c = static_cast<float>(temp_raw >> 4u);
-
+   void publish_data()
+   {
       const volatile uint32_t clock = ClockSource::now_ms();
+      m_barometer_data_storage.update_latest(m_local_barometer_data, clock);
+
       m_data_log_counter++;
       if ((m_data_log_counter % 25u) == 0)
       {
          m_logger.printf("clock: %u   pressure: %.2f     |     temperature: %.2f",
                          clock,
-                         m_local_barometer_data.pressure_hpa,
+                         m_local_barometer_data.pressure_pa,
                          m_local_barometer_data.temperature_c.value());
       }
+   }
+
+   void publish_health()
+   {
+      m_barometer_health_storage.update_latest(m_local_barometer_health, ClockSource::now_ms());
+   }
+
+   void reset_data()
+   {
+      m_local_barometer_data.pressure_pa = 0.0f;
+      m_local_barometer_data.altitude_m  = 0.0f;
+      m_local_barometer_data.temperature_c.reset();
+      m_barometer_data_storage.update_latest(m_local_barometer_data, ClockSource::now_ms());
+   }
+
+   void mark_validation_fail()
+   {
+      m_local_barometer_health.validation_ok = false;
+      m_logger.print("validation failed");
+   }
+
+   void mark_validation_success()
+   {
+      m_local_barometer_health.validation_ok = true;
+      m_logger.print("validation successful");
+   }
+
+   void mark_config_fail()
+   {
+      m_local_barometer_health.config_ok = false;
+      m_logger.print("config failed");
+   }
+
+   void mark_config_success()
+   {
+      m_local_barometer_health.config_ok = true;
+      m_logger.print("config successful");
    }
 
    void set_state(const barometer_sensor::BarometerSensorState state)
@@ -120,17 +238,11 @@ public:
          case barometer_sensor::BarometerSensorState::stopped:
             m_logger.print("entered state->stopped");
             break;
-         case barometer_sensor::BarometerSensorState::reset:
-            m_logger.print("entered state->reset");
-            break;
-         case barometer_sensor::BarometerSensorState::validation:
-            m_logger.print("entered state->validation");
+         case barometer_sensor::BarometerSensorState::setup:
+            m_logger.print("entered state->setup");
             break;
          case barometer_sensor::BarometerSensorState::self_test:
             m_logger.print("entered state->self_test");
-            break;
-         case barometer_sensor::BarometerSensorState::config:
-            m_logger.print("entered state->config");
             break;
          case barometer_sensor::BarometerSensorState::operational:
             m_logger.print("entered state->operational");
@@ -160,6 +272,9 @@ public:
          case barometer_sensor::BarometerSensorError::bus_error:
             m_logger.print("encountered error->bus_error");
             break;
+         case barometer_sensor::BarometerSensorError::id_mismatch_error:
+            m_logger.print("encountered error->id_mismatch_error");
+            break;
          case barometer_sensor::BarometerSensorError::sensor_error:
             m_logger.print("encountered error->sensor_error");
             break;
@@ -175,9 +290,56 @@ public:
       }
    }
 
+   bool validation_successful() const
+   {
+      return m_local_barometer_health.validation_ok;
+   }
+
+   bool config_successful() const
+   {
+      return m_local_barometer_health.config_ok;
+   }
+
    bool id_matched() const
    {
-      return (m_rx_buffer[0] == params::device_id);
+      return (m_device_id == params::device_id);
+   }
+
+   bool config_matched() const
+   {
+      const uint8_t pwr_ctrl_config = params::PwrCtrlReg::pressure_sensor_enable_mask | params::PwrCtrlReg::temperature_sensor_enable_mask |
+                                      params::PwrCtrlReg::normal_mode_mask;
+      const uint8_t osr_config = params::OsrReg::press_x8_oversampling_mask | params::OsrReg::temp_no_oversampling_mask;
+
+      return ((m_config_registers.pwr_ctrl == pwr_ctrl_config) &&
+              (m_config_registers.osr == osr_config) &&
+              (m_config_registers.odr == params::OdrReg::odr_25hz) &&
+              (m_config_registers.config == params::ConfigReg::iir_coef3_mask));
+   }
+
+   bool is_buffer_non_zero() const
+   {
+      for (std::size_t i = 1u; i < params::num_bytes_data; i++)
+      {
+         if (m_rx_buffer[i] != 0)
+         {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   bool sensor_error_reported() const
+   {
+      return ((m_error_register & params::ErrReg::fatal_err_mask) ||
+              (m_error_register & params::ErrReg::cmd_err_mask) ||
+              (m_error_register & params::ErrReg::conf_err_mask));
+   }
+
+   static bool is_data_valid()
+   {
+      return true;
    }
 
    bool bus_error() const
@@ -185,22 +347,76 @@ public:
       return m_i2c_error;
    }
 
+   bool receive_wait_timeout() const
+   {
+      return m_wait_timer_ms >= m_receive_wait_timeout_ms;
+   }
+
+   bool read_failures_below_limit() const
+   {
+      return (m_local_barometer_health.read_failure_count < m_read_failures_limit);
+   }
+
 private:
-   BarometerData&                                     m_barometer_data_storage;
-   BarometerHealth&                                   m_barometer_health_storage;
-   I2cDriver&                                         m_i2c_driver;
-   Logger&                                            m_logger;
-   const uint8_t                                      m_read_failures_limit;
-   const std::size_t                                  m_execution_period_ms;
-   const std::size_t                                  m_receive_wait_timeout_ms;
-   barometer_sensor::BarometerData                    m_local_barometer_data{};
-   barometer_sensor::BarometerHealth                  m_local_barometer_health{};
-   std::array<uint8_t, params::num_bytes_transaction> m_tx_buffer{};
-   std::array<uint8_t, params::num_bytes_transaction> m_rx_buffer{};
-   uint8_t                                            m_device_id{};
-   bool                                               m_i2c_error{false};
-   std::size_t                                        m_wait_timer_ms{};
-   std::size_t                                        m_data_log_counter{};
+   float compensate_temperature(const float uncomp_temp) const
+   {
+      float partial_data1 = uncomp_temp - m_quantized_coefficients.par_t1;
+      float partial_data2 = partial_data1 * m_quantized_coefficients.par_t2;
+
+      return partial_data2 + (partial_data1 * partial_data1) * m_quantized_coefficients.par_t3;
+   }
+
+   static constexpr int32_t to_int24(const uint8_t msb, const uint8_t lsb, const uint8_t xlsb) noexcept
+   {
+      return (static_cast<uint32_t>(msb << two_bytes_shift) |
+              static_cast<uint32_t>(lsb << one_byte_shift) |
+              xlsb);
+   }
+
+   static constexpr uint16_t to_uint16(const uint8_t msb, const uint8_t lsb) noexcept
+   {
+      return (static_cast<uint16_t>(msb << one_byte_shift) | lsb);
+   }
+
+   static constexpr int16_t to_int16(const uint8_t msb, const uint8_t lsb) noexcept
+   {
+      return (static_cast<int16_t>(msb << one_byte_shift) | static_cast<int8_t>(lsb));
+   }
+
+   struct Config_registers
+   {
+      uint8_t pwr_ctrl;
+      uint8_t osr;
+      uint8_t odr;
+      uint8_t config;
+   };
+
+   static constexpr uint8_t two_bytes_shift = 16u;
+   static constexpr uint8_t one_byte_shift  = 8u;
+
+   static constexpr float scale_t1 = 1.0f / 256.0f;        // 2^-8
+   static constexpr float scale_t2 = 1073741824.0f;        // 2^30
+   static constexpr float scale_t3 = 281474976710656.0f;   // 2^48
+
+   BarometerData&                           m_barometer_data_storage;
+   BarometerHealth&                         m_barometer_health_storage;
+   I2cDriver&                               m_i2c_driver;
+   Logger&                                  m_logger;
+   const uint8_t                            m_read_failures_limit;
+   const std::size_t                        m_execution_period_ms;
+   const std::size_t                        m_receive_wait_timeout_ms;
+   barometer_sensor::BarometerData          m_local_barometer_data{};
+   barometer_sensor::BarometerHealth        m_local_barometer_health{};
+   std::array<uint8_t, params::buffer_size> m_tx_buffer{};
+   std::array<uint8_t, params::buffer_size> m_rx_buffer{};
+   uint8_t                                  m_device_id{};
+   Config_registers                         m_config_registers{};
+   params::CalibrationCoeffiecients         m_raw_coefficients{};
+   params::QuantizedCoeffiecients           m_quantized_coefficients{};
+   uint8_t                                  m_error_register{};
+   bool                                     m_i2c_error{false};
+   std::size_t                              m_wait_timer_ms{};
+   std::size_t                              m_data_log_counter{};
 };
 
 }   // namespace bmp390

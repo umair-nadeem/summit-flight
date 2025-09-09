@@ -6,10 +6,8 @@ namespace barometer_sensor
 enum class BarometerSensorState
 {
    stopped,
-   reset,
-   validation,
+   setup,
    self_test,
-   config,
    operational,
    soft_recovery,
    hard_recovery,

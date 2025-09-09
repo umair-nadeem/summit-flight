@@ -413,7 +413,7 @@ private:
       return (reg | params::read_mask);
    }
 
-   static constexpr auto to_int16(uint8_t msb, uint8_t lsb) noexcept
+   static constexpr auto to_int16(const uint8_t msb, const uint8_t lsb) noexcept
    {
       return static_cast<int16_t>((msb << one_byte_shift) | lsb);
    }
@@ -445,7 +445,7 @@ private:
               (m_local_imu_data.temperature_c.value() < params::temp_max_plauisble_range));
    }
 
-   struct config_registers
+   struct Config_registers
    {
       uint8_t sample_rate_div;
       uint8_t config;
@@ -482,7 +482,7 @@ private:
    imu_sensor::ImuData                                m_local_imu_data{};
    imu_sensor::ImuHealth                              m_local_imu_health{};
    uint8_t                                            m_device_id{};
-   config_registers                                   m_config_registers{};
+   Config_registers                                   m_config_registers{};
    std::size_t                                        m_wait_timer_ms{};
    std::size_t                                        m_data_log_counter{};
 };
