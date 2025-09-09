@@ -163,17 +163,17 @@ public:
       m_raw_coefficients.par_p10 = static_cast<int8_t>(m_rx_buffer[19]);
       m_raw_coefficients.par_p11 = static_cast<int8_t>(m_rx_buffer[20]);
 
-      m_quantized_coefficients.par_p1  = ((static_cast<double>(m_raw_coefficients.par_p1) - offset_p1_p2) * scale_p1);
-      m_quantized_coefficients.par_p2  = ((static_cast<double>(m_raw_coefficients.par_p2) - offset_p1_p2) * scale_p2);
-      m_quantized_coefficients.par_p3  = (static_cast<double>(m_raw_coefficients.par_p3) * scale_p3);
-      m_quantized_coefficients.par_p4  = (static_cast<double>(m_raw_coefficients.par_p4) * scale_p4);
-      m_quantized_coefficients.par_p5  = (static_cast<double>(m_raw_coefficients.par_p5) * scale_p5);
-      m_quantized_coefficients.par_p6  = (static_cast<double>(m_raw_coefficients.par_p6) * scale_p6);
-      m_quantized_coefficients.par_p7  = (static_cast<double>(m_raw_coefficients.par_p7) * scale_p7);
-      m_quantized_coefficients.par_p8  = (static_cast<double>(m_raw_coefficients.par_p8) * scale_p8);
-      m_quantized_coefficients.par_p9  = (static_cast<double>(m_raw_coefficients.par_p9) * scale_p9);
-      m_quantized_coefficients.par_p10 = (static_cast<double>(m_raw_coefficients.par_p10) * scale_p10);
-      m_quantized_coefficients.par_p11 = (static_cast<double>(m_raw_coefficients.par_p11) * scale_p11);
+      m_quantized_coefficients.par_p1  = static_cast<float>((static_cast<double>(m_raw_coefficients.par_p1) - offset_p1_p2) * scale_p1);
+      m_quantized_coefficients.par_p2  = static_cast<float>((static_cast<double>(m_raw_coefficients.par_p2) - offset_p1_p2) * scale_p2);
+      m_quantized_coefficients.par_p3  = static_cast<float>(static_cast<double>(m_raw_coefficients.par_p3) * scale_p3);
+      m_quantized_coefficients.par_p4  = static_cast<float>(static_cast<double>(m_raw_coefficients.par_p4) * scale_p4);
+      m_quantized_coefficients.par_p5  = static_cast<float>(static_cast<double>(m_raw_coefficients.par_p5) * scale_p5);
+      m_quantized_coefficients.par_p6  = static_cast<float>(static_cast<double>(m_raw_coefficients.par_p6) * scale_p6);
+      m_quantized_coefficients.par_p7  = static_cast<float>(static_cast<double>(m_raw_coefficients.par_p7) * scale_p7);
+      m_quantized_coefficients.par_p8  = static_cast<float>(static_cast<double>(m_raw_coefficients.par_p8) * scale_p8);
+      m_quantized_coefficients.par_p9  = static_cast<float>(static_cast<double>(m_raw_coefficients.par_p9) * scale_p9);
+      m_quantized_coefficients.par_p10 = static_cast<float>(static_cast<double>(m_raw_coefficients.par_p10) * scale_p10);
+      m_quantized_coefficients.par_p11 = static_cast<float>(static_cast<double>(m_raw_coefficients.par_p11) * scale_p11);
    }
 
    void process_error_register()
@@ -188,7 +188,7 @@ public:
       uint32_t temperature_raw = to_int24(m_rx_buffer[7], m_rx_buffer[6], m_rx_buffer[5]);
 
       m_local_barometer_data.temperature_c = compensate_temperature(static_cast<float>(temperature_raw));
-      m_local_barometer_data.pressure_pa   = compensate_pressure(m_local_barometer_data.temperature_c.value(), pressure_raw);
+      m_local_barometer_data.pressure_pa   = compensate_pressure(m_local_barometer_data.temperature_c.value(), static_cast<float>(pressure_raw));
    }
 
    void publish_data()
@@ -379,24 +379,24 @@ private:
       return partial_data2 + (partial_data1 * partial_data1) * m_quantized_coefficients.par_t3;
    }
 
-   float compensate_pressure(const float comp_temp, const double uncomp_pressure) const
+   float compensate_pressure(const float comp_temp, const float uncomp_pressure) const
    {
-      double partial_data1 = m_quantized_coefficients.par_p6 * comp_temp;
-      double partial_data2 = m_quantized_coefficients.par_p7 * (comp_temp * comp_temp);
-      double partial_data3 = m_quantized_coefficients.par_p8 * (comp_temp * comp_temp * comp_temp);
-      double partial_out1  = m_quantized_coefficients.par_p5 + partial_data1 + partial_data2 + partial_data3;
+      float partial_data1 = m_quantized_coefficients.par_p6 * comp_temp;
+      float partial_data2 = m_quantized_coefficients.par_p7 * (comp_temp * comp_temp);
+      float partial_data3 = m_quantized_coefficients.par_p8 * (comp_temp * comp_temp * comp_temp);
+      float partial_out1  = m_quantized_coefficients.par_p5 + partial_data1 + partial_data2 + partial_data3;
 
-      partial_data1       = m_quantized_coefficients.par_p2 * comp_temp;
-      partial_data2       = m_quantized_coefficients.par_p3 * (comp_temp * comp_temp);
-      partial_data3       = m_quantized_coefficients.par_p4 * (comp_temp * comp_temp * comp_temp);
-      double partial_out2 = uncomp_pressure * (m_quantized_coefficients.par_p1 + partial_data1 + partial_data2 + partial_data3);
+      partial_data1      = m_quantized_coefficients.par_p2 * comp_temp;
+      partial_data2      = m_quantized_coefficients.par_p3 * (comp_temp * comp_temp);
+      partial_data3      = m_quantized_coefficients.par_p4 * (comp_temp * comp_temp * comp_temp);
+      float partial_out2 = uncomp_pressure * (m_quantized_coefficients.par_p1 + partial_data1 + partial_data2 + partial_data3);
 
-      partial_data1        = uncomp_pressure * uncomp_pressure;
-      partial_data2        = m_quantized_coefficients.par_p9 + m_quantized_coefficients.par_p10 * comp_temp;
-      partial_data3        = partial_data1 * partial_data2;
-      double partial_data4 = partial_data3 + (uncomp_pressure * uncomp_pressure * uncomp_pressure) * m_quantized_coefficients.par_p11;
+      partial_data1       = uncomp_pressure * uncomp_pressure;
+      partial_data2       = m_quantized_coefficients.par_p9 + m_quantized_coefficients.par_p10 * comp_temp;
+      partial_data3       = partial_data1 * partial_data2;
+      float partial_data4 = partial_data3 + (uncomp_pressure * uncomp_pressure * uncomp_pressure) * m_quantized_coefficients.par_p11;
 
-      return static_cast<float>(partial_out1 + partial_out2 + partial_data4);
+      return (partial_out1 + partial_out2 + partial_data4);
    }
 
    static constexpr uint32_t to_int24(const uint32_t msb, const uint32_t lsb, const uint32_t xlsb) noexcept
