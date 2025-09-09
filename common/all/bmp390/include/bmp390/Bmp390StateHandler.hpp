@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #include "barometer_sensor/BarometerData.hpp"
 #include "barometer_sensor/BarometerHealth.hpp"
 #include "boundaries/SharedData.hpp"
@@ -144,9 +146,9 @@ public:
       m_raw_coefficients.par_t2 = to_uint16(m_rx_buffer[3], m_rx_buffer[2]);
       m_raw_coefficients.par_t3 = static_cast<int8_t>(m_rx_buffer[4]);
 
-      m_quantized_coefficients.par_t1 = static_cast<float>(m_raw_coefficients.par_t1) / scale_t1;
-      m_quantized_coefficients.par_t2 = static_cast<float>(m_raw_coefficients.par_t2) / scale_t2;
-      m_quantized_coefficients.par_t3 = static_cast<float>(m_raw_coefficients.par_t3) / scale_t3;
+      m_quantized_coefficients.par_t1 = static_cast<float>(static_cast<float>(m_raw_coefficients.par_t1) * scale_t1);
+      m_quantized_coefficients.par_t2 = static_cast<float>(static_cast<float>(m_raw_coefficients.par_t2) * scale_t2);
+      m_quantized_coefficients.par_t3 = static_cast<float>(static_cast<float>(m_raw_coefficients.par_t3) * scale_t3);
 
       // pressure coefficients
       m_raw_coefficients.par_p1  = to_int16(m_rx_buffer[6], m_rx_buffer[5]);
@@ -160,6 +162,18 @@ public:
       m_raw_coefficients.par_p9  = to_int16(m_rx_buffer[18], m_rx_buffer[17]);
       m_raw_coefficients.par_p10 = static_cast<int8_t>(m_rx_buffer[19]);
       m_raw_coefficients.par_p11 = static_cast<int8_t>(m_rx_buffer[20]);
+
+      m_quantized_coefficients.par_p1  = ((static_cast<double>(m_raw_coefficients.par_p1) - offset_p1_p2) * scale_p1);
+      m_quantized_coefficients.par_p2  = ((static_cast<double>(m_raw_coefficients.par_p2) - offset_p1_p2) * scale_p2);
+      m_quantized_coefficients.par_p3  = (static_cast<double>(m_raw_coefficients.par_p3) * scale_p3);
+      m_quantized_coefficients.par_p4  = (static_cast<double>(m_raw_coefficients.par_p4) * scale_p4);
+      m_quantized_coefficients.par_p5  = (static_cast<double>(m_raw_coefficients.par_p5) * scale_p5);
+      m_quantized_coefficients.par_p6  = (static_cast<double>(m_raw_coefficients.par_p6) * scale_p6);
+      m_quantized_coefficients.par_p7  = (static_cast<double>(m_raw_coefficients.par_p7) * scale_p7);
+      m_quantized_coefficients.par_p8  = (static_cast<double>(m_raw_coefficients.par_p8) * scale_p8);
+      m_quantized_coefficients.par_p9  = (static_cast<double>(m_raw_coefficients.par_p9) * scale_p9);
+      m_quantized_coefficients.par_p10 = (static_cast<double>(m_raw_coefficients.par_p10) * scale_p10);
+      m_quantized_coefficients.par_p11 = (static_cast<double>(m_raw_coefficients.par_p11) * scale_p11);
    }
 
    void process_error_register()
@@ -169,12 +183,12 @@ public:
 
    void convert_raw_data()
    {
-      // data was read out in burst from err_register (0x02) -> m_rx_buffer[0]
-      int32_t press_raw = to_int24(m_rx_buffer[4], m_rx_buffer[3], m_rx_buffer[2]);
-      int32_t temp_raw  = to_int24(m_rx_buffer[7], m_rx_buffer[6], m_rx_buffer[5]);
+      // data is read out in burst from err_register (0x02) -> m_rx_buffer[0]
+      uint32_t pressure_raw    = to_int24(m_rx_buffer[4], m_rx_buffer[3], m_rx_buffer[2]);
+      uint32_t temperature_raw = to_int24(m_rx_buffer[7], m_rx_buffer[6], m_rx_buffer[5]);
 
-      m_local_barometer_data.temperature_c = compensate_temperature(static_cast<float>(temp_raw));
-      m_local_barometer_data.pressure_pa   = static_cast<float>(press_raw);
+      m_local_barometer_data.temperature_c = compensate_temperature(static_cast<float>(temperature_raw));
+      m_local_barometer_data.pressure_pa   = compensate_pressure(m_local_barometer_data.temperature_c.value(), pressure_raw);
    }
 
    void publish_data()
@@ -362,11 +376,30 @@ private:
    {
       float partial_data1 = uncomp_temp - m_quantized_coefficients.par_t1;
       float partial_data2 = partial_data1 * m_quantized_coefficients.par_t2;
-
       return partial_data2 + (partial_data1 * partial_data1) * m_quantized_coefficients.par_t3;
    }
 
-   static constexpr int32_t to_int24(const uint8_t msb, const uint8_t lsb, const uint8_t xlsb) noexcept
+   float compensate_pressure(const float comp_temp, const double uncomp_pressure) const
+   {
+      double partial_data1 = m_quantized_coefficients.par_p6 * comp_temp;
+      double partial_data2 = m_quantized_coefficients.par_p7 * (comp_temp * comp_temp);
+      double partial_data3 = m_quantized_coefficients.par_p8 * (comp_temp * comp_temp * comp_temp);
+      double partial_out1  = m_quantized_coefficients.par_p5 + partial_data1 + partial_data2 + partial_data3;
+
+      partial_data1       = m_quantized_coefficients.par_p2 * comp_temp;
+      partial_data2       = m_quantized_coefficients.par_p3 * (comp_temp * comp_temp);
+      partial_data3       = m_quantized_coefficients.par_p4 * (comp_temp * comp_temp * comp_temp);
+      double partial_out2 = uncomp_pressure * (m_quantized_coefficients.par_p1 + partial_data1 + partial_data2 + partial_data3);
+
+      partial_data1        = uncomp_pressure * uncomp_pressure;
+      partial_data2        = m_quantized_coefficients.par_p9 + m_quantized_coefficients.par_p10 * comp_temp;
+      partial_data3        = partial_data1 * partial_data2;
+      double partial_data4 = partial_data3 + (uncomp_pressure * uncomp_pressure * uncomp_pressure) * m_quantized_coefficients.par_p11;
+
+      return static_cast<float>(partial_out1 + partial_out2 + partial_data4);
+   }
+
+   static constexpr uint32_t to_int24(const uint32_t msb, const uint32_t lsb, const uint32_t xlsb) noexcept
    {
       return (static_cast<uint32_t>(msb << two_bytes_shift) |
               static_cast<uint32_t>(lsb << one_byte_shift) |
@@ -380,7 +413,8 @@ private:
 
    static constexpr int16_t to_int16(const uint8_t msb, const uint8_t lsb) noexcept
    {
-      return (static_cast<int16_t>(msb << one_byte_shift) | static_cast<int8_t>(lsb));
+      uint16_t u = to_uint16(msb, lsb);
+      return (static_cast<int16_t>(u));
    }
 
    struct Config_registers
@@ -394,9 +428,23 @@ private:
    static constexpr uint8_t two_bytes_shift = 16u;
    static constexpr uint8_t one_byte_shift  = 8u;
 
-   static constexpr float scale_t1 = 1.0f / 256.0f;        // 2^-8
-   static constexpr float scale_t2 = 1073741824.0f;        // 2^30
-   static constexpr float scale_t3 = 281474976710656.0f;   // 2^48
+   static constexpr double scale_t1 = std::ldexp(1.0, 8);        // dividy by 2^-8, for multiplication invert the sign
+   static constexpr double scale_t2 = std::ldexp(1.0, -30);      // dividy by 2^30, for multiplication invert the sign
+   static constexpr double scale_t3 = std::ldexp(1.0, -48);      // dividy by 2^48, for multiplication invert the sign
+
+   static constexpr double scale_p1  = std::ldexp(1.0, -20);     // dividy by 2^20, for multiplication invert the sign
+   static constexpr double scale_p2  = std::ldexp(1.0, -29);     // dividy by 2^29, for multiplication invert the sign
+   static constexpr double scale_p3  = std::ldexp(1.0, -32);     // dividy by 2^32, for multiplication invert the sign
+   static constexpr double scale_p4  = std::ldexp(1.0, -37);     // dividy by 2^37, for multiplication invert the sign
+   static constexpr double scale_p5  = std::ldexp(1.0, 3);       // dividy by 2^-3, for multiplication invert the sign
+   static constexpr double scale_p6  = std::ldexp(1.0, -6);      // dividy by 2^6, for multiplication invert the sign
+   static constexpr double scale_p7  = std::ldexp(1.0, -8);      // dividy by 2^8, for multiplication invert the sign
+   static constexpr double scale_p8  = std::ldexp(1.0, -15);     // dividy by 2^15, for multiplication invert the sign
+   static constexpr double scale_p9  = std::ldexp(1.0, -48);     // dividy by 2^48, for multiplication invert the sign
+   static constexpr double scale_p10 = std::ldexp(1.0, -48);     // dividy by 2^48, for multiplication invert the sign
+   static constexpr double scale_p11 = std::ldexp(1.0, -65);     // dividy by 2^65, for multiplication invert the sign
+
+   static constexpr double offset_p1_p2 = std::ldexp(1.0, 14);   // 2^14 - no sign inversion
 
    BarometerData&                           m_barometer_data_storage;
    BarometerHealth&                         m_barometer_health_storage;

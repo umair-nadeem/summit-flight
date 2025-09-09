@@ -128,6 +128,17 @@ struct QuantizedCoeffiecients
    float par_t3;
 
    // pressure trimming coefficients
+   double par_p1;
+   double par_p2;
+   double par_p3;
+   double par_p4;
+   double par_p5;
+   double par_p6;
+   double par_p7;
+   double par_p8;
+   double par_p9;
+   double par_p10;
+   double par_p11;
 };
 
 static constexpr uint8_t num_bytes_data             = 8u;   // 1 byte err_reg + 1 byte status_reg + 3 bytes pressure + 3 bytes temperature
