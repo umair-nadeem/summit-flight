@@ -4,6 +4,7 @@
 #include "boundaries/SharedData.hpp"
 #include "imu_sensor/ImuData.hpp"
 #include "imu_sensor/ImuHealth.hpp"
+#include "mocks/common/Logger.hpp"
 #include "mocks/hw/SpiMasterWithDma.hpp"
 #include "mpu6500/params.hpp"
 #include "sys_time/ClockSource.hpp"
@@ -30,4 +31,5 @@ protected:
    std::array<uint8_t, mpu6500::params::num_bytes_transaction> rx_buffer{};
    std::array<uint8_t, mpu6500::params::num_bytes_transaction> test_buffer{};
    mocks::hw::SpiMasterWithDma                                 spi_master_with_dma{tx_buffer, rx_buffer};
+   mocks::common::Logger                                       logger{"mpu_test"};
 };

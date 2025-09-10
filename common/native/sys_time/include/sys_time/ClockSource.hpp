@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+
 #include "interfaces/IClockSource.hpp"
 
 namespace sys_time

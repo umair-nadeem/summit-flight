@@ -6,12 +6,13 @@
 class ResetSMTest : public Mpu6500BaseTest
 {
 protected:
-   using StateHandler    = mpu6500::Mpu6500StateHandler<sys_time::ClockSource, decltype(spi_master_with_dma)>;
+   using StateHandler    = mpu6500::Mpu6500StateHandler<sys_time::ClockSource, decltype(spi_master_with_dma), mocks::common::Logger>;
    using StateMachineDef = mpu6500::ResetStateMachine<StateHandler>;
 
    StateHandler mpu6500_handler{imu_data_storage,
                                 imu_health_storage,
                                 spi_master_with_dma,
+                                logger,
                                 read_failures_limit,
                                 execution_period_ms,
                                 receive_wait_timeout_ms,

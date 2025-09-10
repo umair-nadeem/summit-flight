@@ -13,11 +13,14 @@ template <interfaces::peripherals::ISensorDriver                                
 class BarometerDriverExecutor
 {
 public:
-   explicit BarometerDriverExecutor(Bmp390& bmp390, NotificationWaiter& notify_waiter, const std::size_t period_in_ms)
+   explicit BarometerDriverExecutor(Bmp390&             bmp390,
+                                    NotificationWaiter& notify_waiter,
+                                    const std::size_t   period_in_ms,
+                                    const std::size_t   notification_wait_period_in_ms)
        : m_bmp390{bmp390},
          m_notify_waiter{notify_waiter},
          m_period_in_ms{period_in_ms},
-         m_notification_wait_period_in_ms{period_in_ms / 4u},
+         m_notification_wait_period_in_ms{notification_wait_period_in_ms},
          m_rx_complete_notification{static_cast<uint8_t>(aeromight_boundaries::BarometerTaskEvents::rx_complete)}
    {
       error::verify(m_period_in_ms > 0);

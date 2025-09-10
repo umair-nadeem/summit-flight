@@ -1,6 +1,6 @@
 add_module_test(
    SOURCES
-      ImuDriverExecutorTest.cpp
+      BarometerDriverExecutorTest.cpp
    LIBS
       mocks
       aeromight_boundaries

@@ -62,11 +62,11 @@ TEST_F(LogClientTest, print_random_numbers)
 TEST_F(LogClientTest, cut_short_oversized_msg)
 {
    log_client.enable();
-   logging::params::LogBuffer expected_log{"log_test: This msg is longer than buffer length of 64 chars wi\n"};
+   logging::params::LogBuffer expected_log{"log_test: This msg is longer than buffer length of 128 chars with as many unique words possible. LogClient should cut it short\n"};
 
    EXPECT_CALL(queue_sender_mock, send_if_possible(expected_log));
-   log_client.print("This msg is longer than buffer length of 64 chars with as many unique words possible. LogClient should cut it short to accommodate the logger name and buffer length.");
+   log_client.print("This msg is longer than buffer length of 128 chars with as many unique words possible. LogClient should cut it short to accommodate the logger name and buffer length.");
 
    EXPECT_CALL(queue_sender_mock, send_if_possible(expected_log));
-   log_client.printf("%s", "This msg is longer than buffer length of 64 chars with as many unique words possible. LogClient should cut it short to accommodate the logger name and buffer length.");
+   log_client.printf("%s", "This msg is longer than buffer length of 128 chars with as many unique words possible. LogClient should cut it short to accommodate the logger name and buffer length.");
 }

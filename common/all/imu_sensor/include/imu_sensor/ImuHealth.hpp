@@ -1,5 +1,7 @@
 #pragma once
 
+#include <bitset>
+
 #include "ImuSensorError.hpp"
 #include "ImuSensorState.hpp"
 

@@ -6,12 +6,13 @@
 class ValidationSMTest : public Mpu6500BaseTest
 {
 protected:
-   using StateHandler    = mpu6500::Mpu6500StateHandler<sys_time::ClockSource, decltype(spi_master_with_dma)>;
+   using StateHandler    = mpu6500::Mpu6500StateHandler<sys_time::ClockSource, decltype(spi_master_with_dma), mocks::common::Logger>;
    using StateMachineDef = mpu6500::ValidationStateMachine<StateHandler>;
 
    StateHandler mpu6500_handler{imu_data_storage,
                                 imu_health_storage,
                                 spi_master_with_dma,
+                                logger,
                                 read_failures_limit,
                                 execution_period_ms,
                                 receive_wait_timeout_ms,
@@ -73,12 +74,12 @@ TEST_F(ValidationSMTest, check_read_id_wait_timeout)
    EXPECT_THAT(tx_buffer, testing::ElementsAreArray(test_buffer.begin(), test_buffer.end()));
    EXPECT_TRUE(sm.is(StateMachineDef::s_id_receive_wait));
 
-   EXPECT_EQ(mpu6500_handler.get_error(), imu_sensor::ImuSensorError::none);
+   EXPECT_TRUE(mpu6500_handler.get_error().none());
    // passage of time will cause timeout
    sm.process_event(mpu6500::EventTick{});
    sm.process_event(mpu6500::EventTick{});
 
-   EXPECT_EQ(mpu6500_handler.get_error(), imu_sensor::ImuSensorError::bus_error);
+   EXPECT_TRUE(mpu6500_handler.get_error().test(static_cast<uint8_t>(imu_sensor::ImuSensorError::bus_error)));
    EXPECT_FALSE(mpu6500_handler.validation_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
@@ -103,7 +104,7 @@ TEST_F(ValidationSMTest, check_read_id_mismatch)
    // id verification fails
    sm.process_event(mpu6500::EventTick{});
 
-   EXPECT_EQ(mpu6500_handler.get_error(), imu_sensor::ImuSensorError::none);
+   EXPECT_TRUE(mpu6500_handler.get_error().none());
    EXPECT_FALSE(mpu6500_handler.validation_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
@@ -128,7 +129,7 @@ TEST_F(ValidationSMTest, verify_id_successfully)
    // id verification fails
    sm.process_event(mpu6500::EventTick{});
 
-   EXPECT_EQ(mpu6500_handler.get_error(), imu_sensor::ImuSensorError::none);
+   EXPECT_TRUE(mpu6500_handler.get_error().none());
    EXPECT_TRUE(mpu6500_handler.validation_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
