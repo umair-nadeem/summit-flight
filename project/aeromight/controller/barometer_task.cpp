@@ -26,6 +26,7 @@ extern "C"
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
       constexpr std::size_t bmp390_receive_wait_timeout_ms = 2u * controller::task::barometer_task_period_in_ms;
+      constexpr std::size_t notification_wait_period_in_ms = controller::task::barometer_task_period_in_ms / 4u;
       constexpr uint8_t     bmp390_read_failures_limit     = 5u;
 
       LogClient logger_bmp390{logging::logging_queue_sender, "bmp390"};
@@ -45,7 +46,8 @@ extern "C"
                                                    decltype(data->barometer_task_notification_waiter)>
           barometer_driver_executor{bmp390,
                                     data->barometer_task_notification_waiter,
-                                    controller::task::barometer_task_period_in_ms};
+                                    controller::task::barometer_task_period_in_ms,
+                                    notification_wait_period_in_ms};
 
       data->i2c_driver.register_receive_complete_callback(&i2c1_receive_complete_callback, nullptr);
       barometer_driver_executor.start();
