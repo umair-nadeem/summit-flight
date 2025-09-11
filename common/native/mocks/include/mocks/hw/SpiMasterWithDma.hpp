@@ -18,8 +18,8 @@ public:
 
    void transfer(std::span<const uint8_t> tx_buffer, std::span<uint8_t> rx_buffer)
    {
-      copy_buffer(m_tx_buffer, tx_buffer);
-      copy_buffer(rx_buffer, m_rx_buffer);
+      copy_buffer(tx_buffer, m_tx_buffer);
+      copy_buffer(m_rx_buffer, rx_buffer);
    }
 
    void register_transfer_complete_callback(const TransferCompleteCallback callback, void* context)
@@ -29,9 +29,9 @@ public:
       m_callback_context           = context;
    }
 
-   static void copy_buffer(auto& src, auto& dest)
+   static void copy_buffer(std::span<const uint8_t> src, std::span<uint8_t> dest)
    {
-      std::copy(dest.begin(), dest.end(), src.begin());
+      std::copy(src.begin(), src.end(), dest.begin());
    }
 
    std::span<uint8_t>       m_tx_buffer;
