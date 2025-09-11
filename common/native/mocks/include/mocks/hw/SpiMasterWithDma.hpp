@@ -31,6 +31,7 @@ public:
 
    static void copy_buffer(std::span<const uint8_t> src, std::span<uint8_t> dest)
    {
+      error::verify(src.size() <= dest.size());
       std::copy(src.begin(), src.end(), dest.begin());
    }
 

@@ -157,9 +157,6 @@ private:
          static constexpr auto receive_wait_timeout = [](StateHandler& state)
          { return state.receive_wait_timeout(); };
 
-         // static constexpr auto bus_error = [](StateHandler& state)
-         // { return state.bus_error(); };
-
          // events
          static constexpr auto e_start        = event<EventStart>;
          static constexpr auto e_tick         = event<EventTick>;

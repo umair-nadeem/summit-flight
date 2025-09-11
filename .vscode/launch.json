@@ -28,6 +28,16 @@
             ]
         },
         {
+            "name": "Bmp390Test",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/out/build/native/common/all/bmp390/test/bmp390_test",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {},
+            "stopOnEntry": false
+        },
+        {
             "name": "LoggingTest",
             "type": "lldb",
             "request": "launch",

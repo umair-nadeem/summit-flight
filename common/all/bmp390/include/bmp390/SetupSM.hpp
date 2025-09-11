@@ -82,12 +82,15 @@ struct SetupStateMachine
       static constexpr auto set_id_mismatch_error = [](StateHandler& state)
       { state.set_error(barometer_sensor::BarometerSensorError::id_mismatch_error); };
 
+      static constexpr auto set_config_mismatch_error = [](StateHandler& state)
+      { state.set_error(barometer_sensor::BarometerSensorError::config_mismatch_error); };
+
       // guards
       static constexpr auto receive_wait_timeout = [](const StateHandler& state)
       { return state.receive_wait_timeout(); };
 
-      static constexpr auto bus_error = [](const StateHandler& state)
-      { return state.bus_error(); };
+      static constexpr auto transfer_error = [](const StateHandler& state)
+      { return state.transfer_error(); };
 
       constexpr auto id_matched = [](const StateHandler& state)
       { return state.id_matched(); };
@@ -99,36 +102,42 @@ struct SetupStateMachine
       static constexpr auto e_tick         = event<EventTick>;
       static constexpr auto e_receive_done = event<EventReceiveDone>;
 
+      // clang-format off
       return make_transition_table(
-          // From State  | Event   | Guard                    | Action                                  | To State
-          *s_idle + e_tick / soft_reset = s_read_id,
+          // From State      | Event          | Guard                   | Action                                        | To State
+          *s_idle            + e_tick                                   / soft_reset = s_read_id,
 
-          s_read_id + e_tick[bus_error] / set_bus_error           = X,
-          s_read_id + e_tick[!bus_error] / (reset_timer, read_id) = s_read_id_wait,
+          s_read_id          + e_tick         [transfer_error]          / set_bus_error                                 = X,
+          s_read_id          + e_tick         [!transfer_error]         / (reset_timer, read_id)                        = s_read_id_wait,
 
-          s_read_id_wait + e_receive_done / store_id = s_verify_id,
-          s_read_id_wait + e_tick[!receive_wait_timeout] / tick_timer,
-          s_read_id_wait + e_tick[receive_wait_timeout] / set_bus_error = X,
+          s_read_id_wait     + e_receive_done                           / store_id                                      = s_verify_id,
+          s_read_id_wait     + e_tick         [transfer_error]          / set_bus_error                                 = X,
+          s_read_id_wait     + e_tick         [!receive_wait_timeout]   / tick_timer,
+          s_read_id_wait     + e_tick         [receive_wait_timeout]    / set_bus_error                                 = X,
 
-          s_verify_id + e_tick[!id_matched] / (set_id_mismatch_error, mark_validation_fail) = X,
-          s_verify_id + e_tick[id_matched] / (mark_validation_success)                      = s_oversampling,
+          s_verify_id                         [!id_matched]             / (set_id_mismatch_error, mark_validation_fail) = X,
+          s_verify_id                         [id_matched]              / (mark_validation_success)                     = s_oversampling,
 
-          s_oversampling + e_tick / set_oversampling = s_data_rate,
-          s_data_rate + e_tick / set_data_rate       = s_iir_config,
-          s_iir_config + e_tick / write_irr_config   = s_sensor_mode,
+          s_oversampling     + e_tick                                   / set_oversampling                              = s_data_rate,
+          s_data_rate        + e_tick                                   / set_data_rate                                 = s_iir_config,
+          s_iir_config       + e_tick                                   / write_irr_config                              = s_sensor_mode,
 
-          s_sensor_mode + e_tick[bus_error] / set_bus_error    = X,
-          s_sensor_mode + e_tick[!bus_error] / set_normal_mode = s_read_config,
+          s_sensor_mode      + e_tick         [transfer_error]          / set_bus_error                                 = X,
+          s_sensor_mode      + e_tick         [!transfer_error]         / set_normal_mode                               = s_read_config,
 
-          s_read_config + e_tick[bus_error] / set_bus_error                     = X,
-          s_read_config + e_tick[!bus_error] / (reset_timer, read_config_burst) = s_read_config_wait,
+          s_read_config      + e_tick         [transfer_error]          / set_bus_error                                 = X,
+          s_read_config      + e_tick         [!transfer_error]         / (reset_timer, read_config_burst)              = s_read_config_wait,
 
-          s_read_config_wait + e_receive_done / store_config = s_verify_config,
-          s_read_config_wait + e_tick[!receive_wait_timeout] / tick_timer,
-          s_read_config_wait + e_tick[receive_wait_timeout] / set_bus_error = X,
+          s_read_config_wait + e_receive_done                           / store_config                                  = s_verify_config,
+          s_read_config_wait + e_tick         [transfer_error]          / set_bus_error                                 = X,
+          s_read_config_wait + e_tick         [!receive_wait_timeout]   / tick_timer,
+          s_read_config_wait + e_tick         [receive_wait_timeout]    / set_bus_error                                 = X,
 
-          s_verify_config + e_tick[!config_matched] / mark_config_fail   = X,
-          s_verify_config + e_tick[config_matched] / mark_config_success = X);
+          s_verify_config                     [!config_matched]         / (set_config_mismatch_error, mark_config_fail) = X,
+          s_verify_config                     [config_matched]          / mark_config_success                           = X
+         
+      );
+      // clang-format on
    }
 };
 

@@ -33,8 +33,15 @@ public:
       m_callback_context           = context;
    }
 
+   void stage_rx_buffer(std::span<const uint8_t> staging_rx_buffer)
+   {
+      copy_buffer(staging_rx_buffer, m_rx_buffer);
+      m_rx_buffer_span = std::span{m_rx_buffer.data(), staging_rx_buffer.size()};
+   }
+
    static void copy_buffer(std::span<const uint8_t> src, std::span<uint8_t> dest)
    {
+      error::verify(src.size() <= dest.size());
       std::copy(src.begin(), src.end(), dest.begin());
    }
 
@@ -42,8 +49,8 @@ public:
 
    std::array<uint8_t, max_bytes_per_i2c_transfer> m_tx_buffer{};
    std::array<uint8_t, max_bytes_per_i2c_transfer> m_rx_buffer{};
-   std::span<uint8_t>                              m_tx_buffer_span{m_tx_buffer};
-   std::span<uint8_t>                              m_rx_buffer_span{m_rx_buffer};
+   std::span<uint8_t>                              m_tx_buffer_span{};
+   std::span<uint8_t>                              m_rx_buffer_span{};
    uint8_t                                         m_i2c_addr{};
    std::optional<uint8_t>                          m_read_reg{};
    bool                                            m_transaction_result{true};

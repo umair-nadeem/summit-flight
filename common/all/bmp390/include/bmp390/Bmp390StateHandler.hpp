@@ -289,6 +289,9 @@ public:
          case barometer_sensor::BarometerSensorError::id_mismatch_error:
             m_logger.print("encountered error->id_mismatch_error");
             break;
+         case barometer_sensor::BarometerSensorError::config_mismatch_error:
+            m_logger.print("encountered error->config_mismatch_error");
+            break;
          case barometer_sensor::BarometerSensorError::sensor_error:
             m_logger.print("encountered error->sensor_error");
             break;
@@ -302,6 +305,16 @@ public:
             error::stop_operation();
             break;
       }
+   }
+
+   barometer_sensor::BarometerSensorState get_state() const
+   {
+      return m_local_barometer_health.state;
+   }
+
+   barometer_sensor::BarometerHealth::ErrorBits get_error() const
+   {
+      return m_local_barometer_health.error;
    }
 
    bool validation_successful() const
@@ -356,7 +369,7 @@ public:
       return true;
    }
 
-   bool bus_error() const
+   bool transfer_error() const
    {
       return m_i2c_error;
    }
