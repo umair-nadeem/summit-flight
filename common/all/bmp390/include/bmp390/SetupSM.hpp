@@ -83,10 +83,10 @@ struct SetupStateMachine
       { state.set_error(barometer_sensor::BarometerSensorError::id_mismatch_error); };
 
       // guards
-      static constexpr auto receive_wait_timeout = [](StateHandler& state)
+      static constexpr auto receive_wait_timeout = [](const StateHandler& state)
       { return state.receive_wait_timeout(); };
 
-      static constexpr auto bus_error = [](StateHandler& state)
+      static constexpr auto bus_error = [](const StateHandler& state)
       { return state.bus_error(); };
 
       constexpr auto id_matched = [](const StateHandler& state)
