@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <span>
 
 #include "barometer_sensor/BarometerData.hpp"
 #include "barometer_sensor/BarometerHealth.hpp"
@@ -219,28 +220,16 @@ public:
       m_barometer_data_storage.update_latest(m_local_barometer_data, ClockSource::now_ms());
    }
 
-   void mark_validation_fail()
+   void mark_setup_fail()
    {
-      m_local_barometer_health.validation_ok = false;
-      m_logger.print("validation failed");
+      m_local_barometer_health.setup_ok = false;
+      m_logger.print("setup failed");
    }
 
-   void mark_validation_success()
+   void mark_setup_success()
    {
-      m_local_barometer_health.validation_ok = true;
-      m_logger.print("validation successful");
-   }
-
-   void mark_config_fail()
-   {
-      m_local_barometer_health.config_ok = false;
-      m_logger.print("config failed");
-   }
-
-   void mark_config_success()
-   {
-      m_local_barometer_health.config_ok = true;
-      m_logger.print("config successful");
+      m_local_barometer_health.setup_ok = true;
+      m_logger.print("setup successful");
    }
 
    void set_state(const barometer_sensor::BarometerSensorState state)
@@ -292,6 +281,9 @@ public:
          case barometer_sensor::BarometerSensorError::config_mismatch_error:
             m_logger.print("encountered error->config_mismatch_error");
             break;
+         case barometer_sensor::BarometerSensorError::coefficients_error:
+            m_logger.print("encountered error->coefficients_error");
+            break;
          case barometer_sensor::BarometerSensorError::sensor_error:
             m_logger.print("encountered error->sensor_error");
             break;
@@ -317,14 +309,9 @@ public:
       return m_local_barometer_health.error;
    }
 
-   bool validation_successful() const
+   bool setup_successful() const
    {
-      return m_local_barometer_health.validation_ok;
-   }
-
-   bool config_successful() const
-   {
-      return m_local_barometer_health.config_ok;
+      return m_local_barometer_health.setup_ok;
    }
 
    bool id_matched() const
@@ -344,7 +331,20 @@ public:
               (m_config_registers.config == params::ConfigReg::iir_coef3_mask));
    }
 
-   bool is_buffer_non_zero() const
+   bool are_coefficients_non_zero() const
+   {
+      for (std::size_t i = 1u; i < params::num_bytes_calibration_data; i++)
+      {
+         if (m_rx_buffer[i] != 0)
+         {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   bool is_data_non_zero() const
    {
       for (std::size_t i = 1u; i < params::num_bytes_data; i++)
       {

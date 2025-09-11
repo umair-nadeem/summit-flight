@@ -56,6 +56,16 @@ public:
       m_state_machine.process_event(EventReceiveDone{});
    }
 
+   barometer_sensor::BarometerSensorState get_state() const
+   {
+      return m_state_handler.get_state();
+   }
+
+   barometer_sensor::BarometerHealth::ErrorBits get_error() const
+   {
+      return m_state_handler.get_error();
+   }
+
 private:
    template <typename StateHandler>
    struct Bmp390StateMachine
@@ -132,6 +142,9 @@ private:
          static constexpr auto set_bus_error = [](StateHandler& state)
          { state.set_error(barometer_sensor::BarometerSensorError::bus_error); };
 
+         static constexpr auto set_coefficients_error = [](StateHandler& state)
+         { state.set_error(barometer_sensor::BarometerSensorError::coefficients_error); };
+
          static constexpr auto set_sensor_error = [](StateHandler& state)
          { state.set_error(barometer_sensor::BarometerSensorError::sensor_error); };
 
@@ -139,14 +152,17 @@ private:
          { state.set_error(barometer_sensor::BarometerSensorError::data_error); };
 
          // guards
-         constexpr auto validation_successful = [](StateHandler& state)
-         { return state.validation_successful(); };
+         static constexpr auto transfer_error = [](const StateHandler& state)
+         { return state.transfer_error(); };
 
-         constexpr auto config_successful = [](StateHandler& state)
-         { return state.config_successful(); };
+         constexpr auto setup_successful = [](StateHandler& state)
+         { return state.setup_successful(); };
 
-         constexpr auto is_buffer_non_zero = [](const StateHandler& state)
-         { return state.is_buffer_non_zero(); };
+         constexpr auto are_coefficients_non_zero = [](const StateHandler& state)
+         { return state.are_coefficients_non_zero(); };
+
+         constexpr auto is_data_non_zero = [](const StateHandler& state)
+         { return state.is_data_non_zero(); };
 
          constexpr auto sensor_error_reported = [](const StateHandler& state)
          { return state.sensor_error_reported(); };
@@ -167,21 +183,22 @@ private:
              *s_stopped + e_start / set_setup_state = s_init_setup,
 
              // setup
-             s_init_setup[!validation_successful]                     = s_failure,
-             s_init_setup[!config_successful]                         = s_failure,
-             s_init_setup[validation_successful && config_successful] = s_read_coefficients,
+             s_init_setup[!setup_successful] = s_failure,
+             s_init_setup[setup_successful]  = s_read_coefficients,
 
              // read coefficients
-             s_read_coefficients + e_tick / (reset_timer, read_coefficients)                         = s_read_coefficients_wait,
-             s_read_coefficients_wait + e_receive_done / (store_coefficients, set_operational_state) = s_measurement,
+             s_read_coefficients + e_tick / (reset_timer, read_coefficients)                                                    = s_read_coefficients_wait,
+             s_read_coefficients_wait + e_receive_done[are_coefficients_non_zero] / (store_coefficients, set_operational_state) = s_measurement,
+             s_read_coefficients_wait + e_receive_done[!are_coefficients_non_zero] / set_coefficients_error                     = s_failure,
+             s_read_coefficients_wait + e_tick[transfer_error] / set_bus_error                                                  = s_failure,
              s_read_coefficients_wait + e_tick[!receive_wait_timeout] / tick_timer,
              s_read_coefficients_wait + e_tick[receive_wait_timeout] / set_bus_error = s_failure,
 
              // operational
              s_measurement + e_tick / (reset_timer, read_data) = s_data_read_wait,
 
-             s_data_read_wait + e_receive_done[is_buffer_non_zero] / (process_error_register, convert_raw_data) = s_data_verification,
-             s_data_read_wait + e_receive_done[!is_buffer_non_zero] / (set_sensor_error, count_read_failure)    = s_data_read_fail,
+             s_data_read_wait + e_receive_done[is_data_non_zero] / (process_error_register, convert_raw_data) = s_data_verification,
+             s_data_read_wait + e_receive_done[!is_data_non_zero] / (set_sensor_error, count_read_failure)    = s_data_read_fail,
              s_data_read_wait + e_tick[!receive_wait_timeout] / tick_timer,
              s_data_read_wait + e_tick[receive_wait_timeout] / (set_bus_error, count_read_failure) = s_data_read_fail,
 

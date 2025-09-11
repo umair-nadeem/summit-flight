@@ -6,7 +6,7 @@
 class Bmp390SetupSMTest : public Bmp390BaseTest
 {
 protected:
-   void provide_ticks(std::size_t num_ticks)
+   void provide_ticks(const std::size_t num_ticks)
    {
       for (std::size_t i = 0; i < num_ticks; i++)
       {
@@ -109,7 +109,7 @@ TEST_F(Bmp390SetupSMTest, check_read_id_fail_with_id_mismatch)
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
    EXPECT_EQ(i2c_driver.m_read_reg.value(), bmp390::params::chip_id_reg);
-   EXPECT_FALSE(state_handler.validation_successful());
+   EXPECT_FALSE(state_handler.setup_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
 
@@ -153,7 +153,7 @@ TEST_F(Bmp390SetupSMTest, check_config_write_fail_with_bus_error)
    ref_error.set(static_cast<uint8_t>(barometer_sensor::BarometerSensorError::bus_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
-   EXPECT_FALSE(state_handler.config_successful());
+   EXPECT_FALSE(state_handler.setup_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
 
@@ -186,7 +186,7 @@ TEST_F(Bmp390SetupSMTest, check_power_mode_with_bus_error)
    ref_error.set(static_cast<uint8_t>(barometer_sensor::BarometerSensorError::bus_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
-   EXPECT_FALSE(state_handler.config_successful());
+   EXPECT_FALSE(state_handler.setup_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
 
@@ -215,7 +215,7 @@ TEST_F(Bmp390SetupSMTest, check_read_config_burst_fail_with_timeout)
    ref_error.set(static_cast<uint8_t>(barometer_sensor::BarometerSensorError::bus_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
-   EXPECT_FALSE(state_handler.config_successful());
+   EXPECT_FALSE(state_handler.setup_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
 
@@ -253,7 +253,7 @@ TEST_F(Bmp390SetupSMTest, check_read_config_burst_fail_with_pwr_ctrl_mismatch)
    ref_error.set(static_cast<uint8_t>(barometer_sensor::BarometerSensorError::config_mismatch_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
-   EXPECT_FALSE(state_handler.config_successful());
+   EXPECT_FALSE(state_handler.setup_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
 
@@ -291,7 +291,7 @@ TEST_F(Bmp390SetupSMTest, check_read_config_burst_fail_with_odr_mismatch)
    ref_error.set(static_cast<uint8_t>(barometer_sensor::BarometerSensorError::config_mismatch_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
-   EXPECT_FALSE(state_handler.config_successful());
+   EXPECT_FALSE(state_handler.setup_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
 
@@ -313,10 +313,10 @@ TEST_F(Bmp390SetupSMTest, check_read_config_burst_successful)
    sm.process_event(bmp390::EventTick{});   // iir
    sm.process_event(bmp390::EventTick{});   // power control
 
-   // read config burst fails with power control mismatch
+   // read config burst succeeds
    std::array<uint8_t, 5> ref_config_rx_buffer{get_pwr_ctrl(),                                 // pwr ctrl
                                                static_cast<uint8_t>((osr4_t << 3u) | osr_p),   // osr
-                                               odr_sel,                                        // wrong odr
+                                               odr_sel,                                        // odr
                                                0,                                              // reserved
                                                iir_filter << 1u};                              // iir
 
@@ -326,6 +326,6 @@ TEST_F(Bmp390SetupSMTest, check_read_config_burst_successful)
    sm.process_event(bmp390::EventReceiveDone{});
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), 0);
-   EXPECT_TRUE(state_handler.config_successful());
+   EXPECT_TRUE(state_handler.setup_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
