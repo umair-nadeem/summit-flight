@@ -22,7 +22,7 @@ protected:
                               i2c_driver,
                               logger,
                               read_failures_limit,
-                              recovery_attempts,
+                              max_recovery_attempts,
                               execution_period_ms,
                               receive_wait_timeout_ms};
 

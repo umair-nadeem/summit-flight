@@ -18,7 +18,7 @@ protected:
    }
 
    static constexpr uint8_t     read_failures_limit     = 3u;
-   static constexpr uint8_t     recovery_attempts       = 3u;
+   static constexpr uint8_t     max_recovery_attempts   = 3u;
    static constexpr std::size_t execution_period_ms     = 40u;
    static constexpr std::size_t receive_wait_timeout_ms = 80u;
 
