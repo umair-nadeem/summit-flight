@@ -126,7 +126,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_smplrt_mismatch)
    // provide tick for verification state to complete with fail
    sm.process_event(mpu6500::EventTick{});
 
-   imu_sensor::ImuHealth::ErrorBits ref_error{};
+   imu_sensor::ErrorBits ref_error{};
    ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::config_mismatch_error));
 
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -158,7 +158,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_config_mismatch)
    // provide tick for verification state to complete with fail
    sm.process_event(mpu6500::EventTick{});
 
-   imu_sensor::ImuHealth::ErrorBits ref_error{};
+   imu_sensor::ErrorBits ref_error{};
    ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::config_mismatch_error));
 
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -190,7 +190,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_gyro_config_mismatch)
    // provide tick for verification state to complete with fail
    sm.process_event(mpu6500::EventTick{});
 
-   imu_sensor::ImuHealth::ErrorBits ref_error{};
+   imu_sensor::ErrorBits ref_error{};
    ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::config_mismatch_error));
 
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -222,7 +222,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_accel_config_mismatch)
    // provide tick for verification state to complete with fail
    sm.process_event(mpu6500::EventTick{});
 
-   imu_sensor::ImuHealth::ErrorBits ref_error{};
+   imu_sensor::ErrorBits ref_error{};
    ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::config_mismatch_error));
 
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -254,7 +254,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_accel_config_2_mismatch)
    // provide tick for verification state to complete with fail
    sm.process_event(mpu6500::EventTick{});
 
-   imu_sensor::ImuHealth::ErrorBits ref_error{};
+   imu_sensor::ErrorBits ref_error{};
    ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::config_mismatch_error));
 
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());

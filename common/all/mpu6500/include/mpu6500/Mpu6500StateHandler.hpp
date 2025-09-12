@@ -327,7 +327,7 @@ public:
       return m_local_imu_health.state;
    }
 
-   imu_sensor::ImuHealth::ErrorBits get_error() const
+   imu_sensor::ErrorBits get_error() const
    {
       return m_local_imu_health.error;
    }

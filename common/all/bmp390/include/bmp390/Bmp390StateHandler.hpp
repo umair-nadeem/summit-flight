@@ -324,7 +324,7 @@ public:
       return m_local_barometer_health.state;
    }
 
-   barometer_sensor::BarometerHealth::ErrorBits get_error() const
+   barometer_sensor::ErrorBits get_error() const
    {
       return m_local_barometer_health.error;
    }

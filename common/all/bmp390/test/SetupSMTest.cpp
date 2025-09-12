@@ -44,7 +44,7 @@ TEST_F(Bmp390SetupSMTest, check_soft_reset_fail_with_bus_error)
 
    sm.process_event(bmp390::EventTick{});   // bus error evaluated
 
-   barometer_sensor::BarometerHealth::ErrorBits ref_error{};
+   barometer_sensor::ErrorBits ref_error{};
    ref_error.set(static_cast<uint8_t>(barometer_sensor::BarometerSensorError::bus_error));
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
    EXPECT_TRUE(sm.is(boost::sml::X));
@@ -63,7 +63,7 @@ TEST_F(Bmp390SetupSMTest, check_read_id_fail_with_bus_error)
    sm.process_event(bmp390::EventTick{});   // read id command executed
    sm.process_event(bmp390::EventTick{});   // bus error evaluated
 
-   barometer_sensor::BarometerHealth::ErrorBits ref_error{};
+   barometer_sensor::ErrorBits ref_error{};
    ref_error.set(static_cast<uint8_t>(barometer_sensor::BarometerSensorError::bus_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -83,7 +83,7 @@ TEST_F(Bmp390SetupSMTest, check_read_id_fail_with_timeout)
    sm.process_event(bmp390::EventTick{});                                 // read id command executed
    provide_ticks((receive_wait_timeout_ms / execution_period_ms) + 1u);   // timeout ticks
 
-   barometer_sensor::BarometerHealth::ErrorBits ref_error{};
+   barometer_sensor::ErrorBits ref_error{};
    ref_error.set(static_cast<uint8_t>(barometer_sensor::BarometerSensorError::bus_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -105,7 +105,7 @@ TEST_F(Bmp390SetupSMTest, check_read_id_fail_with_id_mismatch)
    sm.process_event(bmp390::EventTick{});   // read id command executed
    sm.process_event(bmp390::EventReceiveDone{});
 
-   barometer_sensor::BarometerHealth::ErrorBits ref_error{};
+   barometer_sensor::ErrorBits ref_error{};
    ref_error.set(static_cast<uint8_t>(barometer_sensor::BarometerSensorError::id_mismatch_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -150,7 +150,7 @@ TEST_F(Bmp390SetupSMTest, check_config_write_fail_with_bus_error)
 
    sm.process_event(bmp390::EventTick{});   // bus error evaluated
 
-   barometer_sensor::BarometerHealth::ErrorBits ref_error{};
+   barometer_sensor::ErrorBits ref_error{};
    ref_error.set(static_cast<uint8_t>(barometer_sensor::BarometerSensorError::bus_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -183,7 +183,7 @@ TEST_F(Bmp390SetupSMTest, check_power_mode_with_bus_error)
 
    sm.process_event(bmp390::EventTick{});   // bus error evaluated
 
-   barometer_sensor::BarometerHealth::ErrorBits ref_error{};
+   barometer_sensor::ErrorBits ref_error{};
    ref_error.set(static_cast<uint8_t>(barometer_sensor::BarometerSensorError::bus_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -212,7 +212,7 @@ TEST_F(Bmp390SetupSMTest, check_read_config_burst_fail_with_timeout)
 
    provide_ticks((receive_wait_timeout_ms / execution_period_ms) + 1u);   // timeout ticks
 
-   barometer_sensor::BarometerHealth::ErrorBits ref_error{};
+   barometer_sensor::ErrorBits ref_error{};
    ref_error.set(static_cast<uint8_t>(barometer_sensor::BarometerSensorError::bus_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -250,7 +250,7 @@ TEST_F(Bmp390SetupSMTest, check_read_config_burst_fail_with_pwr_ctrl_mismatch)
    sm.process_event(bmp390::EventTick{});
    sm.process_event(bmp390::EventReceiveDone{});
 
-   barometer_sensor::BarometerHealth::ErrorBits ref_error{};
+   barometer_sensor::ErrorBits ref_error{};
    ref_error.set(static_cast<uint8_t>(barometer_sensor::BarometerSensorError::config_mismatch_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -288,7 +288,7 @@ TEST_F(Bmp390SetupSMTest, check_read_config_burst_fail_with_odr_mismatch)
    sm.process_event(bmp390::EventTick{});
    sm.process_event(bmp390::EventReceiveDone{});
 
-   barometer_sensor::BarometerHealth::ErrorBits ref_error{};
+   barometer_sensor::ErrorBits ref_error{};
    ref_error.set(static_cast<uint8_t>(barometer_sensor::BarometerSensorError::config_mismatch_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());

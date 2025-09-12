@@ -1,5 +1,6 @@
 #pragma once
 
+#include <bitset>
 #include <cstdint>
 
 namespace barometer_sensor
@@ -16,5 +17,7 @@ enum class BarometerSensorError : uint8_t
    out_of_range_data_error,      // non-zero but implausible data
    max_error
 };
+
+using ErrorBits = std::bitset<static_cast<uint8_t>(BarometerSensorError::max_error)>;
 
 }   // namespace barometer_sensor

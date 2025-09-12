@@ -104,7 +104,7 @@ TEST_F(ValidationSMTest, check_read_id_mismatch)
    // id verification fails
    sm.process_event(mpu6500::EventTick{});
 
-   imu_sensor::ImuHealth::ErrorBits ref_error{};
+   imu_sensor::ErrorBits ref_error{};
    ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::id_mismatch_error));
 
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
