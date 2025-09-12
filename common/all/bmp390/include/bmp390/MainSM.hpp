@@ -158,7 +158,7 @@ struct Bmp390MainStateMachine
           s_init_setup                           [!setup_successful]                                                                             = s_failure,
 
           // read coefficients
-          s_read_coeff         + e_tick                                            / (reset_timer, read_coefficients)                                                                     = s_read_coeff_wait,
+          s_read_coeff         + e_tick                                            / (reset_timer, read_coefficients)                            = s_read_coeff_wait,
           s_read_coeff_wait    + e_receive_done  [is_coefficients_pattern_ok]      / (store_coefficients, set_operational_state, publish_health) = s_measurement,
           s_read_coeff_wait    + e_receive_done  [!is_coefficients_pattern_ok]     / set_coefficients_pattern_error                              = s_failure,
           s_read_coeff_wait    + e_tick          [transfer_error]                  / set_bus_error                                               = s_failure,
@@ -189,13 +189,13 @@ struct Bmp390MainStateMachine
 
           s_failure            + boost::sml::on_entry<_>                           / (set_failure_state, publish_health, reset_data),
 
-          s_init_setup         + e_stop / set_stopped_state                                                                                      = s_stopped,
-          s_recovery_setup     + e_stop / set_stopped_state                                                                                      = s_stopped,
-          s_read_coeff         + e_stop / set_stopped_state                                                                                      = s_stopped,
-          s_read_coeff_wait    + e_stop / set_stopped_state                                                                                      = s_stopped,
-          s_measurement        + e_stop / set_stopped_state                                                                                      = s_stopped,
-          s_data_read_wait     + e_stop / set_stopped_state                                                                                      = s_stopped,
-          s_recovery           + e_stop / set_stopped_state                                                                                      = s_stopped);
+          s_init_setup         + e_stop                                            / set_stopped_state                                           = s_stopped,
+          s_recovery_setup     + e_stop                                            / set_stopped_state                                           = s_stopped,
+          s_read_coeff         + e_stop                                            / set_stopped_state                                           = s_stopped,
+          s_read_coeff_wait    + e_stop                                            / set_stopped_state                                           = s_stopped,
+          s_measurement        + e_stop                                            / set_stopped_state                                           = s_stopped,
+          s_data_read_wait     + e_stop                                            / set_stopped_state                                           = s_stopped,
+          s_recovery           + e_stop                                            / set_stopped_state                                           = s_stopped);
       // clang-format on
    }
 };
