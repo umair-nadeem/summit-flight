@@ -25,6 +25,7 @@ public:
                                I2cDriver&        i2c_driver,
                                Logger&           logger,
                                const uint8_t     read_failures_limit,
+                               const uint8_t     max_recovery_attempts,
                                const std::size_t execution_period_ms,
                                const std::size_t receive_wait_timeout_ms)
        : m_barometer_data_storage{barometer_data_storage},
@@ -32,6 +33,7 @@ public:
          m_i2c_driver{i2c_driver},
          m_logger{logger},
          m_read_failures_limit{read_failures_limit},
+         m_max_recovery_attempts{max_recovery_attempts},
          m_execution_period_ms{execution_period_ms},
          m_receive_wait_timeout_ms{receive_wait_timeout_ms}
    {
@@ -53,9 +55,20 @@ public:
       m_logger.print("read failure");
    }
 
+   void count_recovery_attempt()
+   {
+      m_local_barometer_health.recovery_attempt_count++;
+      m_logger.print("recovery attempt");
+   }
+
    void reset_read_failures()
    {
       m_local_barometer_health.read_failure_count = 0;
+   }
+
+   void reset_recovery_attempts()
+   {
+      m_local_barometer_health.recovery_attempt_count = 0;
    }
 
    void soft_reset()
@@ -244,17 +257,14 @@ public:
          case barometer_sensor::BarometerSensorState::setup:
             m_logger.print("entered state->setup");
             break;
-         case barometer_sensor::BarometerSensorState::self_test:
-            m_logger.print("entered state->self_test");
+         case barometer_sensor::BarometerSensorState::read_coefficients:
+            m_logger.print("entered state->read_coefficients");
             break;
          case barometer_sensor::BarometerSensorState::operational:
             m_logger.print("entered state->operational");
             break;
-         case barometer_sensor::BarometerSensorState::soft_recovery:
-            m_logger.print("entered state->soft_recovery");
-            break;
-         case barometer_sensor::BarometerSensorState::hard_recovery:
-            m_logger.print("entered state->hard_recovery");
+         case barometer_sensor::BarometerSensorState::recovery:
+            m_logger.print("entered state->recovery");
             break;
          case barometer_sensor::BarometerSensorState::failure:
             m_logger.print("entered state->failure");
@@ -286,6 +296,9 @@ public:
             break;
          case barometer_sensor::BarometerSensorError::sensor_error:
             m_logger.print("encountered error->sensor_error");
+            break;
+         case barometer_sensor::BarometerSensorError::zero_data_error:
+            m_logger.print("encountered error->zero_data_error");
             break;
          case barometer_sensor::BarometerSensorError::data_error:
             m_logger.print("encountered error->data_error");
@@ -384,6 +397,11 @@ public:
       return (m_local_barometer_health.read_failure_count < m_read_failures_limit);
    }
 
+   bool recovery_attempts_below_limit() const
+   {
+      return (m_local_barometer_health.recovery_attempt_count < m_max_recovery_attempts);
+   }
+
 private:
    float compensate_temperature(const float uncomp_temp) const
    {
@@ -464,6 +482,7 @@ private:
    I2cDriver&                               m_i2c_driver;
    Logger&                                  m_logger;
    const uint8_t                            m_read_failures_limit;
+   const uint8_t                            m_max_recovery_attempts;
    const std::size_t                        m_execution_period_ms;
    const std::size_t                        m_receive_wait_timeout_ms;
    barometer_sensor::BarometerData          m_local_barometer_data{};

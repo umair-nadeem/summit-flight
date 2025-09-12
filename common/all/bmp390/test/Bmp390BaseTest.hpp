@@ -18,6 +18,7 @@ protected:
    }
 
    static constexpr uint8_t     read_failures_limit     = 3u;
+   static constexpr uint8_t     recovery_attempts       = 3u;
    static constexpr std::size_t execution_period_ms     = 40u;
    static constexpr std::size_t receive_wait_timeout_ms = 80u;
 
@@ -32,4 +33,26 @@ protected:
    boundaries::SharedData<barometer_sensor::BarometerHealth> barometer_health_storage{};
    mocks::hw::I2c                                            i2c_driver{};
    mocks::common::Logger                                     logger{"bmp390_test"};
+
+   std::array<uint8_t, bmp390::params::num_bytes_calibration_data>
+       trimming_coefficients_buffer{214u, 108u, 213u, 76u, 249u, 234u, 26u, 252u, 20u, 6u,
+                                    1u, 253u, 75u, 240u, 91u, 3u, 250u, 105u, 15u, 6u, 245};
+
+   bmp390::params::CalibrationCoeffiecients raw_calibration_data{
+       // temperature
+       .par_t1  = 27862,
+       .par_t2  = 19669,
+       .par_t3  = -7,
+       // pressure
+       .par_p1  = 6890,
+       .par_p2  = 5372,
+       .par_p3  = 6,
+       .par_p4  = 1,
+       .par_p5  = 19453,
+       .par_p6  = 23536,
+       .par_p7  = 3,
+       .par_p8  = -6,
+       .par_p9  = 3945,
+       .par_p10 = 6,
+       .par_p11 = -11};
 };

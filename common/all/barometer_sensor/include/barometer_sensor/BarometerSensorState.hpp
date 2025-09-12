@@ -7,10 +7,9 @@ enum class BarometerSensorState
 {
    stopped,
    setup,
-   self_test,
+   read_coefficients,
    operational,
-   soft_recovery,
-   hard_recovery,
+   recovery,
    failure
 };
 

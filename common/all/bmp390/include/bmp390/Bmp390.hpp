@@ -20,6 +20,7 @@ public:
                    I2cDriver&        i2c_driver,
                    Logger&           logger,
                    const uint8_t     read_failures_limit,
+                   const uint8_t     max_recovery_attempts,
                    const std::size_t execution_period_ms,
                    const std::size_t receive_wait_timeout_ms)
        : m_state_handler{barometer_data_storage,
@@ -27,6 +28,7 @@ public:
                          i2c_driver,
                          logger,
                          read_failures_limit,
+                         max_recovery_attempts,
                          execution_period_ms,
                          receive_wait_timeout_ms},
          m_logger{logger}
@@ -76,8 +78,14 @@ private:
       {
       };
 
+      template <typename H>
+      struct RecoverySetupSM : SetupStateMachine<H>
+      {
+      };
+
       // composite state machines
-      static constexpr auto s_init_setup = boost::sml::state<InitSetupSM<StateHandler>>;
+      static constexpr auto s_init_setup     = boost::sml::state<InitSetupSM<StateHandler>>;
+      static constexpr auto s_recovery_setup = boost::sml::state<RecoverySetupSM<StateHandler>>;
 
       // leaf states
       static constexpr auto s_stopped                = boost::sml::state<class StateStopped>;
@@ -87,6 +95,7 @@ private:
       static constexpr auto s_data_read_wait         = boost::sml::state<class StateDataReadWait>;
       static constexpr auto s_data_verification      = boost::sml::state<class StateDataVerification>;
       static constexpr auto s_data_read_fail         = boost::sml::state<class StateDataReadFailure>;
+      static constexpr auto s_recovery               = boost::sml::state<class StateRecovery>;
       static constexpr auto s_failure                = boost::sml::state<class StateFailure>;
 
       auto operator()() const
@@ -103,8 +112,14 @@ private:
          constexpr auto reset_read_failures = [](StateHandler& state)
          { state.reset_read_failures(); };
 
+         constexpr auto reset_recovery_attempts = [](StateHandler& state)
+         { state.reset_recovery_attempts(); };
+
          constexpr auto count_read_failure = [](StateHandler& state)
          { state.count_read_failure(); };
+
+         constexpr auto count_recovery_attempt = [](StateHandler& state)
+         { state.count_recovery_attempt(); };
 
          static constexpr auto read_coefficients = [](StateHandler& state)
          { state.read_coefficients(); };
@@ -133,8 +148,14 @@ private:
          static constexpr auto set_setup_state = [](StateHandler& state)
          { state.set_state(barometer_sensor::BarometerSensorState::setup); };
 
+         static constexpr auto set_read_coefficients_state = [](StateHandler& state)
+         { state.set_state(barometer_sensor::BarometerSensorState::read_coefficients); };
+
          static constexpr auto set_operational_state = [](StateHandler& state)
          { state.set_state(barometer_sensor::BarometerSensorState::operational); };
+
+         static constexpr auto set_recovery_state = [](StateHandler& state)
+         { state.set_state(barometer_sensor::BarometerSensorState::recovery); };
 
          static constexpr auto set_failure_state = [](StateHandler& state)
          { state.set_state(barometer_sensor::BarometerSensorState::failure); };
@@ -147,6 +168,9 @@ private:
 
          static constexpr auto set_sensor_error = [](StateHandler& state)
          { state.set_error(barometer_sensor::BarometerSensorError::sensor_error); };
+
+         static constexpr auto set_zero_data_error = [](StateHandler& state)
+         { state.set_error(barometer_sensor::BarometerSensorError::zero_data_error); };
 
          static constexpr auto set_data_error = [](StateHandler& state)
          { state.set_error(barometer_sensor::BarometerSensorError::data_error); };
@@ -173,6 +197,12 @@ private:
          static constexpr auto receive_wait_timeout = [](StateHandler& state)
          { return state.receive_wait_timeout(); };
 
+         constexpr auto read_failures_below_limit = [](const StateHandler& state)
+         { return state.read_failures_below_limit(); };
+
+         constexpr auto recovery_attempts_below_limit = [](const StateHandler& state)
+         { return state.recovery_attempts_below_limit(); };
+
          // events
          static constexpr auto e_start        = event<EventStart>;
          static constexpr auto e_tick         = event<EventTick>;
@@ -183,14 +213,14 @@ private:
              *s_stopped + e_start / set_setup_state = s_init_setup,
 
              // setup
-             s_init_setup[!setup_successful] = s_failure,
-             s_init_setup[setup_successful]  = s_read_coefficients,
+             s_init_setup[setup_successful] / (set_read_coefficients_state, publish_health) = s_read_coefficients,
+             s_init_setup[!setup_successful]                                                = s_failure,
 
              // read coefficients
-             s_read_coefficients + e_tick / (reset_timer, read_coefficients)                                                    = s_read_coefficients_wait,
-             s_read_coefficients_wait + e_receive_done[are_coefficients_non_zero] / (store_coefficients, set_operational_state) = s_measurement,
-             s_read_coefficients_wait + e_receive_done[!are_coefficients_non_zero] / set_coefficients_error                     = s_failure,
-             s_read_coefficients_wait + e_tick[transfer_error] / set_bus_error                                                  = s_failure,
+             s_read_coefficients + e_tick / (reset_timer, read_coefficients)                                                                    = s_read_coefficients_wait,
+             s_read_coefficients_wait + e_receive_done[are_coefficients_non_zero] / (store_coefficients, set_operational_state, publish_health) = s_measurement,
+             s_read_coefficients_wait + e_receive_done[!are_coefficients_non_zero] / set_coefficients_error                                     = s_failure,
+             s_read_coefficients_wait + e_tick[transfer_error] / set_bus_error                                                                  = s_failure,
              s_read_coefficients_wait + e_tick[!receive_wait_timeout] / tick_timer,
              s_read_coefficients_wait + e_tick[receive_wait_timeout] / set_bus_error = s_failure,
 
@@ -198,13 +228,23 @@ private:
              s_measurement + e_tick / (reset_timer, read_data) = s_data_read_wait,
 
              s_data_read_wait + e_receive_done[is_data_non_zero] / (process_error_register, convert_raw_data) = s_data_verification,
-             s_data_read_wait + e_receive_done[!is_data_non_zero] / (set_sensor_error, count_read_failure)    = s_data_read_fail,
+             s_data_read_wait + e_receive_done[!is_data_non_zero] / (set_zero_data_error, count_read_failure) = s_data_read_fail,
              s_data_read_wait + e_tick[!receive_wait_timeout] / tick_timer,
              s_data_read_wait + e_tick[receive_wait_timeout] / (set_bus_error, count_read_failure) = s_data_read_fail,
 
-             s_data_verification[sensor_error_reported] / set_sensor_error              = s_failure,
-             s_data_verification[is_data_valid] / (reset_read_failures, publish_data)   = s_measurement,
-             s_data_verification[!is_data_valid] / (set_data_error, count_read_failure) = s_data_read_fail,
+             s_data_verification[sensor_error_reported] / (set_sensor_error, count_read_failure) = s_data_read_fail,
+             s_data_verification[is_data_valid] / (reset_read_failures, publish_data)            = s_measurement,
+             s_data_verification[!is_data_valid] / (set_data_error, count_read_failure)          = s_data_read_fail,
+
+             s_data_read_fail[read_failures_below_limit]                                         = s_measurement,
+             s_data_read_fail[!read_failures_below_limit] / (set_recovery_state, publish_health) = s_recovery,
+
+             // soft recovery re-orchestrates setup composite SM
+             s_recovery + e_tick / count_recovery_attempt = s_recovery_setup,
+
+             s_recovery_setup[setup_successful] / (reset_recovery_attempts, set_operational_state, publish_health) = s_measurement,
+             s_recovery_setup[!setup_successful && recovery_attempts_below_limit]                                  = s_recovery,
+             s_recovery_setup[!setup_successful && !recovery_attempts_below_limit]                                 = s_failure,
 
              s_failure + boost::sml::on_entry<_> / (set_failure_state, publish_health, reset_data));
       }

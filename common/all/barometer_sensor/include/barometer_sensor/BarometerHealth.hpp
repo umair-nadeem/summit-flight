@@ -15,6 +15,7 @@ struct BarometerHealth
    ErrorBits            error{0};
    BarometerSensorState state{BarometerSensorState::stopped};
    std::size_t          read_failure_count{0};
+   std::size_t          recovery_attempt_count{0};
    bool                 setup_ok{false};
 };
 
