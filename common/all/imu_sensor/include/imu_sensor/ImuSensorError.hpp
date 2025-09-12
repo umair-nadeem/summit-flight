@@ -7,9 +7,11 @@ namespace imu_sensor
 
 enum class ImuSensorError : uint8_t
 {
-   bus_error    = 0,   // bus communication failure
-   sensor_error = 1,   // all zeros etc.
-   data_error   = 2,   // non-zero but implausible data
+   bus_error,                 // bus communication failure
+   id_mismatch_error,         // id mismatch
+   config_mismatch_error,     // config mismatch
+   data_pattern_error,        // all zeros/all ones data etc.
+   out_of_range_data_error,   // non-zero but implausible data
    max_error
 };
 

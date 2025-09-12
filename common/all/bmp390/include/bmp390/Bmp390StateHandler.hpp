@@ -219,10 +219,11 @@ public:
       m_data_log_counter++;
       if ((m_data_log_counter % 25u) == 0)
       {
-         m_logger.printf("clock: %u   pressure: %.2f     |     temperature: %.2f",
+         m_logger.printf("clock: %u   pressure: %.2f     |     temperature: %.2f     |     altitude: %.2f",
                          clock,
                          m_local_barometer_data.pressure_pa,
-                         m_local_barometer_data.temperature_c.value());
+                         m_local_barometer_data.temperature_c.value(),
+                         m_local_barometer_data.altitude_m.value());
       }
    }
 

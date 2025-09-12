@@ -136,11 +136,11 @@ struct MainStateMachine
       constexpr auto set_bus_error = [](StateHandler& state)
       { state.set_error(imu_sensor::ImuSensorError::bus_error); };
 
-      constexpr auto set_sensor_error = [](StateHandler& state)
-      { state.set_error(imu_sensor::ImuSensorError::sensor_error); };
+      constexpr auto set_data_pattern_error = [](StateHandler& state)
+      { state.set_error(imu_sensor::ImuSensorError::data_pattern_error); };
 
-      constexpr auto set_data_error = [](StateHandler& state)
-      { state.set_error(imu_sensor::ImuSensorError::data_error); };
+      constexpr auto set_out_of_range_data_error = [](StateHandler& state)
+      { state.set_error(imu_sensor::ImuSensorError::out_of_range_data_error); };
 
       // guards
       constexpr auto validation_successful = [](StateHandler& state)
@@ -152,8 +152,8 @@ struct MainStateMachine
       constexpr auto config_successful = [](StateHandler& state)
       { return state.config_successful(); };
 
-      constexpr auto is_buffer_non_zero = [](const StateHandler& state)
-      { return state.is_buffer_non_zero(); };
+      constexpr auto is_data_pattern_ok = [](const StateHandler& state)
+      { return state.is_data_pattern_ok(); };
 
       constexpr auto is_data_valid = [](const StateHandler& state)
       { return state.is_data_valid(); };
@@ -190,13 +190,13 @@ struct MainStateMachine
           // operational
           s_measurement         + e_tick                                       / (reset_timer, read_data)                      = s_data_read_wait,
 
-          s_data_read_wait      + e_receive_done  [is_buffer_non_zero]         / convert_raw_data                              = s_data_verification,
-          s_data_read_wait      + e_receive_done  [!is_buffer_non_zero]        / (set_sensor_error, count_read_failure)        = s_data_read_fail,
+          s_data_read_wait      + e_receive_done  [is_data_pattern_ok]         / convert_raw_data                              = s_data_verification,
+          s_data_read_wait      + e_receive_done  [!is_data_pattern_ok]        / (set_data_pattern_error, count_read_failure)        = s_data_read_fail,
           s_data_read_wait      + e_tick          [!receive_wait_timeout]      / tick_timer,
           s_data_read_wait      + e_tick          [receive_wait_timeout]       / (set_bus_error, count_read_failure)           = s_data_read_fail,
 
-          s_data_verification                     [is_data_valid]              / (reset_read_failures, publish_data)           = s_measurement,
-          s_data_verification                     [!is_data_valid]             / (set_data_error, count_read_failure)          = s_data_read_fail,
+          s_data_verification                     [is_data_valid]              / (reset_read_failures, publish_data, publish_health) = s_measurement,
+          s_data_verification                     [!is_data_valid]             / (set_out_of_range_data_error, count_read_failure)   = s_data_read_fail,
 
           s_data_read_fail                        [read_failures_below_limit]                                                  = s_measurement,
           s_data_read_fail                        [!read_failures_below_limit] / (set_soft_recovery_state, publish_health)     = s_soft_recovery,

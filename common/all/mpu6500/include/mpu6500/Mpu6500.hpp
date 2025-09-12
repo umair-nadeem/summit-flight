@@ -75,11 +75,6 @@ public:
       return m_state_handler.get_error();
    }
 
-   std::size_t get_read_failure_count() const
-   {
-      return m_state_handler.get_read_failure_count();
-   }
-
 private:
    using StateHandler    = Mpu6500StateHandler<ClockSource, SpiMaster, Logger>;
    using StateMachineDef = MainStateMachine<StateHandler>;

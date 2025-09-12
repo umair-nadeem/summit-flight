@@ -8,7 +8,7 @@ namespace barometer_sensor
 enum class BarometerSensorError : uint8_t
 {
    bus_error = 0,                // bus communication failure/timeout
-   id_mismatch_error,            // id mismatch etc.
+   id_mismatch_error,            // id mismatch
    config_mismatch_error,        // config mismatch
    coefficients_pattern_error,   // all zeros/all ones calibration coefficients
    sensor_error,                 // sensor error register bits

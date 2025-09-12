@@ -44,6 +44,9 @@ struct ValidationStateMachine
       constexpr auto set_bus_error = [](StateHandler& state)
       { state.set_error(imu_sensor::ImuSensorError::bus_error); };
 
+      constexpr auto set_id_mismatch_error = [](StateHandler& state)
+      { state.set_error(imu_sensor::ImuSensorError::id_mismatch_error); };
+
       constexpr auto mark_validation_fail = [](StateHandler& state)
       { state.mark_validation_fail(); };
 
@@ -63,18 +66,18 @@ struct ValidationStateMachine
 
       // clang-format off
       return make_transition_table(
-          // From State       | Event           | Guard                   | Action                                 | To State
-          *s_disable_i2c      + e_tick                                    / disable_i2c                            = s_wakeup,
-          s_wakeup            + e_tick                                    / set_clock_and_wakeup                   = s_read_id,
+          // From State       | Event           | Guard                   | Action                                         | To State
+          *s_disable_i2c      + e_tick                                    / disable_i2c                                    = s_wakeup,
+          s_wakeup            + e_tick                                    / set_clock_and_wakeup                           = s_read_id,
 
-          s_read_id           + e_tick                                    / (reset_timer, read_id)                 = s_id_receive_wait,
+          s_read_id           + e_tick                                    / (reset_timer, read_id)                         = s_id_receive_wait,
 
-          s_id_receive_wait   + e_receive_done                            / store_id                               = s_verify_id,
+          s_id_receive_wait   + e_receive_done                            / store_id                                       = s_verify_id,
           s_id_receive_wait   + e_tick          [!receive_wait_timeout]   / tick_timer,               
-          s_id_receive_wait   + e_tick          [receive_wait_timeout]    / (set_bus_error, mark_validation_fail)  = X,               
+          s_id_receive_wait   + e_tick          [receive_wait_timeout]    / (set_bus_error, mark_validation_fail)          = X,               
 
-          s_verify_id         + e_tick          [!id_matched]             / mark_validation_fail                   = X,
-          s_verify_id         + e_tick          [id_matched]              / mark_validation_success                = X
+          s_verify_id         + e_tick          [!id_matched]             / (set_id_mismatch_error, mark_validation_fail)  = X,
+          s_verify_id         + e_tick          [id_matched]              / mark_validation_success                        = X
 
           // clock and wakeup
       );

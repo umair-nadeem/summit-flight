@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <span>
 
@@ -301,11 +302,17 @@ public:
          case imu_sensor::ImuSensorError::bus_error:
             m_logger.print("encountered error->bus_error");
             break;
-         case imu_sensor::ImuSensorError::sensor_error:
-            m_logger.print("encountered error->sensor_error");
+         case imu_sensor::ImuSensorError::id_mismatch_error:
+            m_logger.print("encountered error->id_mismatch_error");
             break;
-         case imu_sensor::ImuSensorError::data_error:
-            m_logger.print("encountered error->data_error");
+         case imu_sensor::ImuSensorError::config_mismatch_error:
+            m_logger.print("encountered error->config_mismatch_error");
+            break;
+         case imu_sensor::ImuSensorError::data_pattern_error:
+            m_logger.print("encountered error->data_pattern_error");
+            break;
+         case imu_sensor::ImuSensorError::out_of_range_data_error:
+            m_logger.print("encountered error->out_of_range_data_error");
             break;
          case imu_sensor::ImuSensorError::max_error:
          default:
@@ -323,11 +330,6 @@ public:
    imu_sensor::ImuHealth::ErrorBits get_error() const
    {
       return m_local_imu_health.error;
-   }
-
-   std::size_t get_read_failure_count() const
-   {
-      return m_local_imu_health.read_failure_count;
    }
 
    bool validation_successful() const
@@ -364,17 +366,10 @@ public:
               (accel_a_dlpf_config == m_accel_a_dlpf_config));
    }
 
-   bool is_buffer_non_zero() const
+   bool is_data_pattern_ok() const
    {
-      for (std::size_t i = 1u; i < params::num_bytes_transaction; i++)
-      {
-         if (m_rx_buffer[i] != 0)
-         {
-            return true;
-         }
-      }
-
-      return false;
+      const auto buffer = std::span{m_rx_buffer.data(), params::num_bytes_transaction};
+      return (!is_buffer_all_zeros(buffer) && !is_buffer_all_ones(buffer));
    }
 
    bool is_data_valid() const
@@ -411,6 +406,18 @@ private:
    static constexpr uint8_t get_read_spi_command(const uint8_t reg) noexcept
    {
       return (reg | params::read_mask);
+   }
+
+   static constexpr bool is_buffer_all_zeros(std::span<const uint8_t> buffer)
+   {
+      return std::all_of(buffer.begin(), buffer.end(), [](const uint8_t v)
+                         { return v == 0; });
+   }
+
+   static constexpr bool is_buffer_all_ones(std::span<const uint8_t> buffer)
+   {
+      return std::all_of(buffer.begin(), buffer.end(), [](const uint8_t v)
+                         { return v == 0xff; });
    }
 
    static constexpr auto to_int16(const uint8_t msb, const uint8_t lsb) noexcept

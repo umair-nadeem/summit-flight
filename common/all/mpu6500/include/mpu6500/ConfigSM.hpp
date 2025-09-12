@@ -46,6 +46,9 @@ struct ConfigStateMachine
       constexpr auto set_bus_error = [](StateHandler& state)
       { state.set_error(imu_sensor::ImuSensorError::bus_error); };
 
+      constexpr auto set_config_mismatch_error = [](StateHandler& state)
+      { state.set_error(imu_sensor::ImuSensorError::config_mismatch_error); };
+
       // guards
       constexpr auto receive_wait_timeout = [](const StateHandler& state)
       { return state.receive_wait_timeout(); };
@@ -59,17 +62,16 @@ struct ConfigStateMachine
 
       // clang-format off
       return make_transition_table(
-          // From State            | Event           | Guard                    | Action                               | To State
-          *s_config                + e_tick                                     / write_config_burst                   = s_read_config,
-          s_read_config            + e_tick                                     / (reset_timer, read_config_burst)     = s_config_receive_wait,
+          // From State            | Event           | Guard                    | Action                                         | To State
+          *s_config                + e_tick                                     / write_config_burst                             = s_read_config,
+          s_read_config            + e_tick                                     / (reset_timer, read_config_burst)               = s_config_receive_wait,
 
-          s_config_receive_wait    + e_receive_done                             / store_config                         = s_verify_config,
+          s_config_receive_wait    + e_receive_done                             / store_config                                   = s_verify_config,
           s_config_receive_wait    + e_tick          [!receive_wait_timeout]    / tick_timer,               
-          s_config_receive_wait    + e_tick          [receive_wait_timeout]     / (set_bus_error, mark_config_fail)    = X,  
+          s_config_receive_wait    + e_tick          [receive_wait_timeout]     / (set_bus_error, mark_config_fail)              = X,  
 
-          s_verify_config          + e_tick          [!config_matched]          / mark_config_fail                     = X,
-          s_verify_config          + e_tick          [config_matched]           / mark_config_success                  = X
-
+          s_verify_config          + e_tick          [!config_matched]          / (set_config_mismatch_error, mark_config_fail)  = X,
+          s_verify_config          + e_tick          [config_matched]           / mark_config_success                            = X
       );
       // clang-format on
    }
