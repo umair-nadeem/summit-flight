@@ -34,11 +34,18 @@ static constexpr uint8_t calibration_data_reg = 0x31;
 static constexpr uint8_t cmd_reg              = 0x7e;
 
 // sensor specs
-static constexpr float temp_min_plauisble_range = -40.0f;
-static constexpr float temp_max_plauisble_range = 85.0f;
+static constexpr uint8_t pressure_xlsb_byte_index    = 0;
+static constexpr uint8_t pressure_lsb_byte_index     = 1u;
+static constexpr uint8_t pressure_msb_byte_index     = 2u;
+static constexpr uint8_t temperature_xlsb_byte_index = 3u;
+static constexpr uint8_t temperature_lsb_byte_index  = 4u;
+static constexpr uint8_t temperature_msb_byte_index  = 5u;
 
-static constexpr float pressure_min_plauisble_range = 30'000.0f;
-static constexpr float pressure_max_plauisble_range = 125'000.0f;
+static constexpr float min_plauisble_range_temp_c = -40.0f;
+static constexpr float max_plauisble_range_temp_c = 85.0f;
+
+static constexpr float min_plauisble_range_pressure_pa = 30'000.0f;
+static constexpr float max_plauisble_range_pressure_pa = 125'000.0f;
 
 // register values
 struct ErrReg
@@ -141,7 +148,9 @@ struct QuantizedCoeffiecients
    float par_p11;
 };
 
-static constexpr uint8_t num_bytes_data             = 8u;   // 1 byte err_reg + 1 byte status_reg + 3 bytes pressure + 3 bytes temperature
+static constexpr uint8_t num_bytes_err_reg          = 1u;                                              // 1 byte err_reg
+static constexpr uint8_t num_bytes_status_reg       = 1u;                                              // 1 byte status_reg
+static constexpr uint8_t num_bytes_data             = num_bytes_err_reg + num_bytes_status_reg + 6u;   // 3 bytes pressure + 3 bytes temperature
 static constexpr uint8_t num_bytes_calibration_data = 21u;
 static constexpr uint8_t buffer_size                = 32;
 

@@ -114,7 +114,7 @@ TEST_F(Bmp390Test, check_read_coefficients_fail_with_timeout)
    EXPECT_EQ(bmp390.get_state(), barometer_sensor::BarometerSensorState::failure);
 }
 
-TEST_F(Bmp390Test, check_read_coefficients_zero_values)
+TEST_F(Bmp390Test, check_read_coefficients_all_zeros)
 {
    bmp390.start();
    run_through_setup_state(true);
@@ -127,7 +127,28 @@ TEST_F(Bmp390Test, check_read_coefficients_zero_values)
    bmp390.notify_receive_complete();
 
    barometer_sensor::BarometerHealth::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(barometer_sensor::BarometerSensorError::coefficients_error));
+   ref_error.set(static_cast<uint32_t>(barometer_sensor::BarometerSensorError::coefficients_pattern_error));
+
+   EXPECT_EQ(bmp390.get_error().to_ulong(), ref_error.to_ulong());
+   EXPECT_EQ(i2c_driver.m_read_reg, bmp390::params::calibration_data_reg);
+   EXPECT_EQ(bmp390.get_state(), barometer_sensor::BarometerSensorState::failure);
+}
+
+TEST_F(Bmp390Test, check_read_coefficients_all_ones)
+{
+   bmp390.start();
+   run_through_setup_state(true);
+
+   // all zero calibration coefficients
+   std::array<uint8_t, bmp390::params::num_bytes_calibration_data> ref_rx_buffer{};
+   ref_rx_buffer.fill(0xff);
+   i2c_driver.stage_rx_buffer(ref_rx_buffer);
+
+   bmp390.execute();   // read coefficients
+   bmp390.notify_receive_complete();
+
+   barometer_sensor::BarometerHealth::ErrorBits ref_error{};
+   ref_error.set(static_cast<uint32_t>(barometer_sensor::BarometerSensorError::coefficients_pattern_error));
 
    EXPECT_EQ(bmp390.get_error().to_ulong(), ref_error.to_ulong());
    EXPECT_EQ(i2c_driver.m_read_reg, bmp390::params::calibration_data_reg);
@@ -185,7 +206,40 @@ TEST_F(Bmp390Test, check_all_zero_data_causing_recovery)
    EXPECT_EQ(i2c_driver.m_read_reg, bmp390::params::err_reg);   // read from 0x02 register
 
    barometer_sensor::BarometerHealth::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(barometer_sensor::BarometerSensorError::zero_data_error));
+   ref_error.set(static_cast<uint32_t>(barometer_sensor::BarometerSensorError::data_pattern_error));
+
+   const auto barometer_health = barometer_health_storage.get_latest().data;
+   EXPECT_EQ(barometer_health.state, barometer_sensor::BarometerSensorState::recovery);
+   EXPECT_EQ(barometer_health.error.to_ulong(), ref_error.to_ulong());
+   EXPECT_EQ(barometer_health.read_failure_count, read_failures_limit);
+   EXPECT_TRUE(barometer_health.setup_ok);
+}
+
+TEST_F(Bmp390Test, check_all_ones_data_causing_recovery)
+{
+   bmp390.start();
+   run_through_setup_state(true);
+
+   bmp390.execute();   // read coefficients
+   bmp390.notify_receive_complete();
+
+   // all ones data
+   std::array<uint8_t, bmp390::params::num_bytes_data> ref_rx_buffer{0};
+   ref_rx_buffer.fill(0xff);
+   ref_rx_buffer[0] = 0;   // err reg must be zero otherwise sensor error will result
+   i2c_driver.stage_rx_buffer(ref_rx_buffer);
+
+   for (size_t i = 0; i < read_failures_limit; i++)
+   {
+      bmp390.execute();   // triggers read command
+      bmp390.notify_receive_complete();
+   }
+
+   EXPECT_EQ(bmp390.get_state(), barometer_sensor::BarometerSensorState::recovery);
+   EXPECT_EQ(i2c_driver.m_read_reg, bmp390::params::err_reg);   // read from 0x02 register
+
+   barometer_sensor::BarometerHealth::ErrorBits ref_error{};
+   ref_error.set(static_cast<uint32_t>(barometer_sensor::BarometerSensorError::data_pattern_error));
 
    const auto barometer_health = barometer_health_storage.get_latest().data;
    EXPECT_EQ(barometer_health.state, barometer_sensor::BarometerSensorState::recovery);
@@ -224,6 +278,36 @@ TEST_F(Bmp390Test, check_err_reg_bit_causing_recovery)
 
    barometer_sensor::BarometerHealth::ErrorBits ref_error{};
    ref_error.set(static_cast<uint32_t>(barometer_sensor::BarometerSensorError::sensor_error));
+
+   const auto barometer_health = barometer_health_storage.get_latest().data;
+   EXPECT_EQ(barometer_health.state, barometer_sensor::BarometerSensorState::recovery);
+   EXPECT_EQ(barometer_health.error.to_ulong(), ref_error.to_ulong());
+   EXPECT_EQ(barometer_health.read_failure_count, read_failures_limit);
+   EXPECT_TRUE(barometer_health.setup_ok);
+}
+
+TEST_F(Bmp390Test, check_out_of_range_data_causing_recovery)
+{
+   bmp390.start();
+   run_through_setup_state(true);
+
+   bmp390.execute();   // read coefficients
+   bmp390.notify_receive_complete();
+
+   std::array<uint8_t, bmp390::params::num_bytes_data> ref_rx_buffer{0, 0, 1u};
+   i2c_driver.stage_rx_buffer(ref_rx_buffer);
+
+   for (size_t i = 0; i < read_failures_limit; i++)
+   {
+      bmp390.execute();   // triggers read command
+      bmp390.notify_receive_complete();
+   }
+
+   EXPECT_EQ(bmp390.get_state(), barometer_sensor::BarometerSensorState::recovery);
+   EXPECT_EQ(i2c_driver.m_read_reg, bmp390::params::err_reg);   // read from 0x02 register
+
+   barometer_sensor::BarometerHealth::ErrorBits ref_error{};
+   ref_error.set(static_cast<uint32_t>(barometer_sensor::BarometerSensorError::out_of_range_data_error));
 
    const auto barometer_health = barometer_health_storage.get_latest().data;
    EXPECT_EQ(barometer_health.state, barometer_sensor::BarometerSensorState::recovery);

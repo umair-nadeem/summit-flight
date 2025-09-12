@@ -192,14 +192,15 @@ public:
 
    void process_error_register()
    {
-      m_error_register = m_rx_buffer[0];
+      m_error_register = get_err_reg_byte_from_rx_buffer();
    }
 
    void convert_raw_data()
    {
-      // data is read out in burst from err_register (0x02) -> m_rx_buffer[0]
-      uint32_t pressure_raw    = to_int24(m_rx_buffer[4], m_rx_buffer[3], m_rx_buffer[2]);
-      uint32_t temperature_raw = to_int24(m_rx_buffer[7], m_rx_buffer[6], m_rx_buffer[5]);
+      using namespace params;
+      const auto buffer          = get_raw_data_bytes_from_rx_buffer();
+      uint32_t   pressure_raw    = to_int24(buffer[pressure_msb_byte_index], buffer[pressure_lsb_byte_index], buffer[pressure_xlsb_byte_index]);
+      uint32_t   temperature_raw = to_int24(buffer[temperature_msb_byte_index], buffer[temperature_lsb_byte_index], buffer[temperature_xlsb_byte_index]);
 
       m_local_barometer_data.temperature_c = compensate_temperature(static_cast<float>(temperature_raw));
       m_local_barometer_data.pressure_pa   = compensate_pressure(m_local_barometer_data.temperature_c.value(), static_cast<float>(pressure_raw));
@@ -291,17 +292,17 @@ public:
          case barometer_sensor::BarometerSensorError::config_mismatch_error:
             m_logger.print("encountered error->config_mismatch_error");
             break;
-         case barometer_sensor::BarometerSensorError::coefficients_error:
-            m_logger.print("encountered error->coefficients_error");
+         case barometer_sensor::BarometerSensorError::coefficients_pattern_error:
+            m_logger.print("encountered error->coefficients_pattern_error");
             break;
          case barometer_sensor::BarometerSensorError::sensor_error:
             m_logger.print("encountered error->sensor_error");
             break;
-         case barometer_sensor::BarometerSensorError::zero_data_error:
-            m_logger.print("encountered error->zero_data_error");
+         case barometer_sensor::BarometerSensorError::data_pattern_error:
+            m_logger.print("encountered error->data_pattern_error");
             break;
-         case barometer_sensor::BarometerSensorError::data_error:
-            m_logger.print("encountered error->data_error");
+         case barometer_sensor::BarometerSensorError::out_of_range_data_error:
+            m_logger.print("encountered error->out_of_range_data_error");
             break;
          case barometer_sensor::BarometerSensorError::max_error:
             break;
@@ -344,30 +345,16 @@ public:
               (m_config_registers.config == params::ConfigReg::iir_coef3_mask));
    }
 
-   bool are_coefficients_non_zero() const
+   bool is_coefficients_pattern_ok() const
    {
-      for (std::size_t i = 1u; i < params::num_bytes_calibration_data; i++)
-      {
-         if (m_rx_buffer[i] != 0)
-         {
-            return true;
-         }
-      }
-
-      return false;
+      const auto buffer = std::span{m_rx_buffer.data(), params::num_bytes_calibration_data};
+      return (!is_buffer_all_zeros(buffer) && !is_buffer_all_ones(buffer));
    }
 
-   bool is_data_non_zero() const
+   bool is_data_pattern_ok() const
    {
-      for (std::size_t i = 1u; i < params::num_bytes_data; i++)
-      {
-         if (m_rx_buffer[i] != 0)
-         {
-            return true;
-         }
-      }
-
-      return false;
+      const auto buffer = get_raw_data_bytes_from_rx_buffer();
+      return (!is_buffer_all_zeros(buffer) && !is_buffer_all_ones(buffer));
    }
 
    bool sensor_error_reported() const
@@ -377,9 +364,9 @@ public:
               (m_error_register & params::ErrReg::conf_err_mask));
    }
 
-   static bool is_data_valid()
+   bool is_data_valid() const
    {
-      return true;
+      return (is_pressure_range_plausible() && is_temperature_range_plausible());
    }
 
    bool transfer_error() const
@@ -428,6 +415,48 @@ private:
       float partial_data4 = partial_data3 + (uncomp_pressure * uncomp_pressure * uncomp_pressure) * m_quantized_coefficients.par_p11;
 
       return (partial_out1 + partial_out2 + partial_data4);
+   }
+
+   bool is_pressure_range_plausible() const
+   {
+      return ((params::min_plauisble_range_pressure_pa < m_local_barometer_data.pressure_pa) &&
+              (m_local_barometer_data.pressure_pa < params::max_plauisble_range_pressure_pa));
+   }
+
+   bool is_temperature_range_plausible() const
+   {
+      if (!m_local_barometer_data.temperature_c.has_value())
+      {
+         return true;   // nothing to check
+      }
+
+      return ((params::min_plauisble_range_temp_c < m_local_barometer_data.temperature_c.value()) &&
+              (m_local_barometer_data.temperature_c.value() < params::max_plauisble_range_temp_c));
+   }
+
+   uint8_t get_err_reg_byte_from_rx_buffer() const
+   {
+      // read transaction stars from err_reg (addr: 0x02)
+      return m_rx_buffer[0];
+   }
+
+   std::span<const uint8_t> get_raw_data_bytes_from_rx_buffer() const
+   {
+      // first two bytes skipped as we read from err_reg (addr: 0x02) onwards
+      constexpr uint8_t skipped_bytes = params::num_bytes_err_reg + params::num_bytes_status_reg;
+      return std::span{m_rx_buffer.data() + skipped_bytes, params::num_bytes_data - skipped_bytes};
+   }
+
+   static constexpr bool is_buffer_all_zeros(std::span<const uint8_t> buffer)
+   {
+      return std::all_of(buffer.begin(), buffer.end(), [](const uint8_t v)
+                         { return v == 0; });
+   }
+
+   static constexpr bool is_buffer_all_ones(std::span<const uint8_t> buffer)
+   {
+      return std::all_of(buffer.begin(), buffer.end(), [](const uint8_t v)
+                         { return v == 0xff; });
    }
 
    static constexpr uint32_t to_int24(const uint32_t msb, const uint32_t lsb, const uint32_t xlsb) noexcept
