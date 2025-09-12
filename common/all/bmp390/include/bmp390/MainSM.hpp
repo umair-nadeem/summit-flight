@@ -148,53 +148,55 @@ struct Bmp390MainStateMachine
       static constexpr auto e_tick         = event<EventTick>;
       static constexpr auto e_receive_done = event<EventReceiveDone>;
 
+      // clang-format off
       return make_transition_table(
-          // From State  | Event   | Guard                    | Action                                  | To State
-          *s_stopped + e_start / set_setup_state = s_init_setup,
+          // From State        | Event           | Guard                           | Action                                                      | To State
+          *s_stopped           + e_start                                           / set_setup_state                                             = s_init_setup,
 
           // setup
-          s_init_setup[setup_successful] / (set_read_coefficients_state, publish_health) = s_read_coeff,
-          s_init_setup[!setup_successful]                                                = s_failure,
+          s_init_setup                           [setup_successful]                / (set_read_coefficients_state, publish_health)               = s_read_coeff,
+          s_init_setup                           [!setup_successful]                                                                             = s_failure,
 
           // read coefficients
-          s_read_coeff + e_tick / (reset_timer, read_coefficients)                                                                     = s_read_coeff_wait,
-          s_read_coeff_wait + e_receive_done[is_coefficients_pattern_ok] / (store_coefficients, set_operational_state, publish_health) = s_measurement,
-          s_read_coeff_wait + e_receive_done[!is_coefficients_pattern_ok] / set_coefficients_pattern_error                             = s_failure,
-          s_read_coeff_wait + e_tick[transfer_error] / set_bus_error                                                                   = s_failure,
-          s_read_coeff_wait + e_tick[!receive_wait_timeout] / tick_timer,
-          s_read_coeff_wait + e_tick[receive_wait_timeout] / set_bus_error = s_failure,
+          s_read_coeff         + e_tick                                            / (reset_timer, read_coefficients)                                                                     = s_read_coeff_wait,
+          s_read_coeff_wait    + e_receive_done  [is_coefficients_pattern_ok]      / (store_coefficients, set_operational_state, publish_health) = s_measurement,
+          s_read_coeff_wait    + e_receive_done  [!is_coefficients_pattern_ok]     / set_coefficients_pattern_error                              = s_failure,
+          s_read_coeff_wait    + e_tick          [transfer_error]                  / set_bus_error                                               = s_failure,
+          s_read_coeff_wait    + e_tick          [!receive_wait_timeout]           / tick_timer,
+          s_read_coeff_wait    + e_tick          [receive_wait_timeout]            / set_bus_error                                               = s_failure,
 
           // operational
-          s_measurement + e_tick / (reset_timer, read_data) = s_data_read_wait,
+          s_measurement        + e_tick                                            / (reset_timer, read_data)                                    = s_data_read_wait,
 
-          s_data_read_wait + e_receive_done[is_data_pattern_ok] / (process_error_register, convert_raw_data)    = s_data_verification,
-          s_data_read_wait + e_receive_done[!is_data_pattern_ok] / (set_data_pattern_error, count_read_failure) = s_data_read_fail,
-          s_data_read_wait + e_tick[!receive_wait_timeout] / tick_timer,
-          s_data_read_wait + e_tick[receive_wait_timeout] / (set_bus_error, count_read_failure) = s_data_read_fail,
+          s_data_read_wait     + e_receive_done  [is_data_pattern_ok]              / (process_error_register, convert_raw_data)                  = s_data_verification,
+          s_data_read_wait     + e_receive_done  [!is_data_pattern_ok]             / (set_data_pattern_error, count_read_failure)                = s_data_read_fail,
+          s_data_read_wait     + e_tick          [!receive_wait_timeout]           / tick_timer,
+          s_data_read_wait     + e_tick          [receive_wait_timeout]            / (set_bus_error, count_read_failure)                         = s_data_read_fail,
 
-          s_data_verification[sensor_error_reported] / (set_sensor_error, count_read_failure)      = s_data_read_fail,
-          s_data_verification[is_data_valid] / (reset_read_failures, publish_data, publish_health) = s_measurement,
-          s_data_verification[!is_data_valid] / (set_out_of_range_data_error, count_read_failure)  = s_data_read_fail,
+          s_data_verification                    [sensor_error_reported]           / (set_sensor_error, count_read_failure)                      = s_data_read_fail,
+          s_data_verification                    [is_data_valid]                   / (reset_read_failures, publish_data, publish_health)         = s_measurement,
+          s_data_verification                    [!is_data_valid]                  / (set_out_of_range_data_error, count_read_failure)           = s_data_read_fail,
 
-          s_data_read_fail[read_failures_below_limit]                                         = s_measurement,
-          s_data_read_fail[!read_failures_below_limit] / (set_recovery_state, publish_health) = s_recovery,
+          s_data_read_fail                       [read_failures_below_limit]                                                                     = s_measurement,
+          s_data_read_fail                       [!read_failures_below_limit]      / (set_recovery_state, publish_health)                        = s_recovery,
 
           // soft recovery re-orchestrates setup composite SM
-          s_recovery + e_tick / count_recovery_attempt = s_recovery_setup,
+          s_recovery           + e_tick                                            / count_recovery_attempt                                      = s_recovery_setup,
 
-          s_recovery_setup[setup_successful] / (reset_recovery_attempts, set_operational_state, publish_health) = s_measurement,
-          s_recovery_setup[!setup_successful && recovery_attempts_below_limit] / publish_health                 = s_recovery,
-          s_recovery_setup[!setup_successful && !recovery_attempts_below_limit]                                 = s_failure,
+          s_recovery_setup                       [setup_successful]                / (reset_recovery_attempts, set_operational_state, publish_health) = s_measurement,
+          s_recovery_setup                       [!setup_successful && recovery_attempts_below_limit] / publish_health                           = s_recovery,
+          s_recovery_setup                       [!setup_successful && !recovery_attempts_below_limit]                                           = s_failure,
 
-          s_failure + boost::sml::on_entry<_> / (set_failure_state, publish_health, reset_data),
+          s_failure            + boost::sml::on_entry<_>                           / (set_failure_state, publish_health, reset_data),
 
-          s_init_setup + e_stop / set_stopped_state      = s_stopped,
-          s_recovery_setup + e_stop / set_stopped_state  = s_stopped,
-          s_read_coeff + e_stop / set_stopped_state      = s_stopped,
-          s_read_coeff_wait + e_stop / set_stopped_state = s_stopped,
-          s_measurement + e_stop / set_stopped_state     = s_stopped,
-          s_data_read_wait + e_stop / set_stopped_state  = s_stopped,
-          s_recovery + e_stop / set_stopped_state        = s_stopped);
+          s_init_setup         + e_stop / set_stopped_state                                                                                      = s_stopped,
+          s_recovery_setup     + e_stop / set_stopped_state                                                                                      = s_stopped,
+          s_read_coeff         + e_stop / set_stopped_state                                                                                      = s_stopped,
+          s_read_coeff_wait    + e_stop / set_stopped_state                                                                                      = s_stopped,
+          s_measurement        + e_stop / set_stopped_state                                                                                      = s_stopped,
+          s_data_read_wait     + e_stop / set_stopped_state                                                                                      = s_stopped,
+          s_recovery           + e_stop / set_stopped_state                                                                                      = s_stopped);
+      // clang-format on
    }
 };
 
