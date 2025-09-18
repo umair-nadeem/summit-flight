@@ -30,7 +30,7 @@ public:
    static constexpr float pressure_exponent = (r * l_0) / (g * m);   // ~0.1902631
    static constexpr float altitude_constant = t_0 / l_0;             // ~44330.76923
 
-   static std::optional<float> convert_pressure_to_altitude(const float pressure_pa, const float static_pressure_at_sea_level = 101035.0f)
+   static std::optional<float> convert_pressure_to_altitude(const float pressure_pa, const float static_pressure_at_sea_level = 101325.0f)
    {
       if (!(pressure_pa > 0.0f) && !(static_pressure_at_sea_level > 0.0f))
       {
