@@ -14,7 +14,7 @@
 
 extern "C"
 {
-   [[noreturn]] void imu_task(void* params);
+   [[noreturn]] void imu_task(void* const params);
 }
 
 namespace controller

@@ -20,7 +20,7 @@ extern rtos::QueueSender<params::LogBuffer> logging_queue_sender;
 extern "C"
 {
 
-   [[noreturn]] void imu_task(void* params)
+   [[noreturn]] void imu_task(void* const params)
    {
       error::verify(params != nullptr);
       auto* data = static_cast<controller::ImuTaskData*>(params);

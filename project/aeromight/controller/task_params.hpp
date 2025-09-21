@@ -13,6 +13,13 @@ static constexpr std::size_t       imu_task_stack_depth_in_words{imu_task_stack_
 static constexpr std::size_t       imu_task_priority{8u};
 static constexpr std::size_t       imu_task_period_in_ms{4u};
 
+// Control Task
+static constexpr const char* const control_task_name{"ctrl_task"};
+static constexpr std::size_t       control_task_stack_size_in_bytes{4096u};
+static constexpr std::size_t       control_task_stack_depth_in_words{control_task_stack_size_in_bytes / sizeof(uint32_t)};
+static constexpr std::size_t       control_task_priority{7u};
+static constexpr std::size_t       control_task_period_in_ms{8u};
+
 // Barometer Task
 static constexpr const char* const barometer_task_name{"baro_task"};
 static constexpr std::size_t       barometer_task_stack_size_in_bytes{4096u};

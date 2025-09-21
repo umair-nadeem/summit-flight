@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "BarometerTaskData.hpp"
+#include "ControlTaskData.hpp"
 #include "ImuTaskData.hpp"
 #include "LoggingTaskData.hpp"
 #include "SysClockData.hpp"
@@ -34,22 +35,26 @@ namespace controller
 // all data
 GlobalData        global_data{};
 ImuTaskData       imu_task_data{};
+ControlTaskData   control_task_data{};
 BarometerTaskData barometer_task_data{};
 LoggingTaskData   logging_task_data{};
 SysClockData      sys_clock_data{};
 
 // task control blocks
 rtos::TCB imu_task_tcb{};
+rtos::TCB control_task_tcb{};
 rtos::TCB barometer_task_tcb{};
 rtos::TCB logging_task_tcb{};
 
 // task stack
 alignas(std::max_align_t) uint32_t imu_task_stack_buffer[controller::task::imu_task_stack_depth_in_words];
+alignas(std::max_align_t) uint32_t control_task_stack_buffer[controller::task::control_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t barometer_task_stack_buffer[controller::task::barometer_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t logging_task_stack_buffer[controller::task::logging_task_stack_depth_in_words];
 
 // task handles
 TaskHandle_t imu_task_handle;
+TaskHandle_t control_task_handle;
 TaskHandle_t barometer_task_handle;
 TaskHandle_t logging_task_handle;
 
@@ -75,6 +80,20 @@ void register_tasks()
        .task_block           = imu_task_tcb};
 
    imu_task_handle = rtos::create_task(imu_task_config);
+
+   // control task
+   std::memset(control_task_stack_buffer, 0, sizeof(control_task_stack_buffer));
+
+   rtos::RtosTaskConfig control_task_config{
+       .func                 = control_task,
+       .name                 = controller::task::control_task_name,
+       .stack_depth_in_words = controller::task::control_task_stack_depth_in_words,
+       .params               = static_cast<void*>(&control_task_data),
+       .priority             = controller::task::control_task_priority,
+       .stack_buffer         = control_task_stack_buffer,
+       .task_block           = control_task_tcb};
+
+   control_task_handle = rtos::create_task(control_task_config);
 
    // barometer task
    std::memset(barometer_task_stack_buffer, 0, sizeof(barometer_task_stack_buffer));

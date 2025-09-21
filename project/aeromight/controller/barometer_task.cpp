@@ -18,7 +18,7 @@ extern rtos::QueueSender<params::LogBuffer> logging_queue_sender;
 extern "C"
 {
 
-   [[noreturn]] void barometer_task(void* params)
+   [[noreturn]] void barometer_task(void* const params)
    {
       error::verify(params != nullptr);
       auto* data = static_cast<controller::BarometerTaskData*>(params);

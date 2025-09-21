@@ -9,8 +9,8 @@
 void i2c1_receive_complete_callback(void*);
 extern "C"
 {
-   [[noreturn]] void barometer_task(void* params);
-}
+   [[noreturn]] void barometer_task(void* const params);
+}   // extern "C"
 
 namespace controller
 {
