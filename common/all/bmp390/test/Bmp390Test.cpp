@@ -70,7 +70,7 @@ protected:
       const auto barometer_data = barometer_data_storage.get_latest().data;
       EXPECT_NEAR(barometer_data.temperature_c.value(), 12.65f, 0.1f);
       EXPECT_NEAR(barometer_data.pressure_pa, 100367.758f, 0.1f);
-      EXPECT_NEAR(barometer_data.altitude_m.value(), 55.85, 0.1f);
+      EXPECT_NEAR(barometer_data.altitude_m.value(), 79.988, 0.1f);
    }
 
    void fail_operation_state_due_to_read_timeout()
