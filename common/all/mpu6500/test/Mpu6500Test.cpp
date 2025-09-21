@@ -136,12 +136,12 @@ protected:
 
       const auto imu_data = imu_data_storage.get_latest().data;
 
-      EXPECT_NEAR(imu_data.accel_mps2.x, -9.80665f, 0.01f);
-      EXPECT_NEAR(imu_data.accel_mps2.y, 4.9033f, 0.01f);
-      EXPECT_NEAR(imu_data.accel_mps2.z, 9.80665f, 0.01f);
-      EXPECT_NEAR(imu_data.gyro_radps.x, -0.873f, 0.01f);
-      EXPECT_NEAR(imu_data.gyro_radps.y, 1.746f, 0.01f);
-      EXPECT_NEAR(imu_data.gyro_radps.z, 3.492f, 0.01f);
+      EXPECT_NEAR(imu_data.accel_mps2.value().x, -9.80665f, 0.01f);
+      EXPECT_NEAR(imu_data.accel_mps2.value().y, 4.9033f, 0.01f);
+      EXPECT_NEAR(imu_data.accel_mps2.value().z, 9.80665f, 0.01f);
+      EXPECT_NEAR(imu_data.gyro_radps.value().x, -0.873f, 0.01f);
+      EXPECT_NEAR(imu_data.gyro_radps.value().y, 1.746f, 0.01f);
+      EXPECT_NEAR(imu_data.gyro_radps.value().z, 3.492f, 0.01f);
       EXPECT_NEAR(imu_data.temperature_c.value(), 40.0f, 0.01f);
    }
 

@@ -7,7 +7,7 @@ namespace barometer_sensor
 
 struct BarometerData
 {
-   float                pressure_pa;     // Pressure [Pa]
+   std::optional<float> pressure_pa;     // Pressure [Pa]
    std::optional<float> altitude_m;      // Altitude [m]
    std::optional<float> temperature_c;   // Temperature [°C]
 };

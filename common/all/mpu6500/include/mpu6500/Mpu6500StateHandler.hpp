@@ -168,15 +168,15 @@ public:
 
    void convert_raw_data()
    {
-      m_local_imu_data.accel_mps2.x = to_int16(m_rx_buffer[1], m_rx_buffer[2]) * m_accel_scale;
-      m_local_imu_data.accel_mps2.y = to_int16(m_rx_buffer[3], m_rx_buffer[4]) * m_accel_scale;
-      m_local_imu_data.accel_mps2.z = to_int16(m_rx_buffer[5], m_rx_buffer[6]) * m_accel_scale;
+      m_local_imu_data.accel_mps2 = imu_sensor::ImuData::Vec3{to_int16(m_rx_buffer[1], m_rx_buffer[2]) * m_accel_scale,
+                                                              to_int16(m_rx_buffer[3], m_rx_buffer[4]) * m_accel_scale,
+                                                              to_int16(m_rx_buffer[5], m_rx_buffer[6]) * m_accel_scale};
 
       m_local_imu_data.temperature_c = (to_int16(m_rx_buffer[7], m_rx_buffer[8]) / params::temp_sensitivity) + params::temp_offset;
 
-      m_local_imu_data.gyro_radps.x = to_int16(m_rx_buffer[9], m_rx_buffer[10]) * m_gyro_scale;
-      m_local_imu_data.gyro_radps.y = to_int16(m_rx_buffer[11], m_rx_buffer[12]) * m_gyro_scale;
-      m_local_imu_data.gyro_radps.z = to_int16(m_rx_buffer[13], m_rx_buffer[14]) * m_gyro_scale;
+      m_local_imu_data.gyro_radps = imu_sensor::ImuData::Vec3{to_int16(m_rx_buffer[9], m_rx_buffer[10]) * m_gyro_scale,
+                                                              to_int16(m_rx_buffer[11], m_rx_buffer[12]) * m_gyro_scale,
+                                                              to_int16(m_rx_buffer[13], m_rx_buffer[14]) * m_gyro_scale};
    }
 
    void publish_data()
@@ -189,12 +189,12 @@ public:
       {
          m_logger.printf("clock: %u   accel x: %.2f, y: %.2f, z: %.2f     |     gyro: x: %.2f, y: %.2f, z: %.2f     |     temp: %.4f",
                          clock,
-                         m_local_imu_data.accel_mps2.x,
-                         m_local_imu_data.accel_mps2.y,
-                         m_local_imu_data.accel_mps2.z,
-                         m_local_imu_data.gyro_radps.x,
-                         m_local_imu_data.gyro_radps.y,
-                         m_local_imu_data.gyro_radps.z,
+                         m_local_imu_data.accel_mps2.value().x,
+                         m_local_imu_data.accel_mps2.value().y,
+                         m_local_imu_data.accel_mps2.value().z,
+                         m_local_imu_data.gyro_radps.value().x,
+                         m_local_imu_data.gyro_radps.value().y,
+                         m_local_imu_data.gyro_radps.value().z,
                          m_local_imu_data.temperature_c.value());
       }
    }
@@ -206,12 +206,8 @@ public:
 
    void reset_data()
    {
-      m_local_imu_data.accel_mps2.x = 0.0f;
-      m_local_imu_data.accel_mps2.y = 0.0f;
-      m_local_imu_data.accel_mps2.z = 0.0f;
-      m_local_imu_data.gyro_radps.x = 0.0f;
-      m_local_imu_data.gyro_radps.y = 0.0f;
-      m_local_imu_data.gyro_radps.z = 0.0f;
+      m_local_imu_data.accel_mps2.reset();
+      m_local_imu_data.gyro_radps.reset();
       m_local_imu_data.temperature_c.reset();
 
       m_imu_data_storage.update_latest(m_local_imu_data, ClockSource::now_ms());
@@ -427,7 +423,8 @@ private:
 
    bool is_gyro_range_plausible() const
    {
-      const auto& g = m_local_imu_data.gyro_radps;
+      error::verify(m_local_imu_data.gyro_radps.has_value());
+      const auto& g = m_local_imu_data.gyro_radps.value();
       return ((std::fabs(g.x) <= m_gyro_absolute_plausibility_limit_radps) &&
               (std::fabs(g.y) <= m_gyro_absolute_plausibility_limit_radps) &&
               (std::fabs(g.z) <= m_gyro_absolute_plausibility_limit_radps));
@@ -435,7 +432,8 @@ private:
 
    bool is_accel_range_plausible() const
    {
-      const auto& a = m_local_imu_data.accel_mps2;
+      error::verify(m_local_imu_data.accel_mps2.has_value());
+      const auto& a = m_local_imu_data.accel_mps2.value();
       return ((std::fabs(a.x) <= m_accel_absolute_plausibility_limit_mps2) &&
               (std::fabs(a.y) <= m_accel_absolute_plausibility_limit_mps2) &&
               (std::fabs(a.z) <= m_accel_absolute_plausibility_limit_mps2));

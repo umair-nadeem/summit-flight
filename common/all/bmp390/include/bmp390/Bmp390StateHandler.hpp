@@ -211,7 +211,7 @@ public:
    void publish_data()
    {
       // calculate altitude
-      m_local_barometer_data.altitude_m = utilities::Barometric::convert_pressure_to_altitude(m_local_barometer_data.pressure_pa);
+      m_local_barometer_data.altitude_m = utilities::Barometric::convert_pressure_to_altitude(m_local_barometer_data.pressure_pa.value());
 
       const volatile uint32_t clock = ClockSource::now_ms();
       m_barometer_data_storage.update_latest(m_local_barometer_data, clock);
@@ -221,7 +221,7 @@ public:
       {
          m_logger.printf("clock: %u   pressure: %.2f     |     temperature: %.2f     |     altitude: %.2f",
                          clock,
-                         m_local_barometer_data.pressure_pa,
+                         m_local_barometer_data.pressure_pa.value(),
                          m_local_barometer_data.temperature_c.value(),
                          m_local_barometer_data.altitude_m.value());
       }

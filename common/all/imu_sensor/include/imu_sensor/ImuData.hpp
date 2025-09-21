@@ -14,8 +14,8 @@ struct ImuData
       float z = 0.0f;
    };
 
-   Vec3                 accel_mps2;      // Acceleration [m/s²]
-   Vec3                 gyro_radps;      // Angular velocity [rad/s]
+   std::optional<Vec3>  accel_mps2;      // Acceleration [m/s²]
+   std::optional<Vec3>  gyro_radps;      // Angular velocity [rad/s]
    std::optional<float> temperature_c;   // Temperature [°C]
 };
 

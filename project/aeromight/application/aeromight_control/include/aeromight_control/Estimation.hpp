@@ -1,5 +1,7 @@
 #pragma once
 
+#include "boundaries/SharedData.hpp"
+
 namespace aeromight_control
 {
 
