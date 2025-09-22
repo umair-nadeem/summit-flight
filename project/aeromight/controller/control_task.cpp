@@ -1,4 +1,5 @@
 #include "ControlTaskData.hpp"
+#include "aeromight_boundaries/AeromightSensorData.hpp"
 #include "aeromight_control/Control.hpp"
 #include "aeromight_control/Estimation.hpp"
 #include "aeromight_control/EstimationAndControl.hpp"
@@ -28,7 +29,9 @@ extern "C"
       LogClient logger_estimation{logging::logging_queue_sender, "estimation"};
       LogClient logger_control{logging::logging_queue_sender, "control"};
 
-      aeromight_control::Estimation<LogClient> estimation{logger_estimation};
+      aeromight_control::Estimation<LogClient> estimation{aeromight_boundaries::aeromight_sensor_data.imu_sensor_data_storage,
+                                                          aeromight_boundaries::aeromight_sensor_data.barometer_sensor_data_storage,
+                                                          logger_estimation};
       aeromight_control::Control<LogClient>    control{logger_control};
 
       aeromight_control::EstimationAndControl<decltype(estimation),
