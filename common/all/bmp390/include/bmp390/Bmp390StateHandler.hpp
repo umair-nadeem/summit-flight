@@ -10,7 +10,6 @@
 #include "error/error_handler.hpp"
 #include "interfaces/IClockSource.hpp"
 #include "params.hpp"
-#include "utilities/Barometric.hpp"
 
 namespace bmp390
 {
@@ -210,20 +209,16 @@ public:
 
    void publish_data()
    {
-      // calculate altitude
-      m_local_barometer_data.altitude_m = utilities::Barometric::convert_pressure_to_altitude(m_local_barometer_data.pressure_pa.value());
-
       const volatile uint32_t clock = ClockSource::now_ms();
       m_barometer_data_storage.update_latest(m_local_barometer_data, clock);
 
       m_data_log_counter++;
       if ((m_data_log_counter % 25u) == 0)
       {
-         m_logger.printf("clock: %u   pressure: %.2f     |     temperature: %.2f     |     altitude: %.2f",
+         m_logger.printf("clock: %u   pressure: %.2f     |     temperature: %.2f",
                          clock,
                          m_local_barometer_data.pressure_pa.value(),
-                         m_local_barometer_data.temperature_c.value(),
-                         m_local_barometer_data.altitude_m.value());
+                         m_local_barometer_data.temperature_c.value());
       }
    }
 
@@ -234,8 +229,7 @@ public:
 
    void reset_data()
    {
-      m_local_barometer_data.pressure_pa = 0.0f;
-      m_local_barometer_data.altitude_m.reset();
+      m_local_barometer_data.pressure_pa.reset();
       m_local_barometer_data.temperature_c.reset();
       m_barometer_data_storage.update_latest(m_local_barometer_data, ClockSource::now_ms());
    }

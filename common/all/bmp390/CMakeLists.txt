@@ -1,7 +1,6 @@
 add_module(
    SOURCES
    LIBS
-      utilities
       boundaries
       error
       barometer_sensor
