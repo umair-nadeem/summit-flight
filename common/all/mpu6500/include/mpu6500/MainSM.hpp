@@ -174,18 +174,18 @@ struct MainStateMachine
       return make_transition_table(
           // From State          | Event          | Guard                      | Action                                        | To State
           // init orchestrates reset, valiation, and config composite SMs to bring sensor up
-          *s_stopped             + e_start                                     / set_reset_state                               = s_init_reset,
+          *s_stopped             + e_start                                     / (set_reset_state, publish_health)             = s_init_reset,
 
-          s_init_reset                                                         / set_validation_state                          = s_init_validation,
+          s_init_reset                                                         / (set_validation_state, publish_health)        = s_init_validation,
 
-          s_init_validation                       [validation_successful]      / set_self_test_state                           = s_self_test,
+          s_init_validation                       [validation_successful]      / (set_config_state, publish_health)            = s_init_config,
           s_init_validation                       [!validation_successful]                                                     = s_failure,
-
-          s_self_test                             [self_test_successful]       / set_config_state                              = s_init_config,
-          s_self_test                             [!self_test_successful]                                                      = s_failure,
-
-          s_init_config                           [config_successful]          / (set_operational_state, publish_health)       = s_measurement,
+          
+          s_init_config                           [config_successful]          / (set_self_test_state, publish_health)         = s_self_test,
           s_init_config                           [!config_successful]                                                         = s_failure,
+
+          s_self_test                             [self_test_successful]       / (set_operational_state, publish_health)       = s_measurement,
+          s_self_test                             [!self_test_successful]                                                      = s_failure,
 
           // operational
           s_measurement         + e_tick                                       / (reset_timer, read_data)                      = s_data_read_wait,
