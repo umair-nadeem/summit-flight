@@ -97,6 +97,9 @@ struct MainStateMachine
       constexpr auto convert_raw_data = [](StateHandler& state)
       { state.convert_raw_data(); };
 
+      constexpr auto adjust_bias = [](StateHandler& state)
+      { state.adjust_bias(); };
+
       constexpr auto publish_data = [](StateHandler& state)
       { state.publish_data(); };
 
@@ -191,11 +194,11 @@ struct MainStateMachine
           s_measurement         + e_tick                                       / (reset_timer, read_data)                      = s_data_read_wait,
 
           s_data_read_wait      + e_receive_done  [is_data_pattern_ok]         / convert_raw_data                              = s_data_verification,
-          s_data_read_wait      + e_receive_done  [!is_data_pattern_ok]        / (set_data_pattern_error, count_read_failure)        = s_data_read_fail,
+          s_data_read_wait      + e_receive_done  [!is_data_pattern_ok]        / (set_data_pattern_error, count_read_failure)  = s_data_read_fail,
           s_data_read_wait      + e_tick          [!receive_wait_timeout]      / tick_timer,
           s_data_read_wait      + e_tick          [receive_wait_timeout]       / (set_bus_error, count_read_failure)           = s_data_read_fail,
 
-          s_data_verification                     [is_data_valid]              / (reset_read_failures, publish_data, publish_health) = s_measurement,
+          s_data_verification                     [is_data_valid]              / (reset_read_failures, adjust_bias, publish_data, publish_health) = s_measurement,
           s_data_verification                     [!is_data_valid]             / (set_out_of_range_data_error, count_read_failure)   = s_data_read_fail,
 
           s_data_read_fail                        [read_failures_below_limit]                                                  = s_measurement,

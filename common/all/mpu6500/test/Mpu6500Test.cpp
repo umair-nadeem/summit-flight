@@ -158,7 +158,10 @@ protected:
                                                                                                          accel_full_scale,
                                                                                                          accel_a_dlpf_config,
                                                                                                          gyro_range_plausibility_margin_radps,
-                                                                                                         accel_range_plausibility_margin_mps2};
+                                                                                                         accel_range_plausibility_margin_mps2,
+                                                                                                         num_samples_self_test,
+                                                                                                         gyro_tolerance_radps,
+                                                                                                         accel_tolerance_mps2};
 };
 
 TEST_F(Mpu6500Test, check_reset_process)

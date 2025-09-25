@@ -36,6 +36,9 @@ extern "C"
       constexpr uint8_t     mpu6500_accel_a_dlpf_config                  = 0x03;
       constexpr float       mpu6500_gyro_range_plausibility_margin_radps = 6.0f;
       constexpr float       mpu6500_accel_range_plausibility_margin_mps2 = 20.0f;
+      constexpr uint8_t     num_samples_self_test                        = 200u;
+      constexpr float       gyro_tolerance_radps                         = 0.1f;
+      constexpr float       accel_tolerance_mps2                         = 1.5f;
 
       LogClient logger_imu_driver_executor{logging::logging_queue_sender, "imu_runner"};
       LogClient logger_mpu6500{logging::logging_queue_sender, "mpu6500"};
@@ -56,7 +59,10 @@ extern "C"
                   mpu6500_accel_full_scale,
                   mpu6500_accel_a_dlpf_config,
                   mpu6500_gyro_range_plausibility_margin_radps,
-                  mpu6500_accel_range_plausibility_margin_mps2};
+                  mpu6500_accel_range_plausibility_margin_mps2,
+                  num_samples_self_test,
+                  gyro_tolerance_radps,
+                  accel_tolerance_mps2};
 
       aeromight_imu::ImuDriverExecutor<
           decltype(mpu6500),

@@ -27,7 +27,10 @@ public:
                     const uint8_t     accel_full_scale,
                     const uint8_t     accel_a_dlpf_config,
                     const float       gyro_range_plausibility_margin_radps,
-                    const float       accel_range_plausibility_margin_mps2)
+                    const float       accel_range_plausibility_margin_mps2,
+                    const uint8_t     num_samples_self_test,
+                    const float       gyro_tolerance_radps,
+                    const float       accel_tolerance_mps2)
        : m_state_handler{imu_data_storage,
                          imu_health_storage,
                          spi_master,
@@ -41,7 +44,10 @@ public:
                          accel_full_scale,
                          accel_a_dlpf_config,
                          gyro_range_plausibility_margin_radps,
-                         accel_range_plausibility_margin_mps2}
+                         accel_range_plausibility_margin_mps2,
+                         num_samples_self_test,
+                         gyro_tolerance_radps,
+                         accel_tolerance_mps2}
    {
    }
 
