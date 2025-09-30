@@ -61,8 +61,8 @@ struct SelfTestStateMachine
       constexpr auto set_out_of_range_data_error = [](StateHandler& state)
       { state.set_error(imu_sensor::ImuSensorError::out_of_range_data_error); };
 
-      constexpr auto set_unstable_samples_error = [](StateHandler& state)
-      { state.set_unstable_samples_error(); };
+      constexpr auto set_abnormal_samples_error = [](StateHandler& state)
+      { state.set_abnormal_samples_error(); };
 
       // guards
       constexpr auto is_data_pattern_ok = [](const StateHandler& state)
@@ -102,7 +102,7 @@ struct SelfTestStateMachine
           s_check_samples_count               [!all_samples_collected]                                                       = s_collect_samples,
           s_check_samples_count               [all_samples_collected]   / calculate_stats_and_bias                           = s_evaluate_stats,
 
-          s_evaluate_stats                    [!is_sensor_sane]         / (set_unstable_samples_error, mark_self_test_fail)  = X,
+          s_evaluate_stats                    [!is_sensor_sane]         / (set_abnormal_samples_error, mark_self_test_fail)  = X,
           s_evaluate_stats                    [is_sensor_sane]          / mark_self_test_pass                                = X
 
       );

@@ -90,7 +90,7 @@ private:
       }
    }
 
-   static constexpr std::size_t led_state_duration = 2000u;
+   static constexpr std::size_t led_state_duration = 1000u;
 
    Mpu6500&            m_mpu6500;
    NotificationWaiter& m_notify_waiter;

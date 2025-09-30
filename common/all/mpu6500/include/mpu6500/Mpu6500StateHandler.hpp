@@ -369,6 +369,9 @@ public:
          case imu_sensor::ImuSensorError::out_of_range_data_error:
             m_logger.print("encountered error->out_of_range_data_error");
             break;
+         case imu_sensor::ImuSensorError::non_stationary_calibration_error:
+            m_logger.print("encountered error->non_stationary_calibration_error");
+            break;
          case imu_sensor::ImuSensorError::unstable_gyro_error:
             m_logger.print("encountered error->unstable_gyro_error");
             break;
@@ -383,9 +386,14 @@ public:
       }
    }
 
-   void set_unstable_samples_error()
+   void set_abnormal_samples_error()
    {
-      if (!is_gravity_reasonable() || !is_accel_stable())
+      if (!is_platform_stationary())
+      {
+         set_error(imu_sensor::ImuSensorError::non_stationary_calibration_error);
+      }
+
+      if (!is_accel_stable())
       {
          set_error(imu_sensor::ImuSensorError::unstable_accel_error);
       }
@@ -404,6 +412,11 @@ public:
    imu_sensor::ErrorBits get_error() const
    {
       return m_local_imu_health.error;
+   }
+
+   std::tuple<Vec, Vec> get_bias() const
+   {
+      return {m_bias.accel, m_bias.gyro};
    }
 
    bool validation_successful() const
@@ -453,7 +466,7 @@ public:
 
    bool is_sensor_sane() const
    {
-      return (is_gravity_reasonable() && is_accel_stable() && is_gyro_stable());
+      return (is_platform_stationary() && is_accel_stable() && is_gyro_stable());
    }
 
    bool power_reset_wait_over() const
@@ -522,6 +535,14 @@ private:
 
       // gyro bias is just mean
       m_bias.gyro = m_self_test_stats.mean_gyro;
+
+      m_logger.printf("bias accel x: %.2f, y: %.2f, z: %.2f | bias gyro x :  %.2f, y: %.2f, z: %.2f",
+                      m_bias.accel.x,
+                      m_bias.accel.y,
+                      m_bias.accel.z,
+                      m_bias.gyro.x,
+                      m_bias.gyro.y,
+                      m_bias.gyro.z);
    }
 
    static constexpr uint8_t get_write_spi_command(const uint8_t reg) noexcept
@@ -588,9 +609,10 @@ private:
               (m_local_imu_data.temperature_c.value() < params::temp_max_plauisble_range));
    }
 
-   bool is_gravity_reasonable() const
+   bool is_platform_stationary() const
    {
-      return std::abs(get_norm(m_self_test_stats.mean_accel) - g_to_mps2) <= m_accel_tolerance_mps2;
+      const float magnitude = get_norm(m_self_test_stats.mean_accel);
+      return std::abs(magnitude - g_to_mps2) <= m_accel_tolerance_mps2;
    }
 
    bool is_accel_stable() const

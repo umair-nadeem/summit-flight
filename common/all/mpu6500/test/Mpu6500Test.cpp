@@ -45,14 +45,6 @@ protected:
       }
    }
 
-   void run_through_self_test_state()
-   {
-      EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::self_test);
-
-      mpu6500.execute();
-      mpu6500.execute();
-   }
-
    void run_through_config_state(const bool config_success)
    {
       rx_buffer.fill(0);
@@ -74,6 +66,33 @@ protected:
       else
       {
          mpu6500.execute();
+         mpu6500.execute();
+         mpu6500.execute();
+      }
+   }
+
+   void run_through_self_test_state(const bool self_test_success)
+   {
+      // adds accel bias of {−1.01,0.0,+0.70} m/s2
+      EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::self_test);
+      rx_buffer.fill(0);
+
+      if (self_test_success)
+      {
+         provide_stationary_accel_values();
+         provide_stationary_gyro_values();
+
+         for (std::size_t i = 0; i < num_samples_self_test; i++)
+         {
+            mpu6500.execute();                   // read data
+            mpu6500.notify_receive_complete();   // wait for rx complete notification
+         }
+      }
+      else
+      {
+         mpu6500.execute();   // attempt to read data
+
+         // cause receive wait timeout
          mpu6500.execute();
          mpu6500.execute();
       }
@@ -114,20 +133,9 @@ protected:
 
       rx_buffer.fill(0);
 
-      rx_buffer[1]  = 0xe0;                // ACCEL_XOUT_H  (-8192) -1 g
-      rx_buffer[2]  = 0x00;                // ACCEL_XOUT_L
-      rx_buffer[3]  = 0x10;                // ACCEL_YOUT_H  (+4096) 0.5 g
-      rx_buffer[4]  = 0x00;                // ACCEL_YOUT_L
-      rx_buffer[5]  = 0x20;                // ACCEL_ZOUT_H  (+8192) +1 g
-      rx_buffer[6]  = 0x00;                // ACCEL_ZOUT_L
-      rx_buffer[7]  = 0x18;                // TEMP_OUT_H    (+6343) temperature->+40 degC
-      rx_buffer[8]  = 0xc7;                // TEMP_OUT_L
-      rx_buffer[9]  = 0xf9;                // GYRO_XOUT_H   (-1640)-50 dps
-      rx_buffer[10] = 0x98;                // GYRO_XOUT_L
-      rx_buffer[11] = 0x0c;                // GYRO_YOUT_H   (+3280) 100 dps
-      rx_buffer[12] = 0xd0;                // GYRO_YOUT_L
-      rx_buffer[13] = 0x19;                // GYRO_ZOUT_H   (+6560) 200 dps
-      rx_buffer[14] = 0xa0;                // GYRO_ZOUT_L
+      provide_dynamic_accel_values();
+      provide_dynamic_gyro_values();
+      provide_valid_temp_values();
 
       mpu6500.execute();                   // triggers read command
       mpu6500.notify_receive_complete();   // trigger data validation
@@ -136,9 +144,13 @@ protected:
 
       const auto imu_data = imu_data_storage.get_latest().data;
 
-      EXPECT_NEAR(imu_data.accel_mps2.value().x, -9.80665f, 0.01f);
-      EXPECT_NEAR(imu_data.accel_mps2.value().y, 4.9033f, 0.01f);
-      EXPECT_NEAR(imu_data.accel_mps2.value().z, 9.80665f, 0.01f);
+      // compensate for bias of {−1.01,0.0,+0.70} m/s2 added during self test
+      const float bias_x = -1.01f;
+      const float bias_y = 0.0f;
+      const float bias_z = 0.70f;
+      EXPECT_NEAR(imu_data.accel_mps2.value().x, -9.80665f - bias_x, 0.01f);
+      EXPECT_NEAR(imu_data.accel_mps2.value().y, 4.9033f - bias_y, 0.01f);
+      EXPECT_NEAR(imu_data.accel_mps2.value().z, 9.80665f - bias_z, 0.01f);
       EXPECT_NEAR(imu_data.gyro_radps.value().x, -0.873f, 0.01f);
       EXPECT_NEAR(imu_data.gyro_radps.value().y, 1.746f, 0.01f);
       EXPECT_NEAR(imu_data.gyro_radps.value().z, 3.492f, 0.01f);
@@ -240,7 +252,23 @@ TEST_F(Mpu6500Test, check_successful_config)
    EXPECT_EQ(imu_health.read_failure_count, 0);
    EXPECT_TRUE(imu_health.validation_ok);
    EXPECT_TRUE(imu_health.config_ok);
-   EXPECT_FALSE(imu_health.self_test_ok);   // config not done yet!
+   EXPECT_FALSE(imu_health.self_test_ok);   // self-test not done yet!
+}
+
+TEST_F(Mpu6500Test, check_failed_self_test)
+{
+   // run through reset and validation sub-state machines
+   mpu6500.start();
+   run_through_reset_state();
+   run_through_validation_state(true);
+   run_through_config_state(true);
+
+   run_through_self_test_state(false);
+
+   imu_sensor::ErrorBits ref_error{};
+   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::bus_error));
+   EXPECT_EQ(mpu6500.get_error().to_ulong(), ref_error.to_ulong());
+   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::failure);
 }
 
 TEST_F(Mpu6500Test, check_successful_self_test)
@@ -251,9 +279,17 @@ TEST_F(Mpu6500Test, check_successful_self_test)
    run_through_validation_state(true);
    run_through_config_state(true);
 
-   run_through_self_test_state();
+   run_through_self_test_state(true);
 
    EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
+
+   const auto imu_health = imu_health_storage.get_latest().data;
+   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::operational);
+   EXPECT_TRUE(imu_health.error.none());
+   EXPECT_EQ(imu_health.read_failure_count, 0);
+   EXPECT_TRUE(imu_health.validation_ok);
+   EXPECT_TRUE(imu_health.config_ok);
+   EXPECT_TRUE(imu_health.self_test_ok);
 }
 
 TEST_F(Mpu6500Test, check_read_data_command)
@@ -263,7 +299,7 @@ TEST_F(Mpu6500Test, check_read_data_command)
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   run_through_self_test_state();
+   run_through_self_test_state(true);
    EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
 
    mpu6500.execute();
@@ -279,7 +315,7 @@ TEST_F(Mpu6500Test, check_read_data_timeout_causing_soft_rec)
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   run_through_self_test_state();
+   run_through_self_test_state(true);
    EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
 
    for (size_t i = 0; i < read_failures_limit; i++)
@@ -307,7 +343,7 @@ TEST_F(Mpu6500Test, check_all_zeros_data_causing_soft_rec)
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   run_through_self_test_state();
+   run_through_self_test_state(true);
    EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
 
    rx_buffer.fill(0);
@@ -335,7 +371,7 @@ TEST_F(Mpu6500Test, check_all_ones_data_causing_soft_rec)
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   run_through_self_test_state();
+   run_through_self_test_state(true);
    EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
 
    rx_buffer.fill(0xff);
@@ -363,7 +399,7 @@ TEST_F(Mpu6500Test, check_temp_implausibility_causing_soft_rec)
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   run_through_self_test_state();
+   run_through_self_test_state(true);
    EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
 
    rx_buffer.fill(0);
@@ -404,7 +440,7 @@ TEST_F(Mpu6500Test, check_valid_data_readout)
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   run_through_self_test_state();
+   run_through_self_test_state(true);
 
    perform_valid_measurement();
    EXPECT_TRUE(mpu6500.get_error().none());
@@ -422,7 +458,7 @@ TEST_F(Mpu6500Test, check_failing_validation_in_soft_rec_causing_hard_rec)
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   run_through_self_test_state();
+   run_through_self_test_state(true);
 
    cause_bus_and_data_errors_to_soft_recovery();
 
@@ -452,7 +488,7 @@ TEST_F(Mpu6500Test, check_failing_config_in_soft_rec_causing_hard_rec)
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   run_through_self_test_state();
+   run_through_self_test_state(true);
 
    cause_bus_and_data_errors_to_soft_recovery();
 
@@ -483,7 +519,7 @@ TEST_F(Mpu6500Test, check_successful_soft_recovery)
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   run_through_self_test_state();
+   run_through_self_test_state(true);
 
    cause_bus_and_data_errors_to_soft_recovery();
 
@@ -517,7 +553,7 @@ TEST_F(Mpu6500Test, check_failing_validation_in_hard_rec_causing_failure)
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   run_through_self_test_state();
+   run_through_self_test_state(true);
 
    cause_bus_and_data_errors_to_soft_recovery();
 
@@ -558,7 +594,7 @@ TEST_F(Mpu6500Test, check_failing_config_in_hard_rec_causing_failure)
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   run_through_self_test_state();
+   run_through_self_test_state(true);
 
    cause_bus_and_data_errors_to_soft_recovery();
 
@@ -600,7 +636,7 @@ TEST_F(Mpu6500Test, check_successful_hard_recovery)
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   run_through_self_test_state();
+   run_through_self_test_state(true);
 
    cause_bus_and_data_errors_to_soft_recovery();
 
@@ -684,7 +720,7 @@ TEST_F(Mpu6500Test, stop_in_operational)
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   run_through_self_test_state();
+   run_through_self_test_state(true);
    EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
    mpu6500.stop();
    EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
@@ -697,7 +733,7 @@ TEST_F(Mpu6500Test, stop_in_soft_recovery)
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   run_through_self_test_state();
+   run_through_self_test_state(true);
    cause_bus_and_data_errors_to_soft_recovery();
    EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::soft_recovery);
    mpu6500.stop();
@@ -711,7 +747,7 @@ TEST_F(Mpu6500Test, stop_in_hard_recovery)
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   run_through_self_test_state();
+   run_through_self_test_state(true);
    cause_bus_and_data_errors_to_soft_recovery();
    mpu6500.execute();   // enter validation within soft recovery phase
    run_through_validation_state(false);
@@ -727,7 +763,7 @@ TEST_F(Mpu6500Test, stop_in_failure)
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   run_through_self_test_state();
+   run_through_self_test_state(true);
    cause_bus_and_data_errors_to_soft_recovery();
    mpu6500.execute();   // enter validation within soft recovery phase
    run_through_validation_state(false);

@@ -34,9 +34,8 @@ public:
    {
       if (m_enabled)
       {
-         std::cout << m_logger_name << ": " << fmt;   // print the "format" text as-is
-         (std::cout << ... << args);                  // fold expression to print remaining args
-         std::cout << "\n";
+         std::cout << m_logger_name << ": " << fmt;                  // print the "format" text as-is
+         ((std::cout << ... << (std::cout << " ", args)) << '\n');   // fold expression to print remaining args
       }
    }
 
