@@ -19,7 +19,7 @@ class Mpu6500StateHandler
 {
    using ImuData   = ::boundaries::SharedData<imu_sensor::ImuData>;
    using ImuHealth = ::boundaries::SharedData<imu_sensor::ImuHealth>;
-   using Vec       = imu_sensor::ImuData::Vec3;
+   using Vec       = physics::Vector3;
 
 public:
    explicit Mpu6500StateHandler(ImuData&          imu_data_storage,
@@ -505,12 +505,12 @@ private:
       const Vec variance_accel = m_self_test_stats.ssq_accel / n_minus_one;
       const Vec variance_gyro  = m_self_test_stats.ssq_gyro / n_minus_one;
 
-      const float std_accel_x = std::sqrt(variance_accel.x);
-      const float std_accel_y = std::sqrt(variance_accel.y);
-      const float std_accel_z = std::sqrt(variance_accel.z);
-      const float std_gyro_x  = std::sqrt(variance_gyro.x);
-      const float std_gyro_y  = std::sqrt(variance_gyro.y);
-      const float std_gyro_z  = std::sqrt(variance_gyro.z);
+      const float std_accel_x = sqrtf(variance_accel.x);
+      const float std_accel_y = sqrtf(variance_accel.y);
+      const float std_accel_z = sqrtf(variance_accel.z);
+      const float std_gyro_x  = sqrtf(variance_gyro.x);
+      const float std_gyro_y  = sqrtf(variance_gyro.y);
+      const float std_gyro_z  = sqrtf(variance_gyro.z);
 
       m_self_test_stats.std_accel = Vec{std_accel_x, std_accel_y, std_accel_z};
       m_self_test_stats.std_gyro  = Vec{std_gyro_x, std_gyro_y, std_gyro_z};
@@ -574,7 +574,7 @@ private:
 
    static constexpr float get_norm(const Vec& vec) noexcept
    {
-      return std::sqrt((vec.x * vec.x) + (vec.y * vec.y) + (vec.z * vec.z));
+      return sqrtf((vec.x * vec.x) + (vec.y * vec.y) + (vec.z * vec.z));
    }
 
    bool is_gyro_range_plausible() const

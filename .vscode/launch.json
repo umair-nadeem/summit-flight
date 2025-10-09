@@ -56,6 +56,16 @@
             "cwd": "${workspaceFolder}",
             "env": {},
             "stopOnEntry": false
+        },
+        {
+            "name": "AeromightControlTest",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/out/build/native/project/aeromight/application/aeromight_control/test/aeromight_control_test",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {},
+            "stopOnEntry": false
         }
       ]
 }

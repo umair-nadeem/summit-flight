@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EstimatorHealth.hpp"
 #include "barometer_sensor/BarometerData.hpp"
 #include "barometer_sensor/BarometerHealth.hpp"
 #include "boundaries/SharedData.hpp"
@@ -18,6 +19,9 @@ struct AeromightSensorData
    // Barometer
    boundaries::SharedData<barometer_sensor::BarometerData>   barometer_sensor_data_storage{};
    boundaries::SharedData<barometer_sensor::BarometerHealth> barometer_sensor_health_storage{};
+
+   // Estimator
+   boundaries::SharedData<EstimatorHealth> estimator_health_storage{};
 };
 
 extern AeromightSensorData aeromight_sensor_data;

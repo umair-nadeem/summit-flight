@@ -188,9 +188,9 @@ TEST_F(SelfTestSMTest, sane_sensor_values_for_passing_self_test)
    EXPECT_TRUE(mpu6500_handler.self_test_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 
-   const auto                      bias       = mpu6500_handler.get_bias();
-   const imu_sensor::ImuData::Vec3 accel_bias = std::get<0>(bias);
-   const imu_sensor::ImuData::Vec3 gyro_bias  = std::get<1>(bias);
+   const auto             bias       = mpu6500_handler.get_bias();
+   const physics::Vector3 accel_bias = std::get<0>(bias);
+   const physics::Vector3 gyro_bias  = std::get<1>(bias);
 
    EXPECT_NEAR(accel_bias.x, -1.01f, 0.01f);
    EXPECT_NEAR(accel_bias.y, 0.01f, 0.01f);

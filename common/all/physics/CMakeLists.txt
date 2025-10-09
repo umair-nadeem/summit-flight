@@ -1,5 +1,4 @@
 add_module(
    SOURCES
    LIBS
-      physics
 )
