@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "Vector3.hpp"
+#include "physics/constants.hpp"
 
 namespace physics
 {
@@ -106,8 +107,6 @@ struct Quaternion
 
    Vector3 to_euler() const
    {
-      const float pi_by_2 = 1.57079632679489661923f;
-
       // Roll (rotation around X axis)
       const float sinr_cosp = 2.0f * (w * x + y * z);
       const float cosr_cosp = 1.0f - 2.0f * (x * x + y * y);
@@ -120,7 +119,7 @@ struct Quaternion
       const float cosy_cosp = 1.0f - 2.0f * (y * y + z * z);
 
       return Vector3{std::atan2(sinr_cosp, cosr_cosp),
-                     (std::abs(sinp) >= 1.0f) ? std::copysign(pi_by_2, sinp) : std::asin(sinp),
+                     (std::abs(sinp) >= 1.0f) ? std::copysign(physics::constants::pi_by_2, sinp) : std::asin(sinp),
                      std::atan2(siny_cosp, cosy_cosp)};
    }
 };

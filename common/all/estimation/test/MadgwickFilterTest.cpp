@@ -1,4 +1,4 @@
-#include "aeromight_control/MadgwickFilter.hpp"
+#include "estimation/MadgwickFilter.hpp"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -11,9 +11,9 @@ protected:
    static constexpr float accel_tolerance_mps2 = 3.0f;
    static constexpr float sampling_period_s    = 4u / 1000.0f;
 
-   physics::Vector3                  accel{};
-   physics::Vector3                  gyro{};
-   aeromight_control::MadgwickFilter ahrs_filter{beta, gyro_bias_gain, accel_tolerance_mps2, sampling_period_s};
+   physics::Vector3           accel{};
+   physics::Vector3           gyro{};
+   estimation::MadgwickFilter ahrs_filter{beta, gyro_bias_gain, accel_tolerance_mps2, sampling_period_s};
 };
 
 using TestVector = std::tuple<physics::Vector3, physics::Vector3, physics::Quaternion, uint32_t>;

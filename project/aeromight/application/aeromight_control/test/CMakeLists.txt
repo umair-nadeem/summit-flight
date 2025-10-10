@@ -2,7 +2,6 @@ add_module_test(
    SOURCES
       EstimationAndControlTest.cpp
       EstimationTest.cpp
-      MadgwickFilterTest.cpp
    LIBS
       mocks
       aeromight_boundaries

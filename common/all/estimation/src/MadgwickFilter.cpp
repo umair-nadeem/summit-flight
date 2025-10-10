@@ -1,8 +1,10 @@
-#include "aeromight_control/MadgwickFilter.hpp"
+#include "estimation/MadgwickFilter.hpp"
 
 #include <algorithm>
 
-namespace aeromight_control
+#include "physics/constants.hpp"
+
+namespace estimation
 {
 
 MadgwickFilter::MadgwickFilter(const float beta,
@@ -25,7 +27,7 @@ void MadgwickFilter::update(const physics::Vector3& accel_mps2, const physics::V
    physics::Quaternion q_dot_gyro = q_derivative(gyro_corrected);
 
    // perform accel gating to reject data during high dynamic situations
-   if (std::abs(accel.get_norm() - g_to_mps2) <= m_accel_tolerance_mps2)
+   if (std::abs(accel.get_norm() - physics::constants::g_to_mps2) <= m_accel_tolerance_mps2)
    {
       accel.normalize();
       const auto& q  = m_quaternion;
@@ -98,4 +100,4 @@ physics::Vector3 MadgwickFilter::get_unbiased_gyro_data(const physics::Vector3& 
    return physics::Vector3{raw_gyro - m_gyro_bias};
 }
 
-}   // namespace aeromight_control
+}   // namespace estimation

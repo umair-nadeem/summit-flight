@@ -5,7 +5,7 @@
 #include "physics/Quaternion.hpp"
 #include "physics/Vector3.hpp"
 
-namespace aeromight_control
+namespace estimation
 {
 
 class MadgwickFilter
@@ -25,7 +25,6 @@ private:
    physics::Quaternion q_derivative(const physics::Vector3& gyro) const;
 
    static constexpr float max_gyro_bias_radps       = 0.1f;
-   static constexpr float g_to_mps2                 = 9.80665f;
    static constexpr float min_recognizable_gradient = 1e-9f;
 
    const float         m_beta;
@@ -37,4 +36,4 @@ private:
    uint32_t            m_last_timestamp_gyro_data_ms{0};
 };
 
-}   // namespace aeromight_control
+}   // namespace estimation

@@ -10,6 +10,7 @@
 #include "imu_sensor/ImuHealth.hpp"
 #include "interfaces/IClockSource.hpp"
 #include "params.hpp"
+#include "physics/constants.hpp"
 
 namespace mpu6500
 {
@@ -53,10 +54,10 @@ public:
          m_accel_a_dlpf_config{accel_a_dlpf_config},
          m_gyro_range_plausibility_margin_radps{gyro_range_plausibility_margin_radps},
          m_accel_range_plausibility_margin_mps2{accel_range_plausibility_margin_mps2},
-         m_gyro_scale{deg_to_rad / params::gyro_sensitivity_scale_factor[m_gyro_full_scale]},
-         m_accel_scale{g_to_mps2 / params::accel_sensitivity_scale_factor[m_accel_full_scale]},
-         m_gyro_absolute_plausibility_limit_radps{(params::gyro_abs_full_scale_range_dps[m_gyro_full_scale] * deg_to_rad) + m_gyro_range_plausibility_margin_radps},
-         m_accel_absolute_plausibility_limit_mps2{(params::accel_abs_full_scale_range_g[m_accel_full_scale] * g_to_mps2) + m_accel_range_plausibility_margin_mps2},
+         m_gyro_scale{physics::constants::deg_to_rad / params::gyro_sensitivity_scale_factor[m_gyro_full_scale]},
+         m_accel_scale{physics::constants::g_to_mps2 / params::accel_sensitivity_scale_factor[m_accel_full_scale]},
+         m_gyro_absolute_plausibility_limit_radps{(params::gyro_abs_full_scale_range_dps[m_gyro_full_scale] * physics::constants::deg_to_rad) + m_gyro_range_plausibility_margin_radps},
+         m_accel_absolute_plausibility_limit_mps2{(params::accel_abs_full_scale_range_g[m_accel_full_scale] * physics::constants::g_to_mps2) + m_accel_range_plausibility_margin_mps2},
          m_num_samples_self_test{num_samples_self_test},
          m_gyro_tolerance_radps{gyro_tolerance_radps},
          m_accel_tolerance_mps2{accel_tolerance_mps2}
@@ -518,20 +519,16 @@ private:
 
    void calculate_bias()
    {
-      const float magnitude = get_norm(m_self_test_stats.mean_accel);
+      const float magnitude = m_self_test_stats.mean_accel.get_norm();
       error::verify(magnitude > 0);
 
       // unit vector -> a^ = a/|a|
       // gravity_body vector -> G_b = G * a^
-      const Vec gravity_body = {m_self_test_stats.mean_accel.x * g_to_mps2 / magnitude,
-                                m_self_test_stats.mean_accel.y * g_to_mps2 / magnitude,
-                                m_self_test_stats.mean_accel.z * g_to_mps2 / magnitude};
+      const Vec gravity_body = m_self_test_stats.mean_accel * (physics::constants::g_to_mps2 / magnitude);
 
       // bias = a - G_b
       // accel bias is the residual vector after subtracting the G component
-      m_bias.accel.x = m_self_test_stats.mean_accel.x - gravity_body.x;
-      m_bias.accel.y = m_self_test_stats.mean_accel.y - gravity_body.y;
-      m_bias.accel.z = m_self_test_stats.mean_accel.z - gravity_body.z;
+      m_bias.accel = m_self_test_stats.mean_accel - gravity_body;
 
       // gyro bias is just mean
       m_bias.gyro = m_self_test_stats.mean_gyro;
@@ -572,11 +569,6 @@ private:
       return static_cast<int16_t>((msb << one_byte_shift) | lsb);
    }
 
-   static constexpr float get_norm(const Vec& vec) noexcept
-   {
-      return sqrtf((vec.x * vec.x) + (vec.y * vec.y) + (vec.z * vec.z));
-   }
-
    bool is_gyro_range_plausible() const
    {
       // sensor range check -> must be performed with raw/uncalibrated data
@@ -611,8 +603,8 @@ private:
 
    bool is_platform_stationary() const
    {
-      const float magnitude = get_norm(m_self_test_stats.mean_accel);
-      return std::abs(magnitude - g_to_mps2) <= m_accel_tolerance_mps2;
+      const float magnitude = m_self_test_stats.mean_accel.get_norm();
+      return std::abs(magnitude - physics::constants::g_to_mps2) <= m_accel_tolerance_mps2;
    }
 
    bool is_accel_stable() const
@@ -654,8 +646,6 @@ private:
 
    static constexpr uint8_t one_byte_shift  = 8u;
    static constexpr uint8_t three_bit_shift = 3u;
-   static constexpr float   deg_to_rad      = 3.14159265358979323846f / 180.0f;
-   static constexpr float   g_to_mps2       = 9.80665f;
 
    ImuData&                                           m_imu_data_storage;
    ImuHealth&                                         m_imu_health_storage;

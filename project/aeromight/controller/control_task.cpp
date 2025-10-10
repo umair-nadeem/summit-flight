@@ -3,8 +3,8 @@
 #include "aeromight_control/Control.hpp"
 #include "aeromight_control/Estimation.hpp"
 #include "aeromight_control/EstimationAndControl.hpp"
-#include "aeromight_control/MadgwickFilter.hpp"
 #include "error/error_handler.hpp"
+#include "estimation/MadgwickFilter.hpp"
 #include "logging/LogClient.hpp"
 #include "rtos/QueueSender.hpp"
 #include "rtos/periodic_task.hpp"
@@ -40,7 +40,7 @@ extern "C"
       LogClient logger_estimation{logging::logging_queue_sender, "estimation"};
       LogClient logger_control{logging::logging_queue_sender, "control"};
 
-      aeromight_control::MadgwickFilter ahrs_filter{ahrs_beta, gyro_bias_gain, accel_tolerance_mps2, (controller::task::imu_task_period_in_ms / 1000.0f)};
+      estimation::MadgwickFilter ahrs_filter{ahrs_beta, gyro_bias_gain, accel_tolerance_mps2, (controller::task::imu_task_period_in_ms / 1000.0f)};
 
       aeromight_control::Estimation<decltype(ahrs_filter),
                                     sys_time::ClockSource,

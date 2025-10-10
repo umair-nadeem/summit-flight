@@ -1,10 +1,9 @@
 add_module(
    SOURCES
-      src/MadgwickFilter.cpp
    LIBS
       barometer_sensor
       error
+      estimation
       imu_sensor
-      physics
       utilities
 )

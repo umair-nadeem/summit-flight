@@ -1,6 +1,6 @@
 add_module(
    SOURCES
-      Barometric.cpp
+      src/Barometric.cpp
    LIBS
       error
 )
