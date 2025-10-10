@@ -1,5 +1,6 @@
 add_module(
    SOURCES
+      src/AltitudeEkf.cpp
    LIBS
       barometer_sensor
       error

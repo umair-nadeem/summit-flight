@@ -7,12 +7,13 @@
 #include "error/error_handler.hpp"
 #include "imu_sensor/ImuData.hpp"
 #include "interfaces/IClockSource.hpp"
+#include "physics/Quaternion.hpp"
 #include "utilities/Barometric.hpp"
 
 namespace aeromight_control
 {
 
-template <typename MadgwickFilter, interfaces::IClockSource ClockSource, typename Logger>
+template <typename MadgwickFilter, typename AltitudeEkf, interfaces::IClockSource ClockSource, typename Logger>
 class Estimation
 {
    using ImuData         = ::boundaries::SharedData<imu_sensor::ImuData>;
@@ -23,6 +24,7 @@ class Estimation
 
 public:
    explicit Estimation(MadgwickFilter&      ahrs_filter,
+                       AltitudeEkf&         altitude_ekf,
                        EstimatorHealth&     estimator_health_storage,
                        StateEstimation&     state_estimation_data_storage,
                        const ImuData&       imu_data,
@@ -35,6 +37,7 @@ public:
                        const std::size_t    max_age_imu_data_ms,
                        const std::size_t    max_age_baro_data_ms)
        : m_ahrs_filter{ahrs_filter},
+         m_altitude_ekf{altitude_ekf},
          m_estimator_health_storage{estimator_health_storage},
          m_state_estimation_data_storage{state_estimation_data_storage},
          m_imu_data{imu_data},
@@ -126,15 +129,10 @@ private:
 
    void try_read_pressure()
    {
-      const auto pressure_sample = m_barometer_data.get_latest();
-      if (pressure_sample.timestamp_ms > m_last_barometer_sample.timestamp_ms)
+      if (read_from_barometer())
       {
-         if (pressure_sample.data.pressure_pa.has_value())
-         {
-            m_accumulated_pressure_values += pressure_sample.data.pressure_pa.value();
-            m_last_barometer_sample = pressure_sample;
-            m_pressure_sample_counter++;
-         }
+         m_accumulated_pressure_values += m_last_barometer_sample.data.pressure_pa.value();
+         m_pressure_sample_counter++;
       }
    }
 
@@ -147,11 +145,6 @@ private:
       utilities::Barometric::set_pressure_reference(m_reference_pressure);
       m_local_estimator_health.status.set(static_cast<uint8_t>(Status::valid_pressure_reference_acquired));
       m_logger.printf("reference sea-level pressure: %.2f", m_reference_pressure);
-   }
-
-   void publish_health()
-   {
-      m_estimator_health_storage.update_latest(m_local_estimator_health, ClockSource::now_ms());
    }
 
    void move_to_fault()
@@ -182,8 +175,68 @@ private:
       }
    }
 
-   static void run_estimation()
+   void run_estimation()
    {
+      // read imu data
+      if (read_from_imu())
+      {
+         // update attitude state estimation
+         const physics::Vector3 accel_body_mps2 = m_last_imu_sample.data.accel_mps2.value();
+         const physics::Vector3 gyro_radps      = m_last_imu_sample.data.gyro_radps.value();
+         m_ahrs_filter.update(accel_body_mps2, gyro_radps);
+
+         // predict ekf
+         const physics::Quaternion attitude_quaternion = m_ahrs_filter.get_quaternion();
+         m_altitude_ekf.predict(accel_body_mps2, attitude_quaternion);
+
+         publish_data();
+      }
+
+      // read barometer data
+      if (read_from_barometer())
+      {
+         publish_data();
+      }
+   }
+
+   bool read_from_imu()
+   {
+      const auto imu_sample = m_imu_data.get_latest();
+      if (imu_sample.timestamp_ms > m_last_imu_sample.timestamp_ms)
+      {
+         if (imu_sample.data.accel_mps2.has_value() &&
+             imu_sample.data.gyro_radps.has_value())
+         {
+            m_last_imu_sample = imu_sample;
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   bool read_from_barometer()
+   {
+      const auto pressure_sample = m_barometer_data.get_latest();
+      if (pressure_sample.timestamp_ms > m_last_barometer_sample.timestamp_ms)
+      {
+         if (pressure_sample.data.pressure_pa.has_value())
+         {
+            m_last_barometer_sample = pressure_sample;
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   static void publish_data()
+   {
+   }
+
+   void publish_health()
+   {
+      m_estimator_health_storage.update_latest(m_local_estimator_health, ClockSource::now_ms());
    }
 
    bool all_pressure_samples_acquired() const
@@ -220,6 +273,7 @@ private:
    }
 
    MadgwickFilter&                       m_ahrs_filter;
+   AltitudeEkf&                          m_altitude_ekf;
    EstimatorHealth&                      m_estimator_health_storage;
    StateEstimation&                      m_state_estimation_data_storage;
    const ImuData&                        m_imu_data;
