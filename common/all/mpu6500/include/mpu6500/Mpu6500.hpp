@@ -28,7 +28,7 @@ public:
                     const uint8_t     accel_a_dlpf_config,
                     const float       gyro_range_plausibility_margin_radps,
                     const float       accel_range_plausibility_margin_mps2,
-                    const uint8_t     num_samples_self_test,
+                    const uint16_t    num_samples_self_test,
                     const float       gyro_tolerance_radps,
                     const float       accel_tolerance_mps2)
        : m_state_handler{imu_data_storage,

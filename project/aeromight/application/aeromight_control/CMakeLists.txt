@@ -6,5 +6,6 @@ add_module(
       error
       estimation
       imu_sensor
+      math
       utilities
 )

@@ -7,7 +7,6 @@
 #include "error/error_handler.hpp"
 #include "imu_sensor/ImuData.hpp"
 #include "interfaces/IClockSource.hpp"
-#include "physics/Quaternion.hpp"
 #include "utilities/Barometric.hpp"
 
 namespace aeromight_control
@@ -35,7 +34,8 @@ public:
                        const std::size_t    execution_period_ms,
                        const std::size_t    wait_timeout_pressure_reference_acquisition_ms,
                        const std::size_t    max_age_imu_data_ms,
-                       const std::size_t    max_age_baro_data_ms)
+                       const std::size_t    max_age_baro_data_ms,
+                       const float          max_valid_imu_sample_dt_s)
        : m_ahrs_filter{ahrs_filter},
          m_altitude_ekf{altitude_ekf},
          m_estimator_health_storage{estimator_health_storage},
@@ -48,7 +48,8 @@ public:
          m_execution_period_ms{execution_period_ms},
          m_wait_timeout_pressure_reference_acquisition_ms{wait_timeout_pressure_reference_acquisition_ms},
          m_max_age_imu_data_ms{max_age_imu_data_ms},
-         m_max_age_baro_data_ms{max_age_baro_data_ms}
+         m_max_age_baro_data_ms{max_age_baro_data_ms},
+         m_max_valid_imu_sample_dt_s{max_valid_imu_sample_dt_s}
    {
       m_logger.enable();
    }
@@ -93,6 +94,7 @@ public:
             }
             else if (pressure_samples_read_timeout())
             {
+               m_local_estimator_health.status.set(static_cast<uint8_t>(Status::pressure_reference_estimate_timeout));
                move_to_fault();
             }
             break;
@@ -102,6 +104,7 @@ public:
 
             if (estimation_has_fault())
             {
+               m_local_estimator_health.status.set(static_cast<uint8_t>(Status::stale_sensor_data));
                move_to_fault();
             }
             break;
@@ -123,8 +126,12 @@ private:
       m_reference_pressure            = 0.0f;
       m_pressure_sample_counter       = 0;
       m_pressure_reference_wait_timer = 0;
+      m_imu_sample_dt_s               = 0.0f;
       m_last_barometer_sample         = BarometerData::Sample{};
       m_last_imu_sample               = ImuData::Sample{};
+
+      m_ahrs_filter.reset();
+      m_altitude_ekf.reset();
    }
 
    void try_read_pressure()
@@ -150,7 +157,6 @@ private:
    void move_to_fault()
    {
       m_local_estimator_health.state = State::fault;
-      m_local_estimator_health.status.set(static_cast<uint8_t>(Status::fault_occurred));
       publish_health();
    }
 
@@ -180,14 +186,7 @@ private:
       // read imu data
       if (read_from_imu())
       {
-         // update attitude state estimation
-         const physics::Vector3 accel_body_mps2 = m_last_imu_sample.data.accel_mps2.value();
-         const physics::Vector3 gyro_radps      = m_last_imu_sample.data.gyro_radps.value();
-         m_ahrs_filter.update(accel_body_mps2, gyro_radps);
-
-         // predict ekf
-         const physics::Quaternion attitude_quaternion = m_ahrs_filter.get_quaternion();
-         m_altitude_ekf.predict(accel_body_mps2, attitude_quaternion);
+         run_attitude_estimation();
 
          publish_data();
       }
@@ -195,8 +194,92 @@ private:
       // read barometer data
       if (read_from_barometer())
       {
-         publish_data();
+         if (run_altitude_estimation())
+         {
+            publish_data();
+         }
+         else
+         {
+            m_local_estimator_health.status.set(static_cast<uint8_t>(Status::altitude_conversion_failed));
+            move_to_fault();
+         }
       }
+   }
+
+   void run_attitude_estimation()
+   {
+      if (m_imu_sample_dt_s > m_max_valid_imu_sample_dt_s)
+      {
+         m_ahrs_filter.reset();
+         m_altitude_ekf.reset();
+         return;
+      }
+
+      // imu sensor mpu6500 reports data in FLU/ENU sensor frame
+      const math::Vector3 accel_enu = m_last_imu_sample.data.accel_mps2.value();
+      const math::Vector3 gyro_enu  = m_last_imu_sample.data.gyro_radps.value();
+
+      // convert sensor axes from ENU frame to FRD/NED
+      const math::Vector3 accel_mps2 = map_imu_sensor_axes_to_ned(accel_enu);
+      const math::Vector3 gyro_radps = map_imu_sensor_axes_to_ned(gyro_enu);
+
+      // update attitude state estimation
+      m_ahrs_filter.update_in_ned_frame(accel_mps2, gyro_radps, m_imu_sample_dt_s);
+
+      m_local_estimation_data.attitude   = m_ahrs_filter.get_quaternion();
+      m_local_estimation_data.gyro_radps = m_ahrs_filter.get_unbiased_gyro_data(gyro_radps);
+      m_local_estimation_data.gyro_bias  = m_ahrs_filter.get_gyro_bias();
+
+      // predict altitude with ekf2
+      m_altitude_ekf.predict(accel_mps2, m_local_estimation_data.attitude, m_imu_sample_dt_s);
+   }
+
+   bool run_altitude_estimation()
+   {
+      const float                pressure_pa = m_last_barometer_sample.data.pressure_pa.value();
+      const std::optional<float> altitude_m  = utilities::Barometric::convert_pressure_to_altitude(pressure_pa);
+      if (altitude_m.has_value())
+      {
+         // update altitude estimate of ekf2
+         m_altitude_ekf.update(altitude_m.value());
+
+         const auto altitude_state = m_altitude_ekf.get_state();
+
+         m_local_estimation_data.altitude          = altitude_state.z;
+         m_local_estimation_data.vertical_velocity = altitude_state.v_z;
+
+         return true;
+      }
+
+      return false;
+   }
+
+   void publish_data()
+   {
+      m_local_estimation_data.timestamp_ms = ClockSource::now_ms();
+      m_state_estimation_data_storage      = m_local_estimation_data;
+
+      const math::Vector3 euler = m_local_estimation_data.attitude.to_euler();
+
+      m_data_log_counter++;
+      if ((m_data_log_counter % 250u) == 0)
+      {
+         m_logger.printf("z %.2f | vz %.2f | w %.2f | x %.2f | y %.2f | z %.2f | roll %.2f  |  pitch %.2f  |  y %.2f",
+                         m_local_estimation_data.altitude,
+                         m_local_estimation_data.vertical_velocity,
+                         m_local_estimation_data.attitude.w,
+                         m_local_estimation_data.attitude.x,
+                         m_local_estimation_data.attitude.y,
+                         m_local_estimation_data.attitude.z,
+                         euler.x,
+                         euler.y,
+                         euler.z);
+      }
+   }
+
+   void publish_health()
+   {
+      m_estimator_health_storage.update_latest(m_local_estimator_health, ClockSource::now_ms());
    }
 
    bool read_from_imu()
@@ -204,11 +287,23 @@ private:
       const auto imu_sample = m_imu_data.get_latest();
       if (imu_sample.timestamp_ms > m_last_imu_sample.timestamp_ms)
       {
-         if (imu_sample.data.accel_mps2.has_value() &&
-             imu_sample.data.gyro_radps.has_value())
+         // if this is our first sample
+         if (m_last_imu_sample.timestamp_ms == 0)
          {
             m_last_imu_sample = imu_sample;
+            return false;
+         }
+
+         // check for valid data
+         if (imu_sample.data.accel_mps2.has_value() && imu_sample.data.gyro_radps.has_value())
+         {
+            m_imu_sample_dt_s = static_cast<float>(imu_sample.timestamp_ms - m_last_imu_sample.timestamp_ms) * 0.001f;
+            m_last_imu_sample = imu_sample;
             return true;
+         }
+         else
+         {
+            m_local_estimator_health.status.set(static_cast<uint8_t>(Status::missing_valid_imu_data));
          }
       }
 
@@ -225,18 +320,13 @@ private:
             m_last_barometer_sample = pressure_sample;
             return true;
          }
+         else
+         {
+            m_local_estimator_health.status.set(static_cast<uint8_t>(Status::missing_valid_baro_data));
+         }
       }
 
       return false;
-   }
-
-   static void publish_data()
-   {
-   }
-
-   void publish_health()
-   {
-      m_estimator_health_storage.update_latest(m_local_estimator_health, ClockSource::now_ms());
    }
 
    bool all_pressure_samples_acquired() const
@@ -272,6 +362,12 @@ private:
       return false;
    }
 
+   // converts sensor axes from East-North-Up from to North-East-Down frame
+   static constexpr math::Vector3 map_imu_sensor_axes_to_ned(const math::Vector3& enu_vector)
+   {
+      return {-enu_vector.y, -enu_vector.x, -enu_vector.z};
+   }
+
    MadgwickFilter&                       m_ahrs_filter;
    AltitudeEkf&                          m_altitude_ekf;
    EstimatorHealth&                      m_estimator_health_storage;
@@ -285,13 +381,17 @@ private:
    const std::size_t                     m_wait_timeout_pressure_reference_acquisition_ms;
    const std::size_t                     m_max_age_imu_data_ms;
    const std::size_t                     m_max_age_baro_data_ms;
+   const float                           m_max_valid_imu_sample_dt_s;
    aeromight_boundaries::EstimatorHealth m_local_estimator_health{};
+   StateEstimation                       m_local_estimation_data{};
    ImuData::Sample                       m_last_imu_sample{};
    BarometerData::Sample                 m_last_barometer_sample{};
+   float                                 m_imu_sample_dt_s{};
    float                                 m_accumulated_pressure_values{};
    float                                 m_reference_pressure{};
    uint8_t                               m_pressure_sample_counter{};
    std::size_t                           m_pressure_reference_wait_timer{};
+   std::size_t                           m_data_log_counter{};
 };
 
 }   // namespace aeromight_control

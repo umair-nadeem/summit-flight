@@ -211,15 +211,6 @@ public:
    {
       const volatile uint32_t clock = ClockSource::now_ms();
       m_barometer_data_storage.update_latest(m_local_barometer_data, clock);
-
-      m_data_log_counter++;
-      if ((m_data_log_counter % 25u) == 0)
-      {
-         m_logger.printf("clock: %u   pressure: %.2f     |     temperature: %.2f",
-                         clock,
-                         m_local_barometer_data.pressure_pa.value(),
-                         m_local_barometer_data.temperature_c.value());
-      }
    }
 
    void publish_health()

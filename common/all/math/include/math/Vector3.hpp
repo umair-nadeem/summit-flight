@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace physics
+namespace math
 {
 
 struct Vector3
@@ -90,4 +90,4 @@ struct Vector3
    }
 };
 
-}   // namespace physics
+}   // namespace math

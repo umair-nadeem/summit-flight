@@ -48,6 +48,16 @@
             "stopOnEntry": false
         },
         {
+            "name": "MathTest",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/out/build/native/common/all/math/test/math_test",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {},
+            "stopOnEntry": false
+        },
+        {
             "name": "Mpu6500Test",
             "type": "lldb",
             "request": "launch",

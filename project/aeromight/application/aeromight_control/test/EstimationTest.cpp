@@ -9,7 +9,15 @@
 class AhrsFilterMock
 {
 public:
-   MOCK_METHOD(void, update, (const physics::Vector3&, const physics::Vector3&), ());
+   MOCK_METHOD(void, update, (const math::Vector3&, const math::Vector3&, const float&), ());
+   MOCK_METHOD(void, reset, ());
+};
+
+class EkfMock
+{
+public:
+   MOCK_METHOD(void, update, (const math::Vector3&, const math::Vector3&), ());
+   MOCK_METHOD(void, reset, ());
 };
 
 class EstimationTest : public testing::Test
@@ -21,8 +29,10 @@ protected:
    static constexpr std::size_t wait_timeout_pressure_reference_acquisition_ms = 40;
    static constexpr std::size_t max_age_imu_data_ms                            = 8u;
    static constexpr std::size_t max_age_baro_data_ms                           = 16u;
+   static constexpr float       max_valid_imu_sample_dt_s                      = 0.02f;
 
    AhrsFilterMock                                                  ahrs_filter_mock{};
+   EkfMock                                                         ekf_mock{};
    ::boundaries::SharedData<aeromight_boundaries::EstimatorHealth> estimator_health_storage{};
    aeromight_control::StateEstimation                              state_estimation_storage{};
    ::boundaries::SharedData<imu_sensor::ImuData>                   imu_data{};
@@ -30,9 +40,11 @@ protected:
    mocks::common::Logger                                           logger{"estmation"};
 
    aeromight_control::Estimation<decltype(ahrs_filter_mock),
+                                 decltype(ekf_mock),
                                  sys_time::ClockSource,
                                  decltype(logger)>
        estimation{ahrs_filter_mock,
+                  ekf_mock,
                   estimator_health_storage,
                   state_estimation_storage,
                   imu_data,
@@ -43,7 +55,8 @@ protected:
                   execution_period_ms,
                   wait_timeout_pressure_reference_acquisition_ms,
                   max_age_imu_data_ms,
-                  max_age_baro_data_ms};
+                  max_age_baro_data_ms,
+                  max_valid_imu_sample_dt_s};
 };
 
 TEST_F(EstimationTest, check_start_and_stop)

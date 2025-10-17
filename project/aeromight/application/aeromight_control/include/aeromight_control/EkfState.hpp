@@ -5,9 +5,9 @@ namespace aeromight_control
 
 struct EkfState
 {
-   float altitude{};
-   float vertical_velocity{};
-   float accel_z_bias{};
+   float z{};
+   float v_z{};
+   float a_z_bias{};
 };
 
 }   // namespace aeromight_control

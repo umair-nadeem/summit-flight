@@ -5,7 +5,7 @@
 #include "Vector3.hpp"
 #include "physics/constants.hpp"
 
-namespace physics
+namespace math
 {
 
 struct Quaternion
@@ -118,10 +118,12 @@ struct Quaternion
       const float siny_cosp = 2.0f * (w * z + x * y);
       const float cosy_cosp = 1.0f - 2.0f * (y * y + z * z);
 
-      return Vector3{std::atan2(sinr_cosp, cosr_cosp),
-                     (std::abs(sinp) >= 1.0f) ? std::copysign(physics::constants::pi_by_2, sinp) : std::asin(sinp),
-                     std::atan2(siny_cosp, cosy_cosp)};
+      const float roll  = std::atan2(sinr_cosp, cosr_cosp);
+      const float pitch = (std::abs(sinp) >= 1.0f) ? std::copysign(physics::constants::pi_by_2, sinp) : std::asin(sinp);
+      const float yaw   = std::atan2(siny_cosp, cosy_cosp);
+
+      return Vector3{roll, pitch, yaw};
    }
 };
 
-}   // namespace physics
+}   // namespace math

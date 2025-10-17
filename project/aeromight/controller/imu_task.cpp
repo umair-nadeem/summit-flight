@@ -36,7 +36,7 @@ extern "C"
       constexpr uint8_t     mpu6500_accel_a_dlpf_config                  = 0x03;
       constexpr float       mpu6500_gyro_range_plausibility_margin_radps = 6.0f;
       constexpr float       mpu6500_accel_range_plausibility_margin_mps2 = 20.0f;
-      constexpr uint8_t     num_samples_self_test                        = 200u;
+      constexpr uint16_t    num_samples_self_test                        = 400u;
       constexpr float       gyro_tolerance_radps                         = 0.1f;
       constexpr float       accel_tolerance_mps2                         = 1.5f;
 

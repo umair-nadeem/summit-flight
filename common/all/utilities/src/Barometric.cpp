@@ -20,7 +20,7 @@ std::optional<float> Barometric::convert_pressure_to_altitude(const float pressu
 
 void Barometric::set_pressure_reference(const float pressure_at_sea_level_pa)
 {
-   if (pressure_at_sea_level_pa > 100.0f)
+   if (pressure_at_sea_level_pa > 90000.0f)
    {
       m_pressure_at_sea_level_pa = pressure_at_sea_level_pa;
    }

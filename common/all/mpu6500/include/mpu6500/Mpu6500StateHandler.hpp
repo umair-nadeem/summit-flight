@@ -20,7 +20,7 @@ class Mpu6500StateHandler
 {
    using ImuData   = ::boundaries::SharedData<imu_sensor::ImuData>;
    using ImuHealth = ::boundaries::SharedData<imu_sensor::ImuHealth>;
-   using Vec       = physics::Vector3;
+   using Vec       = math::Vector3;
 
 public:
    explicit Mpu6500StateHandler(ImuData&          imu_data_storage,
@@ -37,7 +37,7 @@ public:
                                 const uint8_t     accel_a_dlpf_config,
                                 const float       gyro_range_plausibility_margin_radps,
                                 const float       accel_range_plausibility_margin_mps2,
-                                const uint8_t     num_samples_self_test,
+                                const uint16_t    num_samples_self_test,
                                 const float       gyro_tolerance_radps,
                                 const float       accel_tolerance_mps2)
        : m_imu_data_storage{imu_data_storage},
@@ -243,20 +243,6 @@ public:
    {
       const volatile uint32_t clock = ClockSource::now_ms();
       m_imu_data_storage.update_latest(m_local_imu_data, clock);
-
-      m_data_log_counter++;
-      if ((m_data_log_counter % 250u) == 0)
-      {
-         m_logger.printf("clock: %u   accel x: %.2f, y: %.2f, z: %.2f     |     gyro: x: %.2f, y: %.2f, z: %.2f     |     temp: %.4f",
-                         clock,
-                         m_local_imu_data.accel_mps2.value().x,
-                         m_local_imu_data.accel_mps2.value().y,
-                         m_local_imu_data.accel_mps2.value().z,
-                         m_local_imu_data.gyro_radps.value().x,
-                         m_local_imu_data.gyro_radps.value().y,
-                         m_local_imu_data.gyro_radps.value().z,
-                         m_local_imu_data.temperature_c.value());
-      }
    }
 
    void publish_health()
@@ -665,7 +651,7 @@ private:
    const float                                        m_accel_scale;
    const float                                        m_gyro_absolute_plausibility_limit_radps;
    const float                                        m_accel_absolute_plausibility_limit_mps2;
-   const uint8_t                                      m_num_samples_self_test;
+   const uint16_t                                     m_num_samples_self_test;
    const float                                        m_gyro_tolerance_radps;
    const float                                        m_accel_tolerance_mps2;
    std::array<uint8_t, params::num_bytes_transaction> m_tx_buffer{};
