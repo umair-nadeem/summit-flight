@@ -11,6 +11,25 @@ struct Vector3
    float y = 0.0f;
    float z = 0.0f;
 
+   float epsilon = 0.0001f;   // for comparison
+
+   static constexpr bool nearly_equal(const float a, const float b, const float epsilon) noexcept
+   {
+      return std::abs(a - b) <= epsilon;
+   }
+
+   bool operator==(const Vector3& other) const noexcept
+   {
+      return (nearly_equal(x, other.x, epsilon) &&
+              nearly_equal(y, other.y, epsilon) &&
+              nearly_equal(z, other.z, epsilon));
+   }
+
+   bool operator!=(const Vector3& other) const noexcept
+   {
+      return !(*this == other);
+   }
+
    Vector3 operator+(const Vector3& other) const
    {
       Vector3 result{};
@@ -82,6 +101,11 @@ struct Vector3
          y *= inv_norm;
          z *= inv_norm;
       }
+   }
+
+   void set_epsilon(const float eps)
+   {
+      epsilon = eps;
    }
 
    float get_norm() const

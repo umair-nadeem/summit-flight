@@ -10,10 +10,12 @@ namespace math
 
 struct Quaternion
 {
-   float w;   // scalar (real)
-   float x;   // vector component i
-   float y;   // vector component j
-   float z;   // vector component k
+   float w;                   // scalar (real)
+   float x;                   // vector component i
+   float y;                   // vector component j
+   float z;                   // vector component k
+
+   float epsilon = 0.0001f;   // for comparison
 
    Quaternion()
        : w{1.0f},
@@ -29,6 +31,24 @@ struct Quaternion
          y{_y},
          z{_z}
    {
+   }
+
+   static constexpr bool nearly_equal(const float a, const float b, const float epsilon) noexcept
+   {
+      return std::abs(a - b) <= epsilon;
+   }
+
+   bool operator==(const Quaternion& other) const noexcept
+   {
+      return (nearly_equal(w, other.w, epsilon) &&
+              nearly_equal(x, other.x, epsilon) &&
+              nearly_equal(y, other.y, epsilon) &&
+              nearly_equal(z, other.z, epsilon));
+   }
+
+   bool operator!=(const Quaternion& other) const noexcept
+   {
+      return !(*this == other);
    }
 
    Quaternion operator+(const Quaternion& other) const
@@ -98,6 +118,11 @@ struct Quaternion
          y = 0.0f;
          z = 0.0f;
       }
+   }
+
+   void set_epsilon(const float eps)
+   {
+      epsilon = eps;
    }
 
    float get_norm() const

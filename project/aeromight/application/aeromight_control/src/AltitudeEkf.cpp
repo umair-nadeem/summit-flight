@@ -166,7 +166,7 @@ void AltitudeEkf::reset()
    m_is_initialized = false;
 }
 
-EkfState AltitudeEkf::get_state() const
+EkfState AltitudeEkf::get_ekf_state() const
 {
    return m_state;
 }

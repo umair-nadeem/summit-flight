@@ -21,7 +21,7 @@ public:
    void update(const float baro_altitude_m);
    void reset();
 
-   EkfState get_state() const;
+   EkfState get_ekf_state() const;
 
 private:
    void enfore_covariance_matrix_symmetry();

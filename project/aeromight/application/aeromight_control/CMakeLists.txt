@@ -3,6 +3,7 @@ add_module(
       src/AltitudeEkf.cpp
    LIBS
       barometer_sensor
+      bmp390
       error
       estimation
       imu_sensor

@@ -12,10 +12,11 @@ struct EstimatorHealth
 {
    enum class Status : uint8_t
    {
-      valid_pressure_reference_acquired = 0,
-      altitude_conversion_failed,
-      pressure_reference_estimate_timeout,
-      stale_sensor_data,
+      valid_reference_pressure_acquired = 0,
+      reference_pressure_estimate_timeout,
+      reference_pressure_implausible,
+      stale_imu_sensor_data,
+      stale_baro_sensor_data,
       missing_valid_imu_data,
       missing_valid_baro_data,
       max,

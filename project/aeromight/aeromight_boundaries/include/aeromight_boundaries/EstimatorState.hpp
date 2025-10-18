@@ -6,7 +6,7 @@ namespace aeromight_boundaries
 enum class EstimatorState
 {
    idle,
-   get_pressure_reference,
+   get_reference_pressure,
    running,
    fault
 };

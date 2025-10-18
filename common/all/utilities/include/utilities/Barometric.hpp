@@ -32,8 +32,8 @@ public:
 
    static float m_pressure_at_sea_level_pa;                          // static pressure reference
 
-   static std::optional<float> convert_pressure_to_altitude(const float pressure_pa);
-   static void                 set_pressure_reference(const float pressure_at_sea_level_pa);
+   static float convert_pressure_to_altitude(const float pressure_pa);
+   static void  set_reference_pressure(const float pressure_at_sea_level_pa);
 };
 
 }   // namespace utilities
