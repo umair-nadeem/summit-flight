@@ -5,6 +5,7 @@
 
 #include "BarometerTaskData.hpp"
 #include "ControlTaskData.hpp"
+#include "HealthMonitoringTaskData.hpp"
 #include "ImuTaskData.hpp"
 #include "LoggingTaskData.hpp"
 #include "SysClockData.hpp"
@@ -33,33 +34,38 @@ namespace controller
 {
 
 // all data
-GlobalData        global_data{};
-ImuTaskData       imu_task_data{};
-ControlTaskData   control_task_data{};
-BarometerTaskData barometer_task_data{};
-LoggingTaskData   logging_task_data{};
-SysClockData      sys_clock_data{};
+GlobalData               global_data{};
+ImuTaskData              imu_task_data{};
+ControlTaskData          control_task_data{};
+HealthMonitoringTaskData health_monitoring_task_data{};
+BarometerTaskData        barometer_task_data{};
+LoggingTaskData          logging_task_data{};
+SysClockData             sys_clock_data{};
 
 // task control blocks
 rtos::TCB imu_task_tcb{};
 rtos::TCB control_task_tcb{};
+rtos::TCB health_monitoring_task_tcb{};
 rtos::TCB barometer_task_tcb{};
 rtos::TCB logging_task_tcb{};
 
 // task stack
 alignas(std::max_align_t) uint32_t imu_task_stack_buffer[controller::task::imu_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t control_task_stack_buffer[controller::task::control_task_stack_depth_in_words];
+alignas(std::max_align_t) uint32_t health_monitoring_task_stack_buffer[controller::task::health_monitoring_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t barometer_task_stack_buffer[controller::task::barometer_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t logging_task_stack_buffer[controller::task::logging_task_stack_depth_in_words];
 
 // task handles
 TaskHandle_t imu_task_handle;
 TaskHandle_t control_task_handle;
+TaskHandle_t health_monitoring_task_handle;
 TaskHandle_t barometer_task_handle;
 TaskHandle_t logging_task_handle;
 
-// queue
-rtos::Queue<logging::params::logging_queue_len, sizeof(logging::params::LogBuffer)> logging_queue{};
+// queues
+rtos::Queue<logging::params::logging_queue_len, sizeof(logging::params::LogBuffer)>                      logging_queue{};
+rtos::Queue<aeromight_boundaries::health_summary_queue_len, sizeof(aeromight_boundaries::HealthSummary)> health_summary_queue{};
 
 // semaphore
 rtos::Semaphore logging_uart_semaphore{};
@@ -94,6 +100,20 @@ void register_tasks()
        .task_block           = control_task_tcb};
 
    control_task_handle = rtos::create_task(control_task_config);
+
+   // health monitoring task
+   std::memset(health_monitoring_task_stack_buffer, 0, sizeof(health_monitoring_task_stack_buffer));
+
+   rtos::RtosTaskConfig health_monitoring_task_config{
+       .func                 = health_monitoring_task,
+       .name                 = controller::task::health_monitoring_task_name,
+       .stack_depth_in_words = controller::task::health_monitoring_task_stack_depth_in_words,
+       .params               = static_cast<void*>(&health_monitoring_task_data),
+       .priority             = controller::task::health_monitoring_task_priority,
+       .stack_buffer         = health_monitoring_task_stack_buffer,
+       .task_block           = health_monitoring_task_tcb};
+
+   health_monitoring_task_handle = rtos::create_task(health_monitoring_task_config);
 
    // barometer task
    std::memset(barometer_task_stack_buffer, 0, sizeof(barometer_task_stack_buffer));
@@ -133,9 +153,14 @@ void setup_semaphores()
 
 void setup_queues()
 {
+   // logging queue
    auto logging_queue_handle = logging_queue.create();
    ::logging::logging_queue_sender.set_handle(logging_queue_handle);
    logging_task_data.logging_queue_receiver.set_handle(logging_queue_handle);
+
+   // health summary queue
+   auto health_summary_queue_handle = health_summary_queue.create();
+   health_monitoring_task_data.health_summary_queue_sender.set_handle(health_summary_queue_handle);
 }
 
 void setup_task_notifications()

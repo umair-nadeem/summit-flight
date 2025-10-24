@@ -1,3 +1,4 @@
 add_subdirectory(aeromight_barometer)
 add_subdirectory(aeromight_control)
+add_subdirectory(aeromight_health)
 add_subdirectory(aeromight_imu)

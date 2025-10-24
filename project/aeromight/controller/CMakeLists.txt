@@ -17,6 +17,7 @@ target_sources(aeromight_lib INTERFACE
    imu_task.cpp
    control_task.cpp
    barometer_task.cpp
+   health_monitoring_task.cpp
 )
 
 target_link_libraries(aeromight_lib INTERFACE
@@ -28,6 +29,7 @@ target_link_libraries(aeromight_lib INTERFACE
    aeromight_boundaries
    aeromight_barometer
    aeromight_control
+   aeromight_health
    aeromight_imu
    bmp390
    error

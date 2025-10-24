@@ -6,6 +6,7 @@ namespace controller::task
 // configMAX_PRIORITIES -> 10
 static constexpr uint32_t system_core_clock = 100'000'000u;
 
+// list of tasks in decreasing priority
 // IMU Task
 static constexpr const char* const imu_task_name{"imu_task"};
 static constexpr std::size_t       imu_task_stack_size_in_bytes{4096u};
@@ -19,6 +20,13 @@ static constexpr std::size_t       control_task_stack_size_in_bytes{4096u};
 static constexpr std::size_t       control_task_stack_depth_in_words{control_task_stack_size_in_bytes / sizeof(uint32_t)};
 static constexpr std::size_t       control_task_priority{8u};
 static constexpr std::size_t       control_task_period_in_ms{4u};
+
+// Health Monitoring Task
+static constexpr const char* const health_monitoring_task_name{"health_task"};
+static constexpr std::size_t       health_monitoring_task_stack_size_in_bytes{2048u};
+static constexpr std::size_t       health_monitoring_task_stack_depth_in_words{health_monitoring_task_stack_size_in_bytes / sizeof(uint32_t)};
+static constexpr std::size_t       health_monitoring_task_priority{5u};
+static constexpr std::size_t       health_monitoring_task_period_in_ms{32u};
 
 // Barometer Task
 static constexpr const char* const barometer_task_name{"baro_task"};
