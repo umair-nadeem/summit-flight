@@ -18,7 +18,7 @@ template <interfaces::rtos::IQueueSender<aeromight_boundaries::HealthSummary> Qu
 class HealthMonitoring
 {
 public:
-   explicit HealthMonitoring(QueueSender                                                          queue_sender,
+   explicit HealthMonitoring(QueueSender&                                                         queue_sender,
                              const boundaries::SharedData<imu_sensor::ImuHealth>&                 imu_sensor_health,
                              const boundaries::SharedData<barometer_sensor::BarometerHealth>&     barometer_sensor_health,
                              const boundaries::SharedData<aeromight_boundaries::EstimatorHealth>& estimation_health,
@@ -50,55 +50,68 @@ public:
 
    void run_once()
    {
-      const uint32_t current_time_ms = ClockSource::now_ms();
+      m_current_time_ms = ClockSource::now_ms();
 
       switch (m_state)
       {
          case HealthMonitoringState::startup:
-
-            tick_timer();
+         {
             if (startup_wait_duration_passed())
             {
                m_state = HealthMonitoringState::wait_for_sensors_readiness;
-               reset_timer();
+               m_logger.print("reading health snapshots");
+               m_state_entry_time_ms = m_current_time_ms;
             }
             break;
+         }
 
          case HealthMonitoringState::wait_for_sensors_readiness:
-
-            tick_timer();
+         {
             get_latest_health_snapshots();
 
-            if (all_sensors_ready())
+            const bool imu_ready       = imu_is_ready();
+            const bool barometer_ready = barometer_is_ready();
+
+            if (imu_ready)
             {
-               m_health_summary.imu_health        = aeromight_boundaries::SubsystemHealth::operational;
-               m_health_summary.barometer_health  = aeromight_boundaries::SubsystemHealth::operational;
+               m_health_summary.imu_health = aeromight_boundaries::SubsystemHealth::operational;
+            }
+
+            if (barometer_ready)
+            {
+               m_health_summary.barometer_health = aeromight_boundaries::SubsystemHealth::operational;
+            }
+
+            if (imu_ready && barometer_ready)
+            {
                m_health_summary.all_sensors_ready = true;
                m_state                            = HealthMonitoringState::wait_for_estimation_control_readiness;
+               m_state_entry_time_ms              = m_current_time_ms;
                m_logger.print("sensors healthy");
-               reset_timer();
             }
             else if (wait_for_sensors_readiness_passed())
             {
-               m_health_summary.all_sensors_ready = false;
-               if (m_imu_health_snapshot.data.state != imu_sensor::ImuSensorState::operational)
+               if (!imu_ready)
                {
                   m_health_summary.imu_health = aeromight_boundaries::SubsystemHealth::fault;
                }
-               if (m_barometer_health_snapshot.data.state != barometer_sensor::BarometerSensorState::operational)
+
+               if (!barometer_ready)
                {
                   m_health_summary.barometer_health = aeromight_boundaries::SubsystemHealth::fault;
                }
-               m_state = HealthMonitoringState::wait_for_estimation_control_readiness;
+               m_health_summary.all_sensors_ready = false;
+               m_state                            = HealthMonitoringState::wait_for_estimation_control_readiness;
+               m_state_entry_time_ms              = m_current_time_ms;
                m_logger.print("sensors health couldn't be determined");
-               reset_timer();
             }
 
-            publish_health_summary(current_time_ms);
+            publish_health_summary();
             break;
+         }
 
          case HealthMonitoringState::wait_for_estimation_control_readiness:
-            tick_timer();
+         {
             get_latest_health_snapshots();
 
             if (estimation_control_is_ready())
@@ -107,8 +120,8 @@ public:
                m_health_summary.estimation_ready  = true;
                m_health_summary.control_ready     = true;
                m_state                            = HealthMonitoringState::general_monitoring;
+               m_state_entry_time_ms              = m_current_time_ms;
                m_logger.print("estimation & control healthy");
-               reset_timer();
             }
             else if (wait_for_estimation_control_readiness_passed())
             {
@@ -116,19 +129,21 @@ public:
                m_health_summary.estimation_ready  = false;
                m_health_summary.control_ready     = false;
                m_state                            = HealthMonitoringState::general_monitoring;
+               m_state_entry_time_ms              = m_current_time_ms;
                m_logger.print("estimation & control health couldn't be determined");
-               reset_timer();
             }
 
-            publish_health_summary(current_time_ms);
+            publish_health_summary();
             break;
+         }
 
          case HealthMonitoringState::general_monitoring:
-
+         {
             get_latest_health_snapshots();
-            evaluate_health_status(current_time_ms);
-            publish_health_summary(current_time_ms);
+            evaluate_health_status();
+            publish_health_summary();
             break;
+         }
 
          default:
             break;
@@ -151,16 +166,6 @@ public:
    }
 
 private:
-   void reset_timer()
-   {
-      m_wait_timer_ms = 0;
-   }
-
-   void tick_timer()
-   {
-      m_wait_timer_ms += m_period_in_ms;
-   }
-
    void get_latest_health_snapshots()
    {
       m_imu_health_snapshot        = m_imu_sensor_health.get_latest();
@@ -168,13 +173,15 @@ private:
       m_estimation_health_snapshot = m_estimation_health.get_latest();
    }
 
-   void evaluate_health_status(const uint32_t current_time_ms)
+   void evaluate_health_status()
    {
-      const bool critical_imu_fault        = evaluate_imu_health(current_time_ms);
-      const bool critical_barometer_fault  = evaluate_barometer_health(current_time_ms);
-      const bool critical_estimation_fault = evaluate_estimation_health(current_time_ms);
+      m_health_summary.imu_health        = get_imu_health();
+      m_health_summary.barometer_health  = get_barometer_health();
+      m_health_summary.estimation_health = get_estimation_health();
 
-      if (critical_imu_fault || critical_barometer_fault || critical_estimation_fault)
+      if ((m_health_summary.imu_health == aeromight_boundaries::SubsystemHealth::fault) ||
+          (m_health_summary.barometer_health == aeromight_boundaries::SubsystemHealth::fault) ||
+          (m_health_summary.estimation_health == aeromight_boundaries::SubsystemHealth::fault))
       {
          m_health_summary.flight_critical_fault = true;
       }
@@ -184,124 +191,118 @@ private:
       }
    }
 
-   void publish_health_summary(const uint32_t current_time_ms)
+   void publish_health_summary()
    {
-      m_health_summary.timestamp_ms                = current_time_ms;
-      const bool ok                                = m_queue_sender.send_if_possible(m_health_summary);
-      m_health_summary.health_update_queue_failure = !ok;
+      m_health_summary.timestamp_ms = m_current_time_ms;
+      const bool ok                 = m_queue_sender.send_if_possible(m_health_summary);
+      if (!ok)
+      {
+         m_health_summary.queue_failure_count++;
+      }
    }
 
-   bool evaluate_imu_health(const uint32_t current_time_ms)
+   aeromight_boundaries::SubsystemHealth get_imu_health() const
    {
-      const bool imu_stale = (((current_time_ms - m_imu_health_snapshot.timestamp_ms) > m_max_age_imu_sensor_health_ms));
+      const bool imu_stale = (((m_current_time_ms - m_imu_health_snapshot.timestamp_ms) > m_max_age_imu_sensor_health_ms));
 
       const bool imu_read_failures = m_imu_health_snapshot.data.read_failure_count > 0;
 
       const bool imu_fault = ((m_imu_health_snapshot.data.state == imu_sensor::ImuSensorState::failure) ||
                               (m_imu_health_snapshot.data.error.to_ulong() != 0));
 
-      if (imu_stale || imu_read_failures)
-      {
-         m_health_summary.imu_health = aeromight_boundaries::SubsystemHealth::degraded;
-      }
-
       if (imu_fault)
       {
-         m_health_summary.imu_health = aeromight_boundaries::SubsystemHealth::fault;   // overwrite with higher criticality
+         return aeromight_boundaries::SubsystemHealth::fault;
+      }
+      else if (imu_stale || imu_read_failures)
+      {
+         return aeromight_boundaries::SubsystemHealth::degraded;
       }
 
-      return imu_fault;
+      return aeromight_boundaries::SubsystemHealth::operational;
    }
 
-   bool evaluate_barometer_health(const uint32_t current_time_ms)
+   aeromight_boundaries::SubsystemHealth get_barometer_health() const
    {
-      const bool barometer_stale = (((current_time_ms - m_barometer_health_snapshot.timestamp_ms) > m_max_age_barometer_sensor_health_ms));
+      const bool barometer_stale = (((m_current_time_ms - m_barometer_health_snapshot.timestamp_ms) > m_max_age_barometer_sensor_health_ms));
 
       const bool barometer_read_failures = m_barometer_health_snapshot.data.read_failure_count > 0;
 
       const bool barometer_fault = ((m_barometer_health_snapshot.data.state == barometer_sensor::BarometerSensorState::failure) ||
                                     (m_barometer_health_snapshot.data.error.to_ulong() != 0));
 
-      if (barometer_stale || barometer_read_failures)
-      {
-         m_health_summary.barometer_health = aeromight_boundaries::SubsystemHealth::degraded;
-      }
-
       if (barometer_fault)
       {
-         m_health_summary.barometer_health = aeromight_boundaries::SubsystemHealth::fault;   // overwrite with higher criticality
+         return aeromight_boundaries::SubsystemHealth::fault;
+      }
+      else if (barometer_stale || barometer_read_failures)
+      {
+         return aeromight_boundaries::SubsystemHealth::degraded;
       }
 
-      return barometer_fault;
+      return aeromight_boundaries::SubsystemHealth::operational;
    }
 
-   bool evaluate_estimation_health(const uint32_t current_time_ms)
+   aeromight_boundaries::SubsystemHealth get_estimation_health() const
    {
-      using namespace aeromight_boundaries;
-      using Status = EstimatorHealth::Status;
+      const bool estimation_stale = (((m_current_time_ms - m_estimation_health_snapshot.timestamp_ms) > m_max_age_estimation_health_ms));
 
-      const bool estimation_stale = (((current_time_ms - m_estimation_health_snapshot.timestamp_ms) > m_max_age_estimation_health_ms));
-
-      const bool estimation_fault = ((m_estimation_health_snapshot.data.state == EstimatorState::fault) ||
-                                     (m_estimation_health_snapshot.data.status.test(static_cast<uint8_t>(Status::stale_imu_sensor_data))) ||
-                                     (m_estimation_health_snapshot.data.status.test(static_cast<uint8_t>(Status::stale_baro_sensor_data))) ||
-                                     (m_estimation_health_snapshot.data.status.test(static_cast<uint8_t>(Status::missing_valid_imu_data))) ||
-                                     (m_estimation_health_snapshot.data.status.test(static_cast<uint8_t>(Status::missing_valid_baro_data))));
-
-      if (estimation_stale)
-      {
-         m_health_summary.estimation_health = SubsystemHealth::degraded;
-      }
-
+      const bool estimation_fault = ((m_estimation_health_snapshot.data.state == aeromight_boundaries::EstimatorState::fault) ||
+                                     (m_estimation_health_snapshot.data.error.to_ulong() != 0));
       if (estimation_fault)
       {
-         m_health_summary.estimation_health = SubsystemHealth::fault;   // overwrite with higher criticality
+         return aeromight_boundaries::SubsystemHealth::fault;
+      }
+      else if (estimation_stale)
+      {
+         return aeromight_boundaries::SubsystemHealth::degraded;
       }
 
-      return estimation_fault;
+      return aeromight_boundaries::SubsystemHealth::operational;
    }
 
    bool startup_wait_duration_passed() const
    {
-      return m_wait_timer_ms >= m_startup_wait_ms;
+      return (m_current_time_ms - m_state_entry_time_ms) >= m_startup_wait_ms;
    }
 
    bool wait_for_sensors_readiness_passed() const
    {
-      return m_wait_timer_ms >= m_max_wait_sensors_readiness_ms;
+      return (m_current_time_ms - m_state_entry_time_ms) >= m_max_wait_sensors_readiness_ms;
    }
 
    bool wait_for_estimation_control_readiness_passed() const
    {
-      return m_wait_timer_ms >= m_max_wait_estimation_control_readiness_ms;
+      return (m_current_time_ms - m_state_entry_time_ms) >= m_max_wait_estimation_control_readiness_ms;
    }
 
-   bool all_sensors_ready() const
+   bool imu_is_ready() const
    {
-      const auto& imu_health       = m_imu_health_snapshot.data;
+      const auto& imu_health = m_imu_health_snapshot.data;
+
+      return (imu_health.validation_ok &&
+              imu_health.config_ok &&
+              imu_health.self_test_ok &&
+              (imu_health.error.to_ulong() == 0) &&
+              (imu_health.state == imu_sensor::ImuSensorState::operational));
+   }
+
+   bool barometer_is_ready() const
+   {
       const auto& barometer_health = m_barometer_health_snapshot.data;
 
-      const bool imu_ready = (imu_health.validation_ok &&
-                              imu_health.config_ok &&
-                              imu_health.self_test_ok &&
-                              (imu_health.error.to_ulong() == 0) &&
-                              (imu_health.state == imu_sensor::ImuSensorState::operational));
-
-      const bool barometer_ready = (barometer_health.setup_ok &&
-                                    (barometer_health.error.to_ulong() == 0) &&
-                                    (barometer_health.state == barometer_sensor::BarometerSensorState::operational));
-
-      return (imu_ready && barometer_ready);
+      return (barometer_health.setup_ok &&
+              (barometer_health.error.to_ulong() == 0) &&
+              (barometer_health.state == barometer_sensor::BarometerSensorState::operational));
    }
 
    bool estimation_control_is_ready() const
    {
-      using namespace aeromight_boundaries;
-      return (m_estimation_health_snapshot.data.status.test(static_cast<uint8_t>(EstimatorHealth::Status::valid_reference_pressure_acquired)) &&
-              (m_estimation_health_snapshot.data.state == EstimatorState::running));
+      return (m_estimation_health_snapshot.data.valid_reference_pressure_acquired &&
+              (m_estimation_health_snapshot.data.state == aeromight_boundaries::EstimatorState::running));
    }
 
-   QueueSender                                                           m_queue_sender;
+   QueueSender&                                                          m_queue_sender;
    const boundaries::SharedData<imu_sensor::ImuHealth>&                  m_imu_sensor_health;
    const boundaries::SharedData<barometer_sensor::BarometerHealth>&      m_barometer_sensor_health;
    const boundaries::SharedData<aeromight_boundaries::EstimatorHealth>&  m_estimation_health;
@@ -319,7 +320,8 @@ private:
    boundaries::SharedData<barometer_sensor::BarometerHealth>::Sample     m_barometer_health_snapshot{};
    boundaries::SharedData<aeromight_boundaries::EstimatorHealth>::Sample m_estimation_health_snapshot{};
    HealthMonitoringState                                                 m_state{HealthMonitoringState::startup};
-   std::size_t                                                           m_wait_timer_ms{};
+   uint32_t                                                              m_current_time_ms{0};
+   uint32_t                                                              m_state_entry_time_ms{0};
 };
 
 }   // namespace aeromight_health

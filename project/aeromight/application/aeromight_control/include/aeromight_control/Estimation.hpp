@@ -20,7 +20,7 @@ class Estimation
    using BarometerData   = ::boundaries::SharedData<barometer_sensor::BarometerData>;
    using EstimatorHealth = ::boundaries::SharedData<aeromight_boundaries::EstimatorHealth>;
    using State           = aeromight_boundaries::EstimatorState;
-   using Status          = aeromight_boundaries::EstimatorHealth::Status;
+   using Error           = aeromight_boundaries::EstimatorHealth::Error;
 
 public:
    explicit Estimation(MadgwickFilter&      ahrs_filter,
@@ -101,19 +101,19 @@ public:
                if (reference_pressure_is_valid())
                {
                   utilities::Barometric::set_reference_pressure(m_reference_pressure);
-                  m_local_estimator_health.status.set(static_cast<uint8_t>(Status::valid_reference_pressure_acquired));
-                  m_local_estimator_health.state = State::running;
+                  m_local_estimator_health.valid_reference_pressure_acquired = true;
+                  m_local_estimator_health.state                             = State::running;
                }
                else
                {
-                  m_local_estimator_health.status.set(static_cast<uint8_t>(Status::reference_pressure_implausible));
+                  m_local_estimator_health.error.set(static_cast<uint8_t>(Error::reference_pressure_implausible));
                   move_to_fault();
                }
                publish_health(current_time_ms);
             }
             else if (pressure_samples_read_timeout())
             {
-               m_local_estimator_health.status.set(static_cast<uint8_t>(Status::reference_pressure_estimate_timeout));
+               m_local_estimator_health.error.set(static_cast<uint8_t>(Error::reference_pressure_estimate_timeout));
                move_to_fault();
                publish_health(current_time_ms);
             }
@@ -124,13 +124,13 @@ public:
 
             if (imu_data_is_stale(current_time_ms))
             {
-               m_local_estimator_health.status.set(static_cast<uint8_t>(Status::stale_imu_sensor_data));
+               m_local_estimator_health.error.set(static_cast<uint8_t>(Error::stale_imu_sensor_data));
                move_to_fault();
             }
 
             if (baro_data_is_stale(current_time_ms))
             {
-               m_local_estimator_health.status.set(static_cast<uint8_t>(Status::stale_baro_sensor_data));
+               m_local_estimator_health.error.set(static_cast<uint8_t>(Error::stale_baro_sensor_data));
                move_to_fault();
             }
 
@@ -191,7 +191,7 @@ private:
       if (m_local_estimator_health.recovery_attempts < m_max_recovery_attempts)
       {
          // check for valid pressure reference
-         if (m_local_estimator_health.status.test(static_cast<uint8_t>(Status::valid_reference_pressure_acquired)))
+         if (m_local_estimator_health.valid_reference_pressure_acquired)
          {
             m_local_estimator_health.state = State::running;
          }
@@ -324,7 +324,7 @@ private:
          }
          else
          {
-            m_local_estimator_health.status.set(static_cast<uint8_t>(Status::missing_valid_imu_data));
+            m_local_estimator_health.error.set(static_cast<uint8_t>(Error::missing_valid_imu_data));
          }
       }
 
@@ -343,7 +343,7 @@ private:
          }
          else
          {
-            m_local_estimator_health.status.set(static_cast<uint8_t>(Status::missing_valid_baro_data));
+            m_local_estimator_health.error.set(static_cast<uint8_t>(Error::missing_valid_baro_data));
          }
       }
 

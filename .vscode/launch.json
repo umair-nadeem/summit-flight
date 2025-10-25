@@ -76,6 +76,16 @@
             "cwd": "${workspaceFolder}",
             "env": {},
             "stopOnEntry": false
-        }
+        },
+        {
+            "name": "HealthMonitoringTest",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/out/build/native/project/aeromight/application/aeromight_health/test/aeromight_health_test",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {},
+            "stopOnEntry": false
+        },
       ]
 }

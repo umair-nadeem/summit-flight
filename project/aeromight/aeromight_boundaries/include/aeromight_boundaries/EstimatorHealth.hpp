@@ -10,10 +10,9 @@ namespace aeromight_boundaries
 
 struct EstimatorHealth
 {
-   enum class Status : uint8_t
+   enum class Error : uint8_t
    {
-      valid_reference_pressure_acquired = 0,
-      reference_pressure_estimate_timeout,
+      reference_pressure_estimate_timeout = 0,
       reference_pressure_implausible,
       stale_imu_sensor_data,
       stale_baro_sensor_data,
@@ -22,11 +21,12 @@ struct EstimatorHealth
       max,
    };
 
-   using StatusBits = std::bitset<static_cast<uint8_t>(Status::max)>;
+   using ErrorBits = std::bitset<static_cast<uint8_t>(Error::max)>;
 
+   ErrorBits      error{0};
    EstimatorState state{EstimatorState::idle};
-   StatusBits     status{};
-   uint8_t        recovery_attempts{};
+   uint8_t        recovery_attempts{0};
+   bool           valid_reference_pressure_acquired{false};
 };
 
 }   // namespace aeromight_boundaries
