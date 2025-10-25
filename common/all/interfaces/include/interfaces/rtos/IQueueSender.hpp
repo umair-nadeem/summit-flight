@@ -6,7 +6,7 @@ namespace interfaces::rtos
 {
 
 template <typename C, typename T>
-concept IQueueSender = requires(C c, const T t, const bool b) {
+concept IQueueSender = requires(C c, const T t, bool& b) {
    {
       c.send_blocking(t)
    }

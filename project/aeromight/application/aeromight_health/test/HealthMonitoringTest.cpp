@@ -151,11 +151,11 @@ TEST_F(HealthMonitoringTest, timeout_occurs_while_waiting_for_sensor_readiness_i
 TEST_F(HealthMonitoringTest, timeout_occurs_while_waiting_for_sensor_readiness_baro_ready)
 {
    wait_startup();
-   
+
    // set barometer operational
    barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 0, 0, true};
    barometer_health_storage.update_latest(baro_health, current_ms);
-   
+
    const uint32_t ticks_required = max_wait_sensors_readiness_ms / period_in_ms;
    provide_ticks(ticks_required);
 
@@ -172,17 +172,17 @@ TEST_F(HealthMonitoringTest, timeout_occurs_while_waiting_for_sensor_readiness_b
 TEST_F(HealthMonitoringTest, timeout_occurs_while_waiting_for_sensor_readiness_none_ready)
 {
    wait_startup();
-   
+
    // set imu & barometer operational
    imu_sensor::ImuHealth imu_health{0, imu_sensor::ImuSensorState::operational, 0, true, true, false};                   // self-test failed
    imu_health_storage.update_latest(imu_health, current_ms);
-   
+
    barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 0, 0, false};   // setup failed
    barometer_health_storage.update_latest(baro_health, current_ms);
-   
+
    const uint32_t ticks_required = max_wait_sensors_readiness_ms / period_in_ms;
    provide_ticks(ticks_required);
-   
+
    const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
    EXPECT_EQ(health.all_sensors_ready, false);

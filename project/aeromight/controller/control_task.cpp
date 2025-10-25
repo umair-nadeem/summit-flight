@@ -9,6 +9,7 @@
 #include "logging/LogClient.hpp"
 #include "rtos/QueueSender.hpp"
 #include "rtos/periodic_task.hpp"
+#include "rtos/utilities.hpp"
 #include "sys_time/ClockSource.hpp"
 #include "task_params.hpp"
 
@@ -87,9 +88,19 @@ extern "C"
                                  control,
                                  controller::task::control_task_period_in_ms};
 
-      vTaskDelay(pdMS_TO_TICKS(2500u));
-      estimation_and_control.start();
-      rtos::run_periodic_task(estimation_and_control);
+      const auto flags = data->control_task_notification_waiter.wait(rtos::utilities::max_delay);
+      if (flags.has_value())
+      {
+         if (flags.value().test(static_cast<uint8_t>(aeromight_boundaries::ControlTaskEvents::start)))
+         {
+            estimation_and_control.start();
+            rtos::run_periodic_task(estimation_and_control);
+         }
+      }
+
+      while (true)
+      {
+      }
    }
 
 }   // extern "C"

@@ -3,7 +3,6 @@
 #include "aeromight_health/HealthMonitoring.hpp"
 #include "error/error_handler.hpp"
 #include "logging/LogClient.hpp"
-#include "rtos/QueueSender.hpp"
 #include "rtos/periodic_task.hpp"
 #include "sys_time/ClockSource.hpp"
 #include "task_params.hpp"

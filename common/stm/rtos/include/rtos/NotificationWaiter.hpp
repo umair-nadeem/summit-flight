@@ -29,15 +29,6 @@ public:
       }
       return std::nullopt;
    }
-
-   void set_handle(TaskHandle_t handle)
-   {
-      error::freertos_assert(handle != nullptr);
-      m_task_handle = handle;
-   }
-
-private:
-   TaskHandle_t m_task_handle{nullptr};
 };
 
 static_assert(interfaces::rtos::INotificationWaiter<NotificationWaiter<int>, int>);

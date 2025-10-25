@@ -34,7 +34,7 @@ public:
       error::freertos_assert(result == pdTRUE);
    }
 
-   void set_handle(TaskHandle_t handle)
+   void set_task_to_notify(TaskHandle_t handle)
    {
       error::freertos_assert(handle != nullptr);
       m_task_handle = handle;

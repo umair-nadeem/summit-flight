@@ -28,7 +28,7 @@ public:
       return data;
    }
 
-   std::optional<T> receive_if_available()
+   [[nodiscard]] std::optional<T> receive_if_available()
    {
       T          data;
       BaseType_t result = xQueueReceive(m_handle, &data, 0);
@@ -41,10 +41,32 @@ public:
       return std::nullopt;
    }
 
-   [[nodiscard]] bool receive_from_isr(T& data, const bool higher_priority_task_woken)
+   /// @brief Drain the queue and return the most recent message if any.
+   /// @note  Intended for slow consumers that only need the latest sample.
+   ///        Prevents queue overflow by discarding older messages.
+   [[nodiscard]] std::optional<T> receive_latest()
    {
-      BaseType_t task_woken = (higher_priority_task_woken ? pdTRUE : pdFALSE);
-      BaseType_t result     = xQueueReceiveFromISR(m_handle, &data, &task_woken);
+      bool received = false;
+      T    data;
+
+      while (xQueueReceive(m_handle, &data, 0) == pdPASS)
+      {
+         received = true;
+      }
+
+      if (received)
+      {
+         return data;
+      }
+
+      return std::nullopt;
+   }
+
+   [[nodiscard]] bool receive_from_isr(T& data, bool& higher_priority_task_woken)
+   {
+      BaseType_t task_woken      = (higher_priority_task_woken ? pdTRUE : pdFALSE);
+      BaseType_t result          = xQueueReceiveFromISR(m_handle, &data, &task_woken);
+      higher_priority_task_woken = (task_woken == pdTRUE);
       portYIELD_FROM_ISR(task_woken);
       return (result == pdPASS);
    }

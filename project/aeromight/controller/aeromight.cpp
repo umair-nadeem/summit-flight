@@ -5,6 +5,7 @@
 
 #include "BarometerTaskData.hpp"
 #include "ControlTaskData.hpp"
+#include "FlightManagerTaskData.hpp"
 #include "HealthMonitoringTaskData.hpp"
 #include "ImuTaskData.hpp"
 #include "LoggingTaskData.hpp"
@@ -37,6 +38,7 @@ namespace controller
 GlobalData               global_data{};
 ImuTaskData              imu_task_data{};
 ControlTaskData          control_task_data{};
+FlightManagerTaskData    flight_manager_task_data{};
 HealthMonitoringTaskData health_monitoring_task_data{};
 BarometerTaskData        barometer_task_data{};
 LoggingTaskData          logging_task_data{};
@@ -45,6 +47,7 @@ SysClockData             sys_clock_data{};
 // task control blocks
 rtos::TCB imu_task_tcb{};
 rtos::TCB control_task_tcb{};
+rtos::TCB flight_manager_task_tcb{};
 rtos::TCB health_monitoring_task_tcb{};
 rtos::TCB barometer_task_tcb{};
 rtos::TCB logging_task_tcb{};
@@ -52,6 +55,7 @@ rtos::TCB logging_task_tcb{};
 // task stack
 alignas(std::max_align_t) uint32_t imu_task_stack_buffer[controller::task::imu_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t control_task_stack_buffer[controller::task::control_task_stack_depth_in_words];
+alignas(std::max_align_t) uint32_t flight_manager_task_stack_buffer[controller::task::flight_manager_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t health_monitoring_task_stack_buffer[controller::task::health_monitoring_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t barometer_task_stack_buffer[controller::task::barometer_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t logging_task_stack_buffer[controller::task::logging_task_stack_depth_in_words];
@@ -59,6 +63,7 @@ alignas(std::max_align_t) uint32_t logging_task_stack_buffer[controller::task::l
 // task handles
 TaskHandle_t imu_task_handle;
 TaskHandle_t control_task_handle;
+TaskHandle_t flight_manager_task_handle;
 TaskHandle_t health_monitoring_task_handle;
 TaskHandle_t barometer_task_handle;
 TaskHandle_t logging_task_handle;
@@ -100,6 +105,20 @@ void register_tasks()
        .task_block           = control_task_tcb};
 
    control_task_handle = rtos::create_task(control_task_config);
+
+   // flight manager task
+   std::memset(flight_manager_task_stack_buffer, 0, sizeof(flight_manager_task_stack_buffer));
+
+   rtos::RtosTaskConfig flight_manager_task_config{
+       .func                 = flight_manager_task,
+       .name                 = controller::task::flight_manager_task_name,
+       .stack_depth_in_words = controller::task::flight_manager_task_stack_depth_in_words,
+       .params               = static_cast<void*>(&flight_manager_task_data),
+       .priority             = controller::task::flight_manager_task_priority,
+       .stack_buffer         = flight_manager_task_stack_buffer,
+       .task_block           = flight_manager_task_tcb};
+
+   flight_manager_task_handle = rtos::create_task(flight_manager_task_config);
 
    // health monitoring task
    std::memset(health_monitoring_task_stack_buffer, 0, sizeof(health_monitoring_task_stack_buffer));
@@ -161,18 +180,20 @@ void setup_queues()
    // health summary queue
    auto health_summary_queue_handle = health_summary_queue.create();
    health_monitoring_task_data.health_summary_queue_sender.set_handle(health_summary_queue_handle);
+   flight_manager_task_data.health_summary_queue_receiver.set_handle(health_summary_queue_handle);
 }
 
 void setup_task_notifications()
 {
    // imu task
-   imu_task_data.imu_task_notification_waiter.set_handle(imu_task_handle);
-   imu_task_data.imu_task_tick_notifier_from_isr.set_handle(imu_task_handle);
-   imu_task_data.imu_task_rx_complete_notifier_from_isr.set_handle(imu_task_handle);
+   imu_task_data.imu_task_tick_notifier_from_isr.set_task_to_notify(imu_task_handle);
+   imu_task_data.imu_task_rx_complete_notifier_from_isr.set_task_to_notify(imu_task_handle);
 
    // barometer task
-   barometer_task_data.barometer_task_notification_waiter.set_handle(barometer_task_handle);
-   barometer_task_data.barometer_task_rx_complete_notifier_from_isr.set_handle(barometer_task_handle);
+   barometer_task_data.barometer_task_rx_complete_notifier_from_isr.set_task_to_notify(barometer_task_handle);
+
+   // control task
+   flight_manager_task_data.control_task_start_notifier.set_task_to_notify(control_task_handle);
 }
 
 void init_hardware()
