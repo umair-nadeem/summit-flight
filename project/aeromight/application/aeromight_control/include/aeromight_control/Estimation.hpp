@@ -59,14 +59,16 @@ public:
    {
       m_local_estimator_health.state = State::get_reference_pressure;
       reset();
-      publish_health(ClockSource::now_ms());
+      update_reference_time();
+      publish_health();
       m_logger.print("started");
    }
 
    void stop()
    {
       m_local_estimator_health.state = State::idle;
-      publish_health(ClockSource::now_ms());
+      update_reference_time();
+      publish_health();
       m_logger.print("stopped");
    }
 
@@ -82,7 +84,7 @@ public:
 
    void execute()
    {
-      const uint32_t current_time_ms = ClockSource::now_ms();
+      update_reference_time();
 
       switch (m_local_estimator_health.state)
       {
@@ -109,36 +111,36 @@ public:
                   m_local_estimator_health.error.set(static_cast<uint8_t>(Error::reference_pressure_implausible));
                   move_to_fault();
                }
-               publish_health(current_time_ms);
+               publish_health();
             }
             else if (pressure_samples_read_timeout())
             {
                m_local_estimator_health.error.set(static_cast<uint8_t>(Error::reference_pressure_estimate_timeout));
                move_to_fault();
-               publish_health(current_time_ms);
+               publish_health();
             }
             break;
 
          case State::running:
-            run_estimation(current_time_ms);
+            run_estimation();
 
-            if (imu_data_is_stale(current_time_ms))
+            if (imu_data_is_stale())
             {
                m_local_estimator_health.error.set(static_cast<uint8_t>(Error::stale_imu_sensor_data));
                move_to_fault();
             }
 
-            if (baro_data_is_stale(current_time_ms))
+            if (baro_data_is_stale())
             {
                m_local_estimator_health.error.set(static_cast<uint8_t>(Error::stale_baro_sensor_data));
                move_to_fault();
             }
 
-            publish_health(current_time_ms);
+            publish_health();
             break;
 
          case State::fault:
-            attempt_recovery_if_possible(current_time_ms);
+            attempt_recovery_if_possible();
             break;
 
          default:
@@ -148,6 +150,11 @@ public:
    }
 
 private:
+   void update_reference_time()
+   {
+      m_current_time_ms = ClockSource::now_ms();
+   }
+
    void reset()
    {
       m_accumulated_pressure_values      = 0.0f;
@@ -186,7 +193,7 @@ private:
       m_logger.print("moving to fault");
    }
 
-   void attempt_recovery_if_possible(const uint32_t current_time_ms)
+   void attempt_recovery_if_possible()
    {
       if (m_local_estimator_health.recovery_attempts < m_max_recovery_attempts)
       {
@@ -202,12 +209,12 @@ private:
          }
 
          m_local_estimator_health.recovery_attempts++;
-         publish_health(current_time_ms);
+         publish_health();
          m_logger.printf("fault recovery attempt: %u", m_local_estimator_health.recovery_attempts);
       }
    }
 
-   void run_estimation(const uint32_t current_time_ms)
+   void run_estimation()
    {
       bool data_to_be_published = false;
 
@@ -229,7 +236,7 @@ private:
 
       if (data_to_be_published)
       {
-         publish_data(current_time_ms);
+         publish_data();
       }
    }
 
@@ -275,9 +282,9 @@ private:
       m_local_estimation_data.vertical_velocity = altitude_state.v_z;
    }
 
-   void publish_data(const uint32_t current_time_ms)
+   void publish_data()
    {
-      m_local_estimation_data.timestamp_ms = current_time_ms;
+      m_local_estimation_data.timestamp_ms = m_current_time_ms;
       m_state_estimation_data_storage      = m_local_estimation_data;
 
       const math::Vector3 euler = m_local_estimation_data.attitude.to_euler();
@@ -298,9 +305,9 @@ private:
       }
    }
 
-   void publish_health(const uint32_t current_time_ms)
+   void publish_health()
    {
-      m_estimator_health_storage.update_latest(m_local_estimator_health, current_time_ms);
+      m_estimator_health_storage.update_latest(m_local_estimator_health, m_current_time_ms);
    }
 
    bool read_from_imu()
@@ -366,10 +373,10 @@ private:
               (m_reference_pressure <= bmp390::params::max_plauisble_range_pressure_pa));
    }
 
-   bool imu_data_is_stale(const uint32_t current_time_ms) const
+   bool imu_data_is_stale() const
    {
       // Check IMU data freshness
-      const uint32_t imu_data_age_ms = current_time_ms - m_last_imu_sample.timestamp_ms;
+      const uint32_t imu_data_age_ms = m_current_time_ms - m_last_imu_sample.timestamp_ms;
       if (imu_data_age_ms > m_max_age_imu_data_ms)
       {
          m_logger.printf("imu data stale (age: %u ms)", imu_data_age_ms);
@@ -379,10 +386,10 @@ private:
       return false;
    }
 
-   bool baro_data_is_stale(const uint32_t current_time_ms) const
+   bool baro_data_is_stale() const
    {
       // Check barometer data freshness
-      const uint32_t baro_data_age_ms = current_time_ms - m_last_barometer_sample.timestamp_ms;
+      const uint32_t baro_data_age_ms = m_current_time_ms - m_last_barometer_sample.timestamp_ms;
       if (baro_data_age_ms > m_max_age_baro_data_ms)
       {
          m_logger.printf("barometer data stale (age: %u ms)", baro_data_age_ms);
@@ -420,6 +427,7 @@ private:
    float                                 m_accumulated_pressure_values{};
    float                                 m_reference_pressure{};
    uint8_t                               m_pressure_sample_counter{};
+   uint32_t                              m_current_time_ms{0};
    std::size_t                           m_reference_pressure_wait_timer_ms{};
    std::size_t                           m_data_log_counter{};
 };
