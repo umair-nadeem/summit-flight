@@ -15,11 +15,7 @@ class QueueSender
 public:
    void send_blocking(const T& element)
    {
-      BaseType_t result;
-      do
-      {
-         result = xQueueSend(m_handle, &element, portMAX_DELAY);
-      } while (result == errQUEUE_FULL);
+      const BaseType_t result = xQueueSend(m_handle, &element, portMAX_DELAY);
       error::freertos_assert(result == pdPASS);
    }
 
@@ -32,7 +28,7 @@ public:
    [[nodiscard]] bool send_from_isr(const T& element)
    {
       BaseType_t       task_woken = pdFALSE;
-      const BaseType_t result     = xQueueSendFromISR(m_handle, &element, task_woken);
+      const BaseType_t result     = xQueueSendFromISR(m_handle, &element, &task_woken);
       portYIELD_FROM_ISR(task_woken);
       return (result == pdPASS);
    }

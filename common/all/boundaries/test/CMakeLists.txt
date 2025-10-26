@@ -1,6 +1,6 @@
 add_module_test(
    SOURCES
-      FlightManagerTest.cpp
+      SharedDataTest.cpp
    LIBS
       mocks
 )

@@ -9,13 +9,18 @@ namespace rtos
 
 struct Semaphore
 {
+   bool              created{false};
    StaticSemaphore_t semaphore_buffer{};
    SemaphoreHandle_t semaphore_handle{nullptr};
 
-   [[nodiscard]] SemaphoreHandle_t create()
+   [[nodiscard]] SemaphoreHandle_t create() noexcept
    {
-      semaphore_handle = xSemaphoreCreateBinaryStatic(&semaphore_buffer);
-      error::freertos_assert(semaphore_handle != nullptr);
+      if (!created)
+      {
+         semaphore_handle = xSemaphoreCreateBinaryStatic(&semaphore_buffer);
+         error::freertos_assert(semaphore_handle != nullptr);
+         created = true;
+      }
       return semaphore_handle;
    }
 

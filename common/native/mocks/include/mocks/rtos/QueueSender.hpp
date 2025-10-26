@@ -13,7 +13,7 @@ class QueueSenderNaggy
 public:
    MOCK_METHOD(void, send_blocking, (const T), ());
    MOCK_METHOD(bool, send_if_possible, (const T), ());
-   MOCK_METHOD(bool, send_from_isr, (const T, const bool), ());
+   MOCK_METHOD(bool, send_from_isr, (const T), ());
 };
 
 static_assert(interfaces::rtos::IQueueSender<QueueSenderNaggy<int>, int>);

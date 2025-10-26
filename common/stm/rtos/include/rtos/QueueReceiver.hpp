@@ -17,21 +17,17 @@ class QueueReceiver
 public:
    T receive_blocking()
    {
-      T          data;
-      BaseType_t result;
-      do
-      {
-         result = xQueueReceive(m_handle, &data, portMAX_DELAY);
-      } while (result == errQUEUE_EMPTY);
-      error::freertos_assert(result == pdPASS);
+      T                data;
+      const BaseType_t result = xQueueReceive(m_handle, &data, portMAX_DELAY);
 
+      error::freertos_assert(result == pdPASS);
       return data;
    }
 
    [[nodiscard]] std::optional<T> receive_if_available()
    {
-      T          data;
-      BaseType_t result = xQueueReceive(m_handle, &data, 0);
+      T                data;
+      const BaseType_t result = xQueueReceive(m_handle, &data, 0);
 
       if (result == pdPASS)
       {
@@ -64,8 +60,8 @@ public:
 
    [[nodiscard]] bool receive_from_isr(T& data)
    {
-      BaseType_t task_woken = pdFALSE;
-      BaseType_t result     = xQueueReceiveFromISR(m_handle, &data, &task_woken);
+      BaseType_t       task_woken = pdFALSE;
+      const BaseType_t result     = xQueueReceiveFromISR(m_handle, &data, &task_woken);
       portYIELD_FROM_ISR(task_woken);
       return (result == pdPASS);
    }

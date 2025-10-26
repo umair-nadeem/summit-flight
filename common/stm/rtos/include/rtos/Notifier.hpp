@@ -12,12 +12,13 @@ namespace rtos
 template <typename EventFlags>
 class Notifier
 {
+   static_assert(sizeof(EventFlags) == sizeof(uint32_t));
+   static_assert(std::is_trivially_copyable_v<EventFlags>);
+
 public:
-   explicit Notifier(EventFlags flag)
+   explicit Notifier(const EventFlags& flag)
    {
-      static_assert(sizeof(EventFlags) == sizeof(uint32_t));
-      static_assert(std::is_trivially_copyable_v<EventFlags>);
-      std::memcpy(&m_flag, &flag, sizeof(m_flag));
+      m_flag = flag.to_ulong();
    }
 
    void notify()

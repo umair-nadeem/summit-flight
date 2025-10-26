@@ -11,21 +11,18 @@ namespace rtos
 template <typename EventFlags>
 class NotificationWaiter
 {
+   static_assert(sizeof(EventFlags) == sizeof(uint32_t));
+   static_assert(std::is_trivially_copyable_v<EventFlags>);
+
 public:
-   explicit NotificationWaiter()
+   static std::optional<EventFlags> wait(const uint32_t wait_duration_ms)
    {
-      static_assert(sizeof(EventFlags) == sizeof(uint32_t));
-      static_assert(std::is_trivially_copyable_v<EventFlags>);
-   }
+      uint32_t raw_flags = 0;
 
-   static std::optional<EventFlags> wait(const std::size_t wait_duration_ms)
-   {
-      EventFlags flags = 0;
-
-      const BaseType_t result = xTaskNotifyWait(0, UINT32_MAX, reinterpret_cast<uint32_t*>(&flags), pdMS_TO_TICKS(wait_duration_ms));
+      const BaseType_t result = xTaskNotifyWait(0, UINT32_MAX, &raw_flags, pdMS_TO_TICKS(wait_duration_ms));
       if (result == pdTRUE)
       {
-         return flags;
+         return std::bit_cast<EventFlags>(raw_flags);
       }
       return std::nullopt;
    }

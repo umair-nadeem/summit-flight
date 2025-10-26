@@ -25,7 +25,7 @@ struct SharedData
    uint32_t                                 write_index{1};   // Writer always writes to this buffer, only writer touches it -> non-atomic
    uint32_t                                 spare_index{2};   // Spare buffer waiting to become write buf, only writer touches it -> non-atomic
 
-   inline void update_latest(const T& new_data, const auto ts_ms) noexcept
+   inline void update_latest(const T& new_data, const uint32_t ts_ms) noexcept
    {
       samples[write_index].data         = new_data;
       samples[write_index].timestamp_ms = ts_ms;
@@ -38,7 +38,7 @@ struct SharedData
       spare_index = old_read;
    }
 
-   inline Sample get_latest() const
+   inline Sample get_latest() const noexcept
    {
       return samples[read_index.load(std::memory_order_acquire)];
    }

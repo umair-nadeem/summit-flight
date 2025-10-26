@@ -18,7 +18,7 @@ public:
 
    MOCK_METHOD(T, receive_blocking, (), ());
    MOCK_METHOD(std::optional<T>, receive_if_available, (), ());
-   MOCK_METHOD(bool, receive_from_isr, (T&, bool), ());
+   MOCK_METHOD(bool, receive_from_isr, (T&), ());
 };
 
 static_assert(interfaces::rtos::IQueueReceiver<QueueReceiverNaggy<int>, int>);
