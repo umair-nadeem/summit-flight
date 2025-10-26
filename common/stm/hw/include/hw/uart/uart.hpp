@@ -27,7 +27,7 @@ inline void handle_uart_global_interrupt(UartConfig& config, SemaphoreGiverFromI
       LL_USART_ClearFlag_TC(config.uart_handle);
       ::hw::dma::clear_dma_tc_flag(config.dma_handle, config.tx_dma_stream);
 
-      isr_sem_giver.give_from_isr(false);
+      isr_sem_giver.give_from_isr();
    }
 }
 
@@ -46,7 +46,7 @@ inline void handle_uart_dma_rx_global_interrupt(UartConfig&                confi
 
       std::span<const std::byte> received_data{rx_user_buffer.data(), length};
 
-      queue_sender_from_isr.send_from_isr(received_data, false);
+      queue_sender_from_isr.send_from_isr(received_data);
 
       start_rx(config, rx_buffer);
    }

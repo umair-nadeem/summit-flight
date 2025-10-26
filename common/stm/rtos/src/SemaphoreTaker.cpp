@@ -25,9 +25,9 @@ bool SemaphoreTaker::take_if_possible()
    return true;
 }
 
-bool SemaphoreTaker::take_from_isr(const bool higher_priority_task_woken)
+bool SemaphoreTaker::take_from_isr()
 {
-   BaseType_t       task_woken = (higher_priority_task_woken ? pdTRUE : pdFALSE);
+   BaseType_t       task_woken = pdFALSE;
    const BaseType_t result     = xSemaphoreTakeFromISR(m_handle, &task_woken);
    if (result == errQUEUE_EMPTY)
    {

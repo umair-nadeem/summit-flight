@@ -6,7 +6,7 @@ namespace interfaces::rtos
 {
 
 template <typename C, typename T>
-concept IQueueReceiver = requires(C c, T& t, bool& b) {
+concept IQueueReceiver = requires(C c, T& t) {
    {
       c.receive_blocking()
    }
@@ -18,7 +18,7 @@ concept IQueueReceiver = requires(C c, T& t, bool& b) {
    -> std::same_as<std::optional<T>>;
 
    {
-      c.receive_from_isr(t, b)
+      c.receive_from_isr(t)
    }
    -> std::same_as<bool>;
 };

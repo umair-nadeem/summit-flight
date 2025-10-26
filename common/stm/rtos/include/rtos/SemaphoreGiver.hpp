@@ -12,7 +12,7 @@ class SemaphoreGiver
 {
 public:
    void give();
-   bool give_from_isr(const bool higher_priority_task_woken);
+   bool give_from_isr();
 
    void set_handle(SemaphoreHandle_t semaphore_handle)
    {

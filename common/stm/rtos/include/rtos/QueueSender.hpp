@@ -29,11 +29,10 @@ public:
       return (result == pdPASS);
    }
 
-   [[nodiscard]] bool send_from_isr(const T& element, bool& higher_priority_task_woken)
+   [[nodiscard]] bool send_from_isr(const T& element)
    {
-      BaseType_t       task_woken = (higher_priority_task_woken ? pdTRUE : pdFALSE);
+      BaseType_t       task_woken = pdFALSE;
       const BaseType_t result     = xQueueSendFromISR(m_handle, &element, task_woken);
-      higher_priority_task_woken  = (task_woken == pdTRUE);
       portYIELD_FROM_ISR(task_woken);
       return (result == pdPASS);
    }

@@ -92,7 +92,7 @@ extern "C"
    {
       auto& data = controller::imu_task_data;
       data.spi1_master.handle_spi_transfer_complete_interrupt();
-      data.imu_task_rx_complete_notifier_from_isr.notify_from_isr(false);
+      data.imu_task_rx_complete_notifier_from_isr.notify_from_isr();
    }
 
    // TIM3 (imu task tick timer)
@@ -102,7 +102,7 @@ extern "C"
       if (data.imu_task_tick_timer.is_update_flag_active())
       {
          data.imu_task_tick_timer.clear_update_flag();
-         data.imu_task_tick_notifier_from_isr.notify_from_isr(false);
+         data.imu_task_tick_notifier_from_isr.notify_from_isr();
       }
    }
 }   // extern "C"

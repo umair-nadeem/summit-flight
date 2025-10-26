@@ -6,7 +6,7 @@ namespace interfaces::rtos
 {
 
 template <typename C, typename T>
-concept IQueueSender = requires(C c, const T t, bool& b) {
+concept IQueueSender = requires(C c, const T t) {
    {
       c.send_blocking(t)
    }
@@ -18,7 +18,7 @@ concept IQueueSender = requires(C c, const T t, bool& b) {
    -> std::same_as<bool>;
 
    {
-      c.send_from_isr(t, b)
+      c.send_from_isr(t)
    }
    -> std::same_as<bool>;
 };

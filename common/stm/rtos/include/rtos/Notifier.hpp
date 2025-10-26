@@ -26,9 +26,9 @@ public:
       error::freertos_assert(result == pdTRUE);
    }
 
-   void notify_from_isr(const bool higher_priority_task_woken)
+   void notify_from_isr()
    {
-      BaseType_t       task_woken = (higher_priority_task_woken ? pdTRUE : pdFALSE);
+      BaseType_t       task_woken = pdFALSE;
       const BaseType_t result     = xTaskNotifyFromISR(m_task_handle, m_flag, eSetBits, &task_woken);
       portYIELD_FROM_ISR(task_woken);
       error::freertos_assert(result == pdTRUE);

@@ -13,7 +13,7 @@ class SemaphoreTaker
 public:
    void take();
    bool take_if_possible();
-   bool take_from_isr(const bool higher_priority_task_woken);
+   bool take_from_isr();
 
    void set_handle(SemaphoreHandle_t semaphore_handle)
    {

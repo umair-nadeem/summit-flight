@@ -62,11 +62,10 @@ public:
       return std::nullopt;
    }
 
-   [[nodiscard]] bool receive_from_isr(T& data, bool& higher_priority_task_woken)
+   [[nodiscard]] bool receive_from_isr(T& data)
    {
-      BaseType_t task_woken      = (higher_priority_task_woken ? pdTRUE : pdFALSE);
-      BaseType_t result          = xQueueReceiveFromISR(m_handle, &data, &task_woken);
-      higher_priority_task_woken = (task_woken == pdTRUE);
+      BaseType_t task_woken = pdFALSE;
+      BaseType_t result     = xQueueReceiveFromISR(m_handle, &data, &task_woken);
       portYIELD_FROM_ISR(task_woken);
       return (result == pdPASS);
    }

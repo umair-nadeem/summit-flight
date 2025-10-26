@@ -61,7 +61,7 @@ extern "C"
 void i2c1_receive_complete_callback([[maybe_unused]] void* p)
 {
    auto& data = controller::barometer_task_data;
-   data.barometer_task_rx_complete_notifier_from_isr.notify_from_isr(false);
+   data.barometer_task_rx_complete_notifier_from_isr.notify_from_isr();
 }
 
 extern "C"
