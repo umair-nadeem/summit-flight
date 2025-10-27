@@ -13,6 +13,7 @@ struct SetupStateMachine
 {
    // states
    static constexpr auto s_idle         = boost::sml::state<class StateIdle>;
+   static constexpr auto s_soft_reset   = boost::sml::state<class StateSoftReset>;
    static constexpr auto s_read_id      = boost::sml::state<class StateReadId>;
    static constexpr auto s_read_id_wait = boost::sml::state<class StateInitReadIdWait>;
    static constexpr auto s_verify_id    = boost::sml::state<class StateVerifyId>;
@@ -37,6 +38,9 @@ struct SetupStateMachine
 
       static constexpr auto tick_timer = [](StateHandler& state)
       { state.tick_timer(); };
+
+      static constexpr auto bus_reset = [](StateHandler& state)
+      { state.bus_reset(); };
 
       static constexpr auto soft_reset = [](StateHandler& state)
       { state.soft_reset(); };
@@ -100,7 +104,9 @@ struct SetupStateMachine
       // clang-format off
       return make_transition_table(
           // From State      | Event          | Guard                   | Action                                        | To State
-          *s_idle            + e_tick                                   / soft_reset                                    = s_read_id,
+          *s_idle            + e_tick                                   / bus_reset                                     = s_soft_reset,
+
+          s_soft_reset       + e_tick                                   / soft_reset                                    = s_read_id,
 
           s_read_id          + e_tick         [transfer_error]                                                          = s_bus_error,
           s_read_id          + e_tick         [!transfer_error]         / (reset_timer, read_id)                        = s_read_id_wait,

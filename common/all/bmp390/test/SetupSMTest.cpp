@@ -6,6 +6,13 @@
 class Bmp390SetupSMTest : public Bmp390BaseTest
 {
 protected:
+   void bus_reset()
+   {
+      EXPECT_TRUE(sm.is(StateMachineDef::s_idle));
+      sm.process_event(bmp390::EventTick{});
+      EXPECT_TRUE(sm.is(StateMachineDef::s_soft_reset));
+   }
+
    void provide_ticks(const std::size_t num_ticks)
    {
       for (std::size_t i = 0; i < num_ticks; i++)
@@ -34,8 +41,14 @@ TEST_F(Bmp390SetupSMTest, check_initial_state)
    EXPECT_TRUE(sm.is(StateMachineDef::s_idle));
 }
 
+TEST_F(Bmp390SetupSMTest, check_bus_reset)
+{
+   bus_reset();
+}
+
 TEST_F(Bmp390SetupSMTest, check_soft_reset_fail_with_bus_error)
 {
+   bus_reset();
    i2c_driver.m_transaction_result = false;
    sm.process_event(bmp390::EventTick{});
 
@@ -52,6 +65,7 @@ TEST_F(Bmp390SetupSMTest, check_soft_reset_fail_with_bus_error)
 
 TEST_F(Bmp390SetupSMTest, check_read_id_fail_with_bus_error)
 {
+   bus_reset();
    // soft reset successful
    sm.process_event(bmp390::EventTick{});
 
@@ -73,6 +87,7 @@ TEST_F(Bmp390SetupSMTest, check_read_id_fail_with_bus_error)
 
 TEST_F(Bmp390SetupSMTest, check_read_id_fail_with_timeout)
 {
+   bus_reset();
    // soft reset successful
    sm.process_event(bmp390::EventTick{});
 
@@ -93,6 +108,7 @@ TEST_F(Bmp390SetupSMTest, check_read_id_fail_with_timeout)
 
 TEST_F(Bmp390SetupSMTest, check_read_id_fail_with_id_mismatch)
 {
+   bus_reset();
    // soft reset successful
    sm.process_event(bmp390::EventTick{});
 
@@ -116,6 +132,7 @@ TEST_F(Bmp390SetupSMTest, check_read_id_fail_with_id_mismatch)
 
 TEST_F(Bmp390SetupSMTest, check_config_write_fail_with_bus_error)
 {
+   bus_reset();
    // soft reset successful
    sm.process_event(bmp390::EventTick{});
 
@@ -160,6 +177,7 @@ TEST_F(Bmp390SetupSMTest, check_config_write_fail_with_bus_error)
 
 TEST_F(Bmp390SetupSMTest, check_power_mode_with_bus_error)
 {
+   bus_reset();
    // soft reset successful
    sm.process_event(bmp390::EventTick{});
 
@@ -193,6 +211,7 @@ TEST_F(Bmp390SetupSMTest, check_power_mode_with_bus_error)
 
 TEST_F(Bmp390SetupSMTest, check_read_config_burst_fail_with_timeout)
 {
+   bus_reset();
    // soft reset successful
    sm.process_event(bmp390::EventTick{});
 
@@ -222,6 +241,7 @@ TEST_F(Bmp390SetupSMTest, check_read_config_burst_fail_with_timeout)
 
 TEST_F(Bmp390SetupSMTest, check_read_config_burst_fail_with_pwr_ctrl_mismatch)
 {
+   bus_reset();
    // soft reset successful
    sm.process_event(bmp390::EventTick{});
 
@@ -260,6 +280,7 @@ TEST_F(Bmp390SetupSMTest, check_read_config_burst_fail_with_pwr_ctrl_mismatch)
 
 TEST_F(Bmp390SetupSMTest, check_read_config_burst_fail_with_odr_mismatch)
 {
+   bus_reset();
    // soft reset successful
    sm.process_event(bmp390::EventTick{});
 
@@ -298,6 +319,7 @@ TEST_F(Bmp390SetupSMTest, check_read_config_burst_fail_with_odr_mismatch)
 
 TEST_F(Bmp390SetupSMTest, check_read_config_burst_successful)
 {
+   bus_reset();
    // soft reset successful
    sm.process_event(bmp390::EventTick{});
 

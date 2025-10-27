@@ -15,6 +15,8 @@ protected:
 
    void run_through_setup_state(const bool success)
    {
+      bmp390.execute();   // bus reset
+
       i2c_driver.m_transaction_result = success;
 
       if (success)

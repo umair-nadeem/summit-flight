@@ -72,6 +72,16 @@ public:
       m_local_barometer_health.recovery_attempt_count = 0;
    }
 
+   // attempts to clear stuck i2c peripheral by generating at least 9 clock cycles for dummy address
+   // result is ignored
+   void bus_reset()
+   {
+      m_tx_buffer.fill(0);
+      m_tx_buffer[0] = params::cmd_reg;
+      m_tx_buffer[1] = params::CmdReg::soft_reset;
+      m_i2c_driver.write(params::default_i2c_address, std::span{m_tx_buffer.data(), 2u});
+   }
+
    void soft_reset()
    {
       m_tx_buffer.fill(0);
