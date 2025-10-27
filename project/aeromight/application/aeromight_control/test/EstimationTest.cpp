@@ -72,13 +72,13 @@ protected:
       EXPECT_EQ(estimation.get_state(), aeromight_boundaries::EstimatorState::running);
    }
 
-   static constexpr uint8_t     max_recovery_attempts                          = 3u;
-   static constexpr uint8_t     num_samples_reference_pressure                 = 3u;
-   static constexpr std::size_t execution_period_ms                            = 4u;
-   static constexpr std::size_t wait_timeout_reference_pressure_acquisition_ms = 40;
-   static constexpr std::size_t max_age_imu_data_ms                            = 8u;
-   static constexpr std::size_t max_age_baro_data_ms                           = 16u;
-   static constexpr float       max_valid_imu_sample_dt_s                      = 0.01f;
+   static constexpr uint8_t  max_recovery_attempts                          = 3u;
+   static constexpr uint8_t  num_samples_reference_pressure                 = 3u;
+   static constexpr uint32_t execution_period_ms                            = 4u;
+   static constexpr uint32_t wait_timeout_reference_pressure_acquisition_ms = 40;
+   static constexpr uint32_t max_age_imu_data_ms                            = 8u;
+   static constexpr uint32_t max_age_baro_data_ms                           = 16u;
+   static constexpr float    max_valid_imu_sample_dt_s                      = 0.01f;
 
    testing::NiceMock<AhrsFilterMock>                               ahrs_filter_mock{};
    testing::NiceMock<EkfMock>                                      ekf_mock{};

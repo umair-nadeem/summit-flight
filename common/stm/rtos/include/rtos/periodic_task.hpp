@@ -11,10 +11,10 @@ namespace rtos
 template <typename PeriodicTask>
 [[noreturn]] void run_periodic_task(PeriodicTask& periodicTask)
 {
-   const std::size_t period_in_ms  = periodicTask.get_period_ms();
-   TickType_t        xLastWakeTime = xTaskGetTickCount();
-   BaseType_t        xWasDelayed;
-   UBaseType_t       stack_water_mark;
+   const uint32_t period_in_ms  = periodicTask.get_period_ms();
+   TickType_t     xLastWakeTime = xTaskGetTickCount();
+   BaseType_t     xWasDelayed;
+   UBaseType_t    stack_water_mark;
 
    while (true)
    {

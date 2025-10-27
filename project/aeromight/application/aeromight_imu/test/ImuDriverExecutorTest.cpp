@@ -15,7 +15,7 @@ protected:
    mocks::rtos::NotificationWaiter<aeromight_boundaries::ImuNotificationFlags> notification_waiter{};
    mocks::pcb_component::Led                                                   led_mock{};
    mocks::common::Logger                                                       logger{"test"};
-   std::size_t                                                                 period_ms{1u};
+   uint32_t                                                                    period_ms{1u};
 
    aeromight_imu::ImuDriverExecutor<decltype(mpu_driver_mock),
                                     decltype(notification_waiter),

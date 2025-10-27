@@ -19,7 +19,7 @@ template <interfaces::peripherals::ISensorDriver                                
 class ImuDriverExecutor
 {
 public:
-   explicit ImuDriverExecutor(Mpu6500& mpu6500, NotificationWaiter& notify_waiter, Led& led, Logger& logger, const std::size_t period_in_ms)
+   explicit ImuDriverExecutor(Mpu6500& mpu6500, NotificationWaiter& notify_waiter, Led& led, Logger& logger, const uint32_t period_in_ms)
        : m_mpu6500{mpu6500},
          m_notify_waiter{notify_waiter},
          m_led{led},
@@ -64,7 +64,7 @@ public:
       }
    }
 
-   std::size_t get_period_ms() const
+   uint32_t get_period_ms() const
    {
       return m_period_in_ms;
    }
@@ -90,13 +90,13 @@ private:
       }
    }
 
-   static constexpr std::size_t led_state_duration = 1000u;
+   static constexpr uint32_t led_state_duration = 1000u;
 
    Mpu6500&            m_mpu6500;
    NotificationWaiter& m_notify_waiter;
    Led&                m_led;
    Logger&             m_logger;
-   const std::size_t   m_period_in_ms;
+   const uint32_t      m_period_in_ms;
    const uint8_t       m_tick_notification;
    const uint8_t       m_rx_complete_notification;
    std::size_t         m_led_state_duration_counter{0u};

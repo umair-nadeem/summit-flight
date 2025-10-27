@@ -58,9 +58,9 @@ protected:
       rx_buffer[8] = 0xc7;   // TEMP_OUT_L
    }
 
-   static constexpr uint8_t     read_failures_limit     = 3u;
-   static constexpr std::size_t execution_period_ms     = 4u;
-   static constexpr std::size_t receive_wait_timeout_ms = 4u;
+   static constexpr uint8_t  read_failures_limit     = 3u;
+   static constexpr uint32_t execution_period_ms     = 4u;
+   static constexpr uint32_t receive_wait_timeout_ms = 4u;
 
    // parameter values
    static constexpr uint8_t sample_rate_divider                  = 0x03;

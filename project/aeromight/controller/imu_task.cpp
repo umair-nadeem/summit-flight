@@ -27,18 +27,18 @@ extern "C"
 
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
-      constexpr std::size_t mpu6500_receive_wait_timeout_ms              = 2u * controller::task::imu_task_period_in_ms;
-      constexpr uint8_t     mpu6500_read_failures_limit                  = 5u;
-      constexpr uint8_t     mpu6500_sample_rate_divider                  = 0x03;
-      constexpr uint8_t     mpu6500_dlpf_config                          = 0x02;
-      constexpr uint8_t     mpu6500_gyro_full_scale                      = 0x03;
-      constexpr uint8_t     mpu6500_accel_full_scale                     = 0x03;
-      constexpr uint8_t     mpu6500_accel_a_dlpf_config                  = 0x03;
-      constexpr float       mpu6500_gyro_range_plausibility_margin_radps = 6.0f;
-      constexpr float       mpu6500_accel_range_plausibility_margin_mps2 = 20.0f;
-      constexpr uint16_t    num_samples_self_test                        = 400u;
-      constexpr float       gyro_tolerance_radps                         = 0.1f;
-      constexpr float       accel_tolerance_mps2                         = 1.5f;
+      constexpr uint32_t mpu6500_receive_wait_timeout_ms              = 2u * controller::task::imu_task_period_in_ms;
+      constexpr uint8_t  mpu6500_read_failures_limit                  = 5u;
+      constexpr uint8_t  mpu6500_sample_rate_divider                  = 0x03;
+      constexpr uint8_t  mpu6500_dlpf_config                          = 0x02;
+      constexpr uint8_t  mpu6500_gyro_full_scale                      = 0x03;
+      constexpr uint8_t  mpu6500_accel_full_scale                     = 0x03;
+      constexpr uint8_t  mpu6500_accel_a_dlpf_config                  = 0x03;
+      constexpr float    mpu6500_gyro_range_plausibility_margin_radps = 6.0f;
+      constexpr float    mpu6500_accel_range_plausibility_margin_mps2 = 20.0f;
+      constexpr uint16_t num_samples_self_test                        = 400u;
+      constexpr float    gyro_tolerance_radps                         = 0.1f;
+      constexpr float    accel_tolerance_mps2                         = 1.5f;
 
       LogClient logger_imu_driver_executor{logging::logging_queue_sender, "imu_runner"};
       LogClient logger_mpu6500{logging::logging_queue_sender, "mpu6500"};

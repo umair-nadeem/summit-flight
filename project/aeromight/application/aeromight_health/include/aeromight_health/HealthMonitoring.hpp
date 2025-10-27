@@ -23,14 +23,14 @@ public:
                              const boundaries::SharedData<barometer_sensor::BarometerHealth>&     barometer_sensor_health,
                              const boundaries::SharedData<aeromight_boundaries::EstimatorHealth>& estimation_health,
                              Logger&                                                              logger,
-                             const std::size_t                                                    period_in_ms,
-                             const std::size_t                                                    startup_wait_ms,
-                             const std::size_t                                                    max_wait_sensors_readiness_ms,
-                             const std::size_t                                                    max_wait_estimation_control_readiness_ms,
-                             const std::size_t                                                    max_age_imu_sensor_health_ms,
-                             const std::size_t                                                    max_age_barometer_sensor_health_ms,
-                             const std::size_t                                                    max_age_estimation_health_ms,
-                             const std::size_t                                                    max_age_control_health_ms)
+                             const uint32_t                                                       period_in_ms,
+                             const uint32_t                                                       startup_wait_ms,
+                             const uint32_t                                                       max_wait_sensors_readiness_ms,
+                             const uint32_t                                                       max_wait_estimation_control_readiness_ms,
+                             const uint32_t                                                       max_age_imu_sensor_health_ms,
+                             const uint32_t                                                       max_age_barometer_sensor_health_ms,
+                             const uint32_t                                                       max_age_estimation_health_ms,
+                             const uint32_t                                                       max_age_control_health_ms)
        : m_queue_sender{queue_sender},
          m_imu_sensor_health{imu_sensor_health},
          m_barometer_sensor_health{barometer_sensor_health},
@@ -160,7 +160,7 @@ public:
       return m_state;
    }
 
-   std::size_t get_period_ms() const
+   uint32_t get_period_ms() const
    {
       return m_period_in_ms;
    }
@@ -307,14 +307,14 @@ private:
    const boundaries::SharedData<barometer_sensor::BarometerHealth>&      m_barometer_sensor_health;
    const boundaries::SharedData<aeromight_boundaries::EstimatorHealth>&  m_estimation_health;
    Logger&                                                               m_logger;
-   const std::size_t                                                     m_period_in_ms;
-   const std::size_t                                                     m_startup_wait_ms;
-   const std::size_t                                                     m_max_wait_sensors_readiness_ms;
-   const std::size_t                                                     m_max_wait_estimation_control_readiness_ms;
-   const std::size_t                                                     m_max_age_imu_sensor_health_ms;
-   const std::size_t                                                     m_max_age_barometer_sensor_health_ms;
-   const std::size_t                                                     m_max_age_estimation_health_ms;
-   const std::size_t                                                     m_max_age_control_health_ms;
+   const uint32_t                                                        m_period_in_ms;
+   const uint32_t                                                        m_startup_wait_ms;
+   const uint32_t                                                        m_max_wait_sensors_readiness_ms;
+   const uint32_t                                                        m_max_wait_estimation_control_readiness_ms;
+   const uint32_t                                                        m_max_age_imu_sensor_health_ms;
+   const uint32_t                                                        m_max_age_barometer_sensor_health_ms;
+   const uint32_t                                                        m_max_age_estimation_health_ms;
+   const uint32_t                                                        m_max_age_control_health_ms;
    aeromight_boundaries::HealthSummary                                   m_health_summary{};
    boundaries::SharedData<imu_sensor::ImuHealth>::Sample                 m_imu_health_snapshot{};
    boundaries::SharedData<barometer_sensor::BarometerHealth>::Sample     m_barometer_health_snapshot{};

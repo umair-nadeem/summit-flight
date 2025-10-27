@@ -11,8 +11,8 @@ class BarometerDriverExecutorTest : public testing::Test
 protected:
    mocks::common::Executable                                                         baro_driver_mock{};
    mocks::rtos::NotificationWaiter<aeromight_boundaries::BarometerNotificationFlags> notification_waiter{};
-   std::size_t                                                                       period_ms{40u};
-   std::size_t                                                                       notification_wait_period_in_ms{10u};
+   uint32_t                                                                          period_ms{40u};
+   uint32_t                                                                          notification_wait_period_in_ms{10u};
 
    aeromight_barometer::BarometerDriverExecutor<decltype(baro_driver_mock),
                                                 decltype(notification_waiter)>

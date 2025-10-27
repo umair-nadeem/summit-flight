@@ -8,7 +8,7 @@
 class EstimationAndControlTest : public testing::Test
 {
 protected:
-   static constexpr std::size_t period_in_ms = 8u;
+   static constexpr uint32_t period_in_ms = 8u;
 
    mocks::common::Executable                                                                  estimation_mock{};
    mocks::common::Executable                                                                  control_mock{};

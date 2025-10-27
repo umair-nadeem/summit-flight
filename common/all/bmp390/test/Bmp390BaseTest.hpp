@@ -17,10 +17,10 @@ protected:
       return static_cast<uint8_t>(sensor_normal_mode << 4U) | static_cast<uint8_t>(1u << 1u) | 1u;
    }
 
-   static constexpr uint8_t     read_failures_limit     = 3u;
-   static constexpr uint8_t     max_recovery_attempts   = 3u;
-   static constexpr std::size_t execution_period_ms     = 40u;
-   static constexpr std::size_t receive_wait_timeout_ms = 80u;
+   static constexpr uint8_t  read_failures_limit     = 3u;
+   static constexpr uint8_t  max_recovery_attempts   = 3u;
+   static constexpr uint32_t execution_period_ms     = 40u;
+   static constexpr uint32_t receive_wait_timeout_ms = 80u;
 
    // parameter values
    static constexpr uint8_t osr_p              = 3u;

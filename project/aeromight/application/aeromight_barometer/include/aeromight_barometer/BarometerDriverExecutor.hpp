@@ -15,8 +15,8 @@ class BarometerDriverExecutor
 public:
    explicit BarometerDriverExecutor(Bmp390&             bmp390,
                                     NotificationWaiter& notify_waiter,
-                                    const std::size_t   period_in_ms,
-                                    const std::size_t   notification_wait_period_in_ms)
+                                    const uint32_t      period_in_ms,
+                                    const uint32_t      notification_wait_period_in_ms)
        : m_bmp390{bmp390},
          m_notify_waiter{notify_waiter},
          m_period_in_ms{period_in_ms},
@@ -51,7 +51,7 @@ public:
       }
    }
 
-   std::size_t get_period_ms() const
+   uint32_t get_period_ms() const
    {
       return m_period_in_ms;
    }
@@ -59,8 +59,8 @@ public:
 private:
    Bmp390&             m_bmp390;
    NotificationWaiter& m_notify_waiter;
-   const std::size_t   m_period_in_ms;
-   const std::size_t   m_notification_wait_period_in_ms;
+   const uint32_t      m_period_in_ms;
+   const uint32_t      m_notification_wait_period_in_ms;
    const uint8_t       m_rx_complete_notification;
 };
 

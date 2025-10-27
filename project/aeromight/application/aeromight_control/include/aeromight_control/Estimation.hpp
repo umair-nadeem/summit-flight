@@ -32,10 +32,10 @@ public:
                        Logger&              logger,
                        const uint8_t        max_recovery_attempts,
                        const uint8_t        num_samples_reference_pressure,
-                       const std::size_t    execution_period_ms,
-                       const std::size_t    wait_timeout_reference_pressure_acquisition_ms,
-                       const std::size_t    max_age_imu_data_ms,
-                       const std::size_t    max_age_baro_data_ms,
+                       const uint32_t       execution_period_ms,
+                       const uint32_t       wait_timeout_reference_pressure_acquisition_ms,
+                       const uint32_t       max_age_imu_data_ms,
+                       const uint32_t       max_age_baro_data_ms,
                        const float          max_valid_imu_sample_dt_s)
        : m_ahrs_filter{ahrs_filter},
          m_altitude_ekf{altitude_ekf},
@@ -414,10 +414,10 @@ private:
    Logger&                               m_logger;
    const uint8_t                         m_max_recovery_attempts;
    const uint8_t                         m_num_samples_reference_pressure;
-   const std::size_t                     m_execution_period_ms;
-   const std::size_t                     m_wait_timeout_reference_pressure_acquisition_ms;
-   const std::size_t                     m_max_age_imu_data_ms;
-   const std::size_t                     m_max_age_baro_data_ms;
+   const uint32_t                        m_execution_period_ms;
+   const uint32_t                        m_wait_timeout_reference_pressure_acquisition_ms;
+   const uint32_t                        m_max_age_imu_data_ms;
+   const uint32_t                        m_max_age_baro_data_ms;
    const float                           m_max_valid_imu_sample_dt_s;
    aeromight_boundaries::EstimatorHealth m_local_estimator_health{};
    StateEstimation                       m_local_estimation_data{};
@@ -428,7 +428,7 @@ private:
    float                                 m_reference_pressure{};
    uint8_t                               m_pressure_sample_counter{};
    uint32_t                              m_current_time_ms{0};
-   std::size_t                           m_reference_pressure_wait_timer_ms{};
+   uint32_t                              m_reference_pressure_wait_timer_ms{};
    std::size_t                           m_data_log_counter{};
 };
 

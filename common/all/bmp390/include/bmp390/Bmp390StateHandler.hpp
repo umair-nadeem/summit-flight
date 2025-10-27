@@ -21,14 +21,14 @@ class Bmp390StateHandler
    using BarometerHealth = ::boundaries::SharedData<barometer_sensor::BarometerHealth>;
 
 public:
-   explicit Bmp390StateHandler(BarometerData&    barometer_data_storage,
-                               BarometerHealth&  barometer_health_storage,
-                               I2cDriver&        i2c_driver,
-                               Logger&           logger,
-                               const uint8_t     read_failures_limit,
-                               const uint8_t     max_recovery_attempts,
-                               const std::size_t execution_period_ms,
-                               const std::size_t receive_wait_timeout_ms)
+   explicit Bmp390StateHandler(BarometerData&   barometer_data_storage,
+                               BarometerHealth& barometer_health_storage,
+                               I2cDriver&       i2c_driver,
+                               Logger&          logger,
+                               const uint8_t    read_failures_limit,
+                               const uint8_t    max_recovery_attempts,
+                               const uint32_t   execution_period_ms,
+                               const uint32_t   receive_wait_timeout_ms)
        : m_barometer_data_storage{barometer_data_storage},
          m_barometer_health_storage{barometer_health_storage},
          m_i2c_driver{i2c_driver},
@@ -503,8 +503,8 @@ private:
    Logger&                                  m_logger;
    const uint8_t                            m_read_failures_limit;
    const uint8_t                            m_max_recovery_attempts;
-   const std::size_t                        m_execution_period_ms;
-   const std::size_t                        m_receive_wait_timeout_ms;
+   const uint32_t                           m_execution_period_ms;
+   const uint32_t                           m_receive_wait_timeout_ms;
    barometer_sensor::BarometerData          m_local_barometer_data{};
    barometer_sensor::BarometerHealth        m_local_barometer_health{};
    std::array<uint8_t, params::buffer_size> m_tx_buffer{};
@@ -515,7 +515,7 @@ private:
    params::QuantizedCoeffiecients           m_quantized_coefficients{};
    uint8_t                                  m_error_register{};
    bool                                     m_i2c_error{false};
-   std::size_t                              m_wait_timer_ms{};
+   uint32_t                                 m_wait_timer_ms{};
    std::size_t                              m_data_log_counter{};
 };
 

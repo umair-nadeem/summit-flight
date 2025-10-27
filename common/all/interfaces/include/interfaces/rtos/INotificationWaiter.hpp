@@ -7,7 +7,7 @@ namespace interfaces::rtos
 {
 
 template <typename C, typename T>
-concept INotificationWaiter = requires(C c, T t, const std::size_t s) {
+concept INotificationWaiter = requires(C c, T t, const uint32_t s) {
    {
       c.wait(s)
    }

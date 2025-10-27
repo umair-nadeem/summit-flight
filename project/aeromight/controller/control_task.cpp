@@ -31,23 +31,23 @@ extern "C"
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
       // madgwick parameters
-      constexpr float       ahrs_beta                                      = 0.9f;
-      constexpr float       gyro_bias_gain                                 = 0.5f;
-      constexpr float       accel_tolerance_mps2                           = 3.0f;
+      constexpr float    ahrs_beta                                      = 0.9f;
+      constexpr float    gyro_bias_gain                                 = 0.5f;
+      constexpr float    accel_tolerance_mps2                           = 3.0f;
       // altitude ekf2 parameters
-      constexpr float       process_noise_z                                = 1.0f;
-      constexpr float       process_noise_vz                               = 5.0f;
-      constexpr float       process_noise_accel_bias                       = 0.0001f;
-      constexpr float       measurement_noise_baro                         = 0.5f;
-      constexpr float       tilt_gating_attitude_angle_rad                 = 0.2f;
-      constexpr float       tilt_gating_accel_weight                       = 0.08f;
+      constexpr float    process_noise_z                                = 1.0f;
+      constexpr float    process_noise_vz                               = 5.0f;
+      constexpr float    process_noise_accel_bias                       = 0.0001f;
+      constexpr float    measurement_noise_baro                         = 0.5f;
+      constexpr float    tilt_gating_attitude_angle_rad                 = 0.2f;
+      constexpr float    tilt_gating_accel_weight                       = 0.08f;
       // esimation parameters
-      constexpr uint8_t     num_samples_pressure_reference                 = 10u;
-      constexpr uint8_t     max_recovery_attempts                          = 3u;
-      constexpr std::size_t wait_timeout_pressure_reference_acquisition_ms = controller::task::barometer_task_period_in_ms * 50u;
-      constexpr std::size_t max_age_imu_data_ms                            = controller::task::imu_task_period_in_ms * 10u;
-      constexpr std::size_t max_age_baro_data_ms                           = controller::task::barometer_task_period_in_ms * 10u;
-      constexpr float       max_valid_imu_sample_dt_s                      = 0.02f;
+      constexpr uint8_t  num_samples_pressure_reference                 = 10u;
+      constexpr uint8_t  max_recovery_attempts                          = 3u;
+      constexpr uint32_t wait_timeout_pressure_reference_acquisition_ms = controller::task::barometer_task_period_in_ms * 50u;
+      constexpr uint32_t max_age_imu_data_ms                            = controller::task::imu_task_period_in_ms * 10u;
+      constexpr uint32_t max_age_baro_data_ms                           = controller::task::barometer_task_period_in_ms * 10u;
+      constexpr float    max_valid_imu_sample_dt_s                      = 0.02f;
 
       LogClient logger_estimation{logging::logging_queue_sender, "estimation"};
       LogClient logger_control{logging::logging_queue_sender, "control"};

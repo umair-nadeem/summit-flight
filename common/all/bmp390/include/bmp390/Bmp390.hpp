@@ -13,14 +13,14 @@ class Bmp390
    using BarometerHealth = ::boundaries::SharedData<barometer_sensor::BarometerHealth>;
 
 public:
-   explicit Bmp390(BarometerData&    barometer_data_storage,
-                   BarometerHealth&  barometer_health_storage,
-                   I2cDriver&        i2c_driver,
-                   Logger&           logger,
-                   const uint8_t     read_failures_limit,
-                   const uint8_t     max_recovery_attempts,
-                   const std::size_t execution_period_ms,
-                   const std::size_t receive_wait_timeout_ms)
+   explicit Bmp390(BarometerData&   barometer_data_storage,
+                   BarometerHealth& barometer_health_storage,
+                   I2cDriver&       i2c_driver,
+                   Logger&          logger,
+                   const uint8_t    read_failures_limit,
+                   const uint8_t    max_recovery_attempts,
+                   const uint32_t   execution_period_ms,
+                   const uint32_t   receive_wait_timeout_ms)
        : m_state_handler{barometer_data_storage,
                          barometer_health_storage,
                          i2c_driver,

@@ -25,10 +25,10 @@ extern "C"
 
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
-      constexpr std::size_t bmp390_receive_wait_timeout_ms = 2u * controller::task::barometer_task_period_in_ms;
-      constexpr std::size_t notification_wait_period_in_ms = controller::task::barometer_task_period_in_ms / 4u;
-      constexpr uint8_t     bmp390_read_failures_limit     = 5u;
-      constexpr uint8_t     bmp390_max_recovery_attempts   = 3u;
+      constexpr uint32_t bmp390_receive_wait_timeout_ms = 2u * controller::task::barometer_task_period_in_ms;
+      constexpr uint32_t notification_wait_period_in_ms = controller::task::barometer_task_period_in_ms / 4u;
+      constexpr uint8_t  bmp390_read_failures_limit     = 5u;
+      constexpr uint8_t  bmp390_max_recovery_attempts   = 3u;
 
       LogClient logger_bmp390{logging::logging_queue_sender, "bmp390"};
 

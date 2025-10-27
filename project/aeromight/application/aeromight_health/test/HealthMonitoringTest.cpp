@@ -58,14 +58,14 @@ protected:
       health_monitoring.run_once();
    }
 
-   static constexpr std::size_t period_in_ms                             = 1u;
-   static constexpr std::size_t wait_before_first_summary_update_ms      = 4u;
-   static constexpr std::size_t max_wait_sensors_readiness_ms            = 2u;
-   static constexpr std::size_t max_wait_estimation_control_readiness_ms = 3u;
-   static constexpr std::size_t max_age_stale_imu_sensor_health_ms       = 3u;
-   static constexpr std::size_t max_age_barometer_sensor_health_ms       = 3u;
-   static constexpr std::size_t max_age_estimation_health_ms             = 3u;
-   static constexpr std::size_t max_age_control_health_ms                = 3u;
+   static constexpr uint32_t period_in_ms                             = 1u;
+   static constexpr uint32_t wait_before_first_summary_update_ms      = 4u;
+   static constexpr uint32_t max_wait_sensors_readiness_ms            = 2u;
+   static constexpr uint32_t max_wait_estimation_control_readiness_ms = 3u;
+   static constexpr uint32_t max_age_stale_imu_sensor_health_ms       = 3u;
+   static constexpr uint32_t max_age_barometer_sensor_health_ms       = 3u;
+   static constexpr uint32_t max_age_estimation_health_ms             = 3u;
+   static constexpr uint32_t max_age_control_health_ms                = 3u;
 
    mocks::rtos::QueueSender<aeromight_boundaries::HealthSummary> queue_sender_mock{};
    mocks::common::ClockSource                                    sys_clock{};

@@ -9,7 +9,7 @@ template <typename Estimation, typename Control>
 class EstimationAndControl
 {
 public:
-   explicit EstimationAndControl(Estimation& estimation, Control& control, const std::size_t period_in_ms)
+   explicit EstimationAndControl(Estimation& estimation, Control& control, const uint32_t period_in_ms)
        : m_estimation{estimation},
          m_control{control},
          m_period_in_ms{period_in_ms}
@@ -34,15 +34,15 @@ public:
       m_control.execute();
    }
 
-   std::size_t get_period_ms() const
+   uint32_t get_period_ms() const
    {
       return m_period_in_ms;
    }
 
 private:
-   Estimation&       m_estimation;
-   Control&          m_control;
-   const std::size_t m_period_in_ms;
+   Estimation&    m_estimation;
+   Control&       m_control;
+   const uint32_t m_period_in_ms;
 };
 
 }   // namespace aeromight_control

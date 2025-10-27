@@ -23,13 +23,13 @@ extern "C"
 
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
-      constexpr std::size_t wait_before_first_summary_update_ms      = 1000u;
-      constexpr std::size_t max_wait_sensors_readiness_ms            = 10'000u;
-      constexpr std::size_t max_wait_estimation_control_readiness_ms = 2'000u;
-      constexpr std::size_t max_age_stale_imu_sensor_health_ms       = controller::task::health_monitoring_task_period_in_ms * 5u;
-      constexpr std::size_t max_age_barometer_sensor_health_ms       = controller::task::health_monitoring_task_period_in_ms * 10u;
-      constexpr std::size_t max_age_estimation_health_ms             = controller::task::health_monitoring_task_period_in_ms * 15u;
-      constexpr std::size_t max_age_control_health_ms                = controller::task::health_monitoring_task_period_in_ms * 5u;
+      constexpr uint32_t wait_before_first_summary_update_ms      = 1000u;
+      constexpr uint32_t max_wait_sensors_readiness_ms            = 10'000u;
+      constexpr uint32_t max_wait_estimation_control_readiness_ms = 2'000u;
+      constexpr uint32_t max_age_stale_imu_sensor_health_ms       = controller::task::health_monitoring_task_period_in_ms * 5u;
+      constexpr uint32_t max_age_barometer_sensor_health_ms       = controller::task::health_monitoring_task_period_in_ms * 10u;
+      constexpr uint32_t max_age_estimation_health_ms             = controller::task::health_monitoring_task_period_in_ms * 15u;
+      constexpr uint32_t max_age_control_health_ms                = controller::task::health_monitoring_task_period_in_ms * 5u;
 
       LogClient logger_health_monitoring{logging::logging_queue_sender, "health"};
 

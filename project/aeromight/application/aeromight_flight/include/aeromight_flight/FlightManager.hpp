@@ -16,7 +16,7 @@ public:
    explicit FlightManager(QueueReceiver&      health_summary_queue_receiver,
                           EstimationNotifier& estimation_start_notifier,
                           Logger&             logger,
-                          const std::size_t   period_ms,
+                          const uint32_t      period_ms,
                           const uint32_t      max_wait_sensors_readiness_ms,
                           const uint32_t      max_wait_estimation_control_readiness_ms)
        : m_period_ms{period_ms},
@@ -34,7 +34,7 @@ public:
       m_state_machine.process_event(typename StateMachineDef::EventTick{});
    }
 
-   std::size_t get_period_ms() const
+   uint32_t get_period_ms() const
    {
       return m_period_ms;
    }
@@ -43,7 +43,7 @@ private:
    using StateHandler    = FlightManagerStateHandler<QueueReceiver, EstimationNotifier, ClockSource, Logger>;
    using StateMachineDef = FlightManagerStateMachine<StateHandler>;
 
-   const std::size_t               m_period_ms;
+   const uint32_t                  m_period_ms;
    StateHandler                    m_state_handler;
    boost::sml::sm<StateMachineDef> m_state_machine{m_state_handler};
 };

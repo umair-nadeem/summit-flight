@@ -23,23 +23,23 @@ class Mpu6500StateHandler
    using Vec       = math::Vector3;
 
 public:
-   explicit Mpu6500StateHandler(ImuData&          imu_data_storage,
-                                ImuHealth&        imu_health_storage,
-                                SpiMaster&        spi_master,
-                                Logger&           logger,
-                                const uint8_t     read_failures_limit,
-                                const std::size_t execution_period_ms,
-                                const std::size_t receive_wait_timeout_ms,
-                                const uint8_t     sample_rate_divider,
-                                const uint8_t     dlpf_config,
-                                const uint8_t     gyro_full_scale,
-                                const uint8_t     accel_full_scale,
-                                const uint8_t     accel_a_dlpf_config,
-                                const float       gyro_range_plausibility_margin_radps,
-                                const float       accel_range_plausibility_margin_mps2,
-                                const uint16_t    num_samples_self_test,
-                                const float       gyro_tolerance_radps,
-                                const float       accel_tolerance_mps2)
+   explicit Mpu6500StateHandler(ImuData&       imu_data_storage,
+                                ImuHealth&     imu_health_storage,
+                                SpiMaster&     spi_master,
+                                Logger&        logger,
+                                const uint8_t  read_failures_limit,
+                                const uint32_t execution_period_ms,
+                                const uint32_t receive_wait_timeout_ms,
+                                const uint8_t  sample_rate_divider,
+                                const uint8_t  dlpf_config,
+                                const uint8_t  gyro_full_scale,
+                                const uint8_t  accel_full_scale,
+                                const uint8_t  accel_a_dlpf_config,
+                                const float    gyro_range_plausibility_margin_radps,
+                                const float    accel_range_plausibility_margin_mps2,
+                                const uint16_t num_samples_self_test,
+                                const float    gyro_tolerance_radps,
+                                const float    accel_tolerance_mps2)
        : m_imu_data_storage{imu_data_storage},
          m_imu_health_storage{imu_health_storage},
          m_spi_master{spi_master},
@@ -638,8 +638,8 @@ private:
    SpiMaster&                                         m_spi_master;
    Logger&                                            m_logger;
    const uint8_t                                      m_read_failures_limit;
-   const std::size_t                                  m_execution_period_ms;
-   const std::size_t                                  m_receive_wait_timeout_ms;
+   const uint32_t                                     m_execution_period_ms;
+   const uint32_t                                     m_receive_wait_timeout_ms;
    const uint8_t                                      m_sample_rate_divider;
    const uint8_t                                      m_dlpf_config;
    const uint8_t                                      m_gyro_full_scale;
@@ -662,7 +662,7 @@ private:
    Bias                                               m_bias{};
    uint8_t                                            m_device_id{};
    Config_registers                                   m_config_registers{};
-   std::size_t                                        m_wait_timer_ms{};
+   uint32_t                                           m_wait_timer_ms{};
    std::size_t                                        m_data_log_counter{};
 };
 
