@@ -1,5 +1,5 @@
 #include "ControlTaskData.hpp"
-#include "aeromight_boundaries/AeromightSensorData.hpp"
+#include "aeromight_boundaries/AeromightData.hpp"
 #include "aeromight_control/AltitudeEkf.hpp"
 #include "aeromight_control/Control.hpp"
 #include "aeromight_control/Estimation.hpp"
@@ -67,10 +67,10 @@ extern "C"
                                     LogClient>
           estimation{ahrs_filter,
                      altitude_ekf,
-                     aeromight_boundaries::aeromight_sensor_data.estimator_health_storage,
+                     aeromight_boundaries::aeromight_data.estimator_health_storage,
                      data->state_estimation,
-                     aeromight_boundaries::aeromight_sensor_data.imu_sensor_data_storage,
-                     aeromight_boundaries::aeromight_sensor_data.barometer_sensor_data_storage,
+                     aeromight_boundaries::aeromight_data.imu_sensor_data_storage,
+                     aeromight_boundaries::aeromight_data.barometer_sensor_data_storage,
                      logger_estimation,
                      max_recovery_attempts,
                      num_samples_pressure_reference,

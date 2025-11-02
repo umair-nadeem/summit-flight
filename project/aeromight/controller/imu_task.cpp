@@ -1,5 +1,5 @@
 #include "ImuTaskData.hpp"
-#include "aeromight_boundaries/AeromightSensorData.hpp"
+#include "aeromight_boundaries/AeromightData.hpp"
 #include "aeromight_imu/ImuDriverExecutor.hpp"
 #include "error/error_handler.hpp"
 #include "hw/uart/uart.hpp"
@@ -46,8 +46,8 @@ extern "C"
       mpu6500::Mpu6500<sys_time::ClockSource,
                        decltype(data->spi1_master),
                        decltype(logger_mpu6500)>
-          mpu6500{aeromight_boundaries::aeromight_sensor_data.imu_sensor_data_storage,
-                  aeromight_boundaries::aeromight_sensor_data.imu_sensor_health_storage,
+          mpu6500{aeromight_boundaries::aeromight_data.imu_sensor_data_storage,
+                  aeromight_boundaries::aeromight_data.imu_sensor_health_storage,
                   data->spi1_master,
                   logger_mpu6500,
                   mpu6500_read_failures_limit,

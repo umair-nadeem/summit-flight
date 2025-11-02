@@ -23,7 +23,7 @@ static constexpr uint32_t          control_task_period_in_ms{4u};
 
 // Flight Manager Task
 static constexpr const char* const flight_manager_task_name{"flight_mngr"};
-static constexpr uint32_t          flight_manager_task_stack_size_in_bytes{2048u};
+static constexpr uint32_t          flight_manager_task_stack_size_in_bytes{4096u};
 static constexpr uint32_t          flight_manager_task_stack_depth_in_words{flight_manager_task_stack_size_in_bytes / sizeof(uint32_t)};
 static constexpr uint32_t          flight_manager_task_priority{6u};
 static constexpr uint32_t          flight_manager_task_period_in_ms{20u};

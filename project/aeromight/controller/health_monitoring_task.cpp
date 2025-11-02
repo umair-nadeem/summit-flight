@@ -1,5 +1,5 @@
 #include "HealthMonitoringTaskData.hpp"
-#include "aeromight_boundaries/AeromightSensorData.hpp"
+#include "aeromight_boundaries/AeromightData.hpp"
 #include "aeromight_health/HealthMonitoring.hpp"
 #include "error/error_handler.hpp"
 #include "logging/LogClient.hpp"
@@ -37,9 +37,9 @@ extern "C"
                                          sys_time::ClockSource,
                                          LogClient>
           health_monitoring{data->health_summary_queue_sender,
-                            aeromight_boundaries::aeromight_sensor_data.imu_sensor_health_storage,
-                            aeromight_boundaries::aeromight_sensor_data.barometer_sensor_health_storage,
-                            aeromight_boundaries::aeromight_sensor_data.estimator_health_storage,
+                            aeromight_boundaries::aeromight_data.imu_sensor_health_storage,
+                            aeromight_boundaries::aeromight_data.barometer_sensor_health_storage,
+                            aeromight_boundaries::aeromight_data.estimator_health_storage,
                             logger_health_monitoring,
                             controller::task::health_monitoring_task_period_in_ms,
                             wait_before_first_summary_update_ms,

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EstimatorHealth.hpp"
+#include "FlightManagerData.hpp"
 #include "barometer_sensor/BarometerData.hpp"
 #include "barometer_sensor/BarometerHealth.hpp"
 #include "boundaries/SharedData.hpp"
@@ -10,7 +11,7 @@
 namespace aeromight_boundaries
 {
 
-struct AeromightSensorData
+struct AeromightData
 {
    // IMU
    boundaries::SharedData<imu_sensor::ImuData>   imu_sensor_data_storage{};
@@ -22,8 +23,12 @@ struct AeromightSensorData
 
    // Estimator
    boundaries::SharedData<EstimatorHealth> estimator_health_storage{};
+
+   // Flight Manager
+   boundaries::SharedData<FlightManagerSetpoints> flight_manager_setpoints{};
+   boundaries::SharedData<FlightManagerActuals>   flight_manager_actuals{};
 };
 
-extern AeromightSensorData aeromight_sensor_data;
+extern AeromightData aeromight_data;
 
 }   // namespace aeromight_boundaries

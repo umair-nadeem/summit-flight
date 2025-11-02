@@ -10,7 +10,7 @@
 #include "ImuTaskData.hpp"
 #include "LoggingTaskData.hpp"
 #include "SysClockData.hpp"
-#include "aeromight_boundaries/AeromightSensorData.hpp"
+#include "aeromight_boundaries/AeromightData.hpp"
 #include "error/error_record.hpp"
 #include "hw/uart/uart.hpp"
 #include "rtos/Queue.hpp"
@@ -28,7 +28,7 @@ rtos::QueueSender<params::LogBuffer> logging_queue_sender{};
 
 namespace aeromight_boundaries
 {
-AeromightSensorData aeromight_sensor_data{};
+AeromightData aeromight_data{};
 }   // namespace aeromight_boundaries
 
 namespace controller

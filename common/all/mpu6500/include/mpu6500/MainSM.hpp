@@ -72,6 +72,7 @@ struct MainStateMachine
    static constexpr auto s_data_read_fail    = boost::sml::state<class StateDataReadFailure>;
    static constexpr auto s_soft_recovery     = boost::sml::state<class StateSoftRecovery>;
    static constexpr auto s_hard_recovery     = boost::sml::state<class StateHardRecovery>;
+   static constexpr auto s_to_failure        = boost::sml::state<class StateToFailure>;
    static constexpr auto s_failure           = boost::sml::state<class StateFailure>;
 
    auto operator()() const
@@ -182,13 +183,13 @@ struct MainStateMachine
           s_init_reset                                                         / (set_validation_state, publish_health)        = s_init_validation,
 
           s_init_validation                       [validation_successful]      / (set_config_state, publish_health)            = s_init_config,
-          s_init_validation                       [!validation_successful]                                                     = s_failure,
+          s_init_validation                       [!validation_successful]                                                     = s_to_failure,
           
           s_init_config                           [config_successful]          / (set_self_test_state, publish_health)         = s_self_test,
-          s_init_config                           [!config_successful]                                                         = s_failure,
+          s_init_config                           [!config_successful]                                                         = s_to_failure,
 
           s_self_test                             [self_test_successful]       / (set_operational_state, publish_health)       = s_measurement,
-          s_self_test                             [!self_test_successful]                                                      = s_failure,
+          s_self_test                             [!self_test_successful]                                                      = s_to_failure,
 
           // operational
           s_measurement         + e_tick                                       / (reset_timer, read_data)                      = s_data_read_wait,
@@ -219,13 +220,13 @@ struct MainStateMachine
           s_hard_reset                                                                                                         = s_hard_validation,
 
           s_hard_validation                       [validation_successful]                                                      = s_hard_config,
-          s_hard_validation                       [!validation_successful]                                                     = s_failure,
+          s_hard_validation                       [!validation_successful]                                                     = s_to_failure,
 
           s_hard_config                           [config_successful]          / (set_operational_state, publish_health)       = s_measurement,
-          s_hard_config                           [!config_successful]                                                         = s_failure,
+          s_hard_config                           [!config_successful]                                                         = s_to_failure,
 
           // failure
-          s_failure             + boost::sml::on_entry<_>                      / (set_failure_state, publish_health, reset_data),
+          s_to_failure                                                         / (set_failure_state, publish_health, reset_data) = s_failure,
 
           s_self_test           + e_stop                                       / set_stopped_state                             = s_stopped,
           s_init_reset          + e_stop                                       / set_stopped_state                             = s_stopped,

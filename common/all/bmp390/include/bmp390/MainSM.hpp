@@ -32,6 +32,7 @@ struct Bmp390MainStateMachine
    static constexpr auto s_data_verification = boost::sml::state<class StateDataVerification>;
    static constexpr auto s_data_read_fail    = boost::sml::state<class StateDataReadFailure>;
    static constexpr auto s_recovery          = boost::sml::state<class StateRecovery>;
+   static constexpr auto s_to_failure        = boost::sml::state<class StateToFailure>;
    static constexpr auto s_failure           = boost::sml::state<class StateFailure>;
 
    auto operator()() const
@@ -155,15 +156,15 @@ struct Bmp390MainStateMachine
 
           // setup
           s_init_setup                           [setup_successful]                / (set_read_coefficients_state, publish_health)               = s_read_coeff,
-          s_init_setup                           [!setup_successful]                                                                             = s_failure,
+          s_init_setup                           [!setup_successful]                                                                             = s_to_failure,
 
           // read coefficients
           s_read_coeff         + e_tick                                            / (reset_timer, read_coefficients)                            = s_read_coeff_wait,
           s_read_coeff_wait    + e_receive_done  [is_coefficients_pattern_ok]      / (store_coefficients, set_operational_state, publish_health) = s_measurement,
-          s_read_coeff_wait    + e_receive_done  [!is_coefficients_pattern_ok]     / set_coefficients_pattern_error                              = s_failure,
-          s_read_coeff_wait    + e_tick          [transfer_error]                  / set_bus_error                                               = s_failure,
+          s_read_coeff_wait    + e_receive_done  [!is_coefficients_pattern_ok]     / set_coefficients_pattern_error                              = s_to_failure,
+          s_read_coeff_wait    + e_tick          [transfer_error]                  / set_bus_error                                               = s_to_failure,
           s_read_coeff_wait    + e_tick          [!receive_wait_timeout]           / tick_timer,
-          s_read_coeff_wait    + e_tick          [receive_wait_timeout]            / set_bus_error                                               = s_failure,
+          s_read_coeff_wait    + e_tick          [receive_wait_timeout]            / set_bus_error                                               = s_to_failure,
 
           // operational
           s_measurement        + e_tick                                            / (reset_timer, read_data)                                    = s_data_read_wait,
@@ -185,9 +186,9 @@ struct Bmp390MainStateMachine
 
           s_recovery_setup                       [setup_successful]                / (reset_recovery_attempts, set_operational_state, publish_health) = s_measurement,
           s_recovery_setup                       [!setup_successful && recovery_attempts_below_limit] / publish_health                           = s_recovery,
-          s_recovery_setup                       [!setup_successful && !recovery_attempts_below_limit]                                           = s_failure,
+          s_recovery_setup                       [!setup_successful && !recovery_attempts_below_limit]                                           = s_to_failure,
 
-          s_failure            + boost::sml::on_entry<_>                           / (set_failure_state, publish_health, reset_data),
+          s_to_failure                                                             / (set_failure_state, publish_health, reset_data)             = s_failure,
 
           s_init_setup         + e_stop                                            / set_stopped_state                                           = s_stopped,
           s_recovery_setup     + e_stop                                            / set_stopped_state                                           = s_stopped,

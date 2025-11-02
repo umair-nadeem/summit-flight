@@ -1,6 +1,6 @@
 #include "BarometerTaskData.hpp"
 #include "aeromight_barometer/BarometerDriverExecutor.hpp"
-#include "aeromight_boundaries/AeromightSensorData.hpp"
+#include "aeromight_boundaries/AeromightData.hpp"
 #include "bmp390/Bmp390.hpp"
 #include "logging/LogClient.hpp"
 #include "rtos/QueueSender.hpp"
@@ -35,8 +35,8 @@ extern "C"
       bmp390::Bmp390<sys_time::ClockSource,
                      decltype(data->i2c_driver),
                      LogClient>
-          bmp390{aeromight_boundaries::aeromight_sensor_data.barometer_sensor_data_storage,
-                 aeromight_boundaries::aeromight_sensor_data.barometer_sensor_health_storage,
+          bmp390{aeromight_boundaries::aeromight_data.barometer_sensor_data_storage,
+                 aeromight_boundaries::aeromight_data.barometer_sensor_health_storage,
                  data->i2c_driver,
                  logger_bmp390,
                  bmp390_read_failures_limit,
