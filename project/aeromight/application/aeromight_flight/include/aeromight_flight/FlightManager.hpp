@@ -25,7 +25,6 @@ public:
                           const uint32_t                                                              min_state_debounce_duration_ms,
                           const uint32_t                                                              timeout_sensors_readiness_ms,
                           const uint32_t                                                              timeout_control_readiness_ms,
-                          const uint32_t                                                              timeout_armed_no_flight_ms,
                           const uint32_t                                                              timeout_auto_land_ms)
        : m_period_ms{period_ms},
          m_state_handler{health_summary_queue_receiver,
@@ -39,7 +38,6 @@ public:
                          min_state_debounce_duration_ms,
                          timeout_sensors_readiness_ms,
                          timeout_control_readiness_ms,
-                         timeout_armed_no_flight_ms,
                          timeout_auto_land_ms}
    {
       logger.enable();
@@ -48,6 +46,11 @@ public:
    void run_once()
    {
       m_state_machine.process_event(typename StateMachineDef::EventTick{});
+   }
+
+   FlightManagerState get_state() const
+   {
+      return m_state_handler.get_state();
    }
 
    uint32_t get_period_ms() const

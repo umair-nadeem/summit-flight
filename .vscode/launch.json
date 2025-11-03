@@ -78,6 +78,16 @@
             "stopOnEntry": false
         },
         {
+            "name": "FlightManagerTest",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/out/build/native/project/aeromight/application/aeromight_flight/test/aeromight_flight_test",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {},
+            "stopOnEntry": false
+        },
+        {
             "name": "HealthMonitoringTest",
             "type": "lldb",
             "request": "launch",

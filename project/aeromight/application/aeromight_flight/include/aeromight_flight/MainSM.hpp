@@ -107,9 +107,19 @@ struct FlightManagerStateMachine
          state.set_state(FlightManagerState::wait_control);
       };
 
+      constexpr auto set_disarming_state = [](StateHandler& state)
+      {
+         state.set_state(FlightManagerState::disarming);
+      };
+
       constexpr auto set_disarmed_state = [](StateHandler& state)
       {
          state.set_state(FlightManagerState::disarmed);
+      };
+
+      constexpr auto set_arming_state = [](StateHandler& state)
+      {
+         state.set_state(FlightManagerState::arming);
       };
 
       constexpr auto set_armed_state = [](StateHandler& state)
@@ -157,11 +167,6 @@ struct FlightManagerStateMachine
       constexpr auto timeout_control_readiness = [](StateHandler& state)
       {
          return state.timeout_control_readiness();
-      };
-
-      constexpr auto timeout_armed_no_flight = [](StateHandler& state)
-      {
-         return state.timeout_armed_no_flight();
       };
 
       constexpr auto timeout_auto_land = [](StateHandler& state)
@@ -250,18 +255,18 @@ struct FlightManagerStateMachine
           s_wait_control_checkpoint                                                                                                               = s_wait_control,
 
           s_disarmed          + e_tick                                              / read_radio_input                                            = s_disarmed_checkpoint,
-          s_disarmed_checkpoint       [arm]                                         / set_reference_time                                          = s_arming,
+          s_disarmed_checkpoint       [arm]                                         / (set_arming_state, set_reference_time)                      = s_arming,
           s_disarmed_checkpoint                                                                                                                   = s_disarmed,
 
           s_arming            + e_tick                                              / (read_health_summary, read_radio_input, get_time)           = s_arming_checkpoint,
           s_arming_checkpoint         [kill]                                        / (stop_motors, set_killed_state)                             = s_killed,
-          s_arming_checkpoint         [disarm || !is_health_good || !is_radio_link_good]                                                          = s_disarmed,
+          s_arming_checkpoint         [disarm || !is_health_good || !is_radio_link_good]                   / set_disarmed_state                   = s_disarmed,
           s_arming_checkpoint         [is_state_change_persistent && is_health_good && is_radio_link_good] / (start_motors, set_armed_state)      = s_armed,
           s_arming_checkpoint                                                                                                                     = s_arming,
 
           s_armed             + e_tick                                              / (read_health_summary, read_radio_input, get_time)           = s_armed_checkpoint,
           s_armed_checkpoint          [kill]                                        / (stop_motors, set_killed_state)                             = s_killed,
-          s_armed_checkpoint          [disarm || timeout_armed_no_flight]           / set_reference_time                                          = s_disarming,
+          s_armed_checkpoint          [disarm]                                      / (set_disarming_state, set_reference_time)                   = s_disarming,
           s_armed_checkpoint          [manual_mode]                                 / set_manual_state                                            = s_manual,
           s_armed_checkpoint          [hover_mode]                                  / set_hover_state                                             = s_hover,
           s_armed_checkpoint          [!is_health_good || !is_radio_link_good]      / stop_motors                                                 = s_to_fault,
@@ -275,7 +280,7 @@ struct FlightManagerStateMachine
 
           s_manual            + e_tick                                              / (read_health_summary, read_radio_input, get_time, publish_manual_setpoint) = s_manual_checkpoint,
           s_manual_checkpoint         [kill]                                        / (stop_motors, set_killed_state)                             = s_killed,
-          s_manual_checkpoint         [disarm]                                      / set_reference_time                                          = s_disarming,
+          s_manual_checkpoint         [disarm]                                      / (set_disarming_state, set_reference_time)                   = s_disarming,
           s_manual_checkpoint         [hover_mode]                                  / set_hover_state                                             = s_hover,
           s_manual_checkpoint         [!is_health_good]                             / stop_motors                                                 = s_to_fault,
           s_manual_checkpoint         [!is_radio_link_good]                         / set_auto_land_state                                         = s_auto_land,
@@ -283,7 +288,7 @@ struct FlightManagerStateMachine
 
           s_hover             + e_tick                                              / (read_health_summary, read_radio_input, get_time, publish_hover_setpoint) = s_hover_checkpoint,
           s_hover_checkpoint          [kill]                                        / (stop_motors, set_killed_state)                             = s_killed,
-          s_hover_checkpoint          [disarm]                                      / set_reference_time                                          = s_disarming,
+          s_hover_checkpoint          [disarm]                                      / (set_disarming_state, set_reference_time)                   = s_disarming,
           s_hover_checkpoint          [manual_mode]                                 / set_manual_state                                            = s_manual,
           s_hover_checkpoint          [!is_health_good]                             / stop_motors                                                 = s_to_fault,
           s_hover_checkpoint          [!is_radio_link_good]                         / set_auto_land_state                                         = s_auto_land,

@@ -33,7 +33,6 @@ public:
                                       const uint32_t      min_state_debounce_duration_ms,
                                       const uint32_t      timeout_sensors_readiness_ms,
                                       const uint32_t      timeout_control_readiness_ms,
-                                      const uint32_t      timeout_armed_no_flight_ms,
                                       const uint32_t      timeout_auto_land_ms)
        : m_health_summary_queue_receiver{health_summary_queue_receiver},
          m_control_start_notifier(control_start_notifier),
@@ -46,7 +45,6 @@ public:
          m_min_state_debounce_duration_ms{min_state_debounce_duration_ms},
          m_timeout_sensors_readiness_ms{timeout_sensors_readiness_ms},
          m_timeout_control_readiness_ms{timeout_control_readiness_ms},
-         m_timeout_armed_no_flight_ms{timeout_armed_no_flight_ms},
          m_timeout_auto_land_ms{timeout_auto_land_ms}
    {
    }
@@ -125,8 +123,16 @@ public:
             m_logger.print("entered state->wait_control");
             break;
 
+         case FlightManagerState::disarming:
+            m_logger.print("entered state->disarming");
+            break;
+
          case FlightManagerState::disarmed:
             m_logger.print("entered state->disarmed");
+            break;
+
+         case FlightManagerState::arming:
+            m_logger.print("entered state->arming");
             break;
 
          case FlightManagerState::armed:
@@ -159,6 +165,11 @@ public:
       }
    }
 
+   FlightManagerState get_state() const
+   {
+      return m_state;
+   }
+
    bool health_summary_received() const
    {
       return (m_last_health_summary.timestamp_ms > 0);
@@ -179,16 +190,9 @@ public:
       return ((m_current_time_ms - m_reference_time_ms) >= m_timeout_control_readiness_ms);
    }
 
-   // cppcheck-suppress functionStatic
-   bool timeout_armed_no_flight() const
-   {
-      return false;
-   }
-
-   // cppcheck-suppress functionStatic
    bool timeout_auto_land() const
    {
-      return false;
+      return ((m_current_time_ms - m_reference_time_ms) >= m_timeout_auto_land_ms);
    }
 
    bool is_state_change_persistent() const
@@ -233,13 +237,13 @@ public:
 
    bool stale_health() const
    {
-      return ((m_current_time_ms - m_last_health_summary.timestamp_ms) > m_max_age_stale_data_ms);
+      return ((m_current_time_ms - m_last_health_summary.timestamp_ms) >= m_max_age_stale_data_ms);
    }
 
    bool stale_radio_input() const
    {
-      if (((m_current_time_ms - m_last_setpoints.timestamp_ms) > m_max_age_stale_data_ms) ||
-          ((m_current_time_ms - m_last_actuals.timestamp_ms) > m_max_age_stale_data_ms))
+      if (((m_current_time_ms - m_last_setpoints.timestamp_ms) >= m_max_age_stale_data_ms) ||
+          ((m_current_time_ms - m_last_actuals.timestamp_ms) >= m_max_age_stale_data_ms))
       {
          return true;
       }
@@ -265,7 +269,7 @@ public:
    {
       if (!stale_radio_input())
       {
-         return m_last_actuals.data.link_status_ok;
+         return (m_last_actuals.data.link_status_ok && (m_last_actuals.data.link_rssi >= m_min_good_signal_rssi_dbm));
       }
 
       return false;
@@ -315,7 +319,6 @@ private:
    const uint32_t                      m_min_state_debounce_duration_ms;
    const uint32_t                      m_timeout_sensors_readiness_ms;
    const uint32_t                      m_timeout_control_readiness_ms;
-   const uint32_t                      m_timeout_armed_no_flight_ms;
    const uint32_t                      m_timeout_auto_land_ms;
    aeromight_boundaries::HealthSummary m_last_health_summary{};
    Setpoints::Sample                   m_last_setpoints{};
