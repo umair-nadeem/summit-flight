@@ -31,8 +31,7 @@ extern "C"
       constexpr uint32_t min_state_debounce_duration_ms = 200u;
       constexpr uint32_t timeout_sensors_readiness_ms   = 10'000u;
       constexpr uint32_t timeout_control_readiness_ms   = 2000u;
-      constexpr uint32_t timeout_armed_no_flight_ms     = 600'000u;   // 10 minutes
-      constexpr uint32_t timeout_auto_land_ms           = 60'000u;    // 1 minute
+      constexpr uint32_t timeout_auto_land_ms           = 60'000u;   // 1 minute
 
       LogClient logger_flight_manager_task{logging::logging_queue_sender, "flight"};
 
@@ -52,7 +51,6 @@ extern "C"
                          min_state_debounce_duration_ms,
                          timeout_sensors_readiness_ms,
                          timeout_control_readiness_ms,
-                         timeout_armed_no_flight_ms,
                          timeout_auto_land_ms};
 
       rtos::run_periodic_task(flight_manager);
