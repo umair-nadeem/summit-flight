@@ -3,6 +3,8 @@
 #include <span>
 
 #include "UartConfig.hpp"
+#include "boundaries/BufferWithOwnershipIndex.hpp"
+#include "error/error_handler.hpp"
 #include "hw/dma/dma.hpp"
 
 namespace hw::uart
@@ -31,24 +33,35 @@ inline void handle_uart_global_interrupt(UartConfig& config, SemaphoreGiverFromI
    }
 }
 
-template <typename QueueSenderFromIsr>
-inline void handle_uart_dma_rx_global_interrupt(UartConfig&                config,
-                                                QueueSenderFromIsr&        queue_sender_from_isr,
-                                                std::span<const std::byte> rx_buffer,
-                                                std::span<std::byte>       rx_user_buffer)
+template <typename QueueSenderFromIsr, typename BufferPoolIndexQueueReceiverFromIsr, std::size_t N>
+inline void handle_uart_dma_rx_global_interrupt(UartConfig&                         config,
+                                                QueueSenderFromIsr&                 queue_sender_from_isr,
+                                                BufferPoolIndexQueueReceiverFromIsr buffer_pool_index_queue_receiver_from_isr,
+                                                const std::array<std::byte, N>&     dma_rx_buffer,
+                                                std::span<std::array<std::byte, N>> rx_buffer_pool)
 {
    if (::hw::dma::is_dma_tc_flag_active(config.dma_handle, config.rx_dma_stream))
    {
-      ::hw::dma::clear_dma_tc_flag(config.dma_handle, config.tx_dma_stream);
+      ::hw::dma::clear_dma_tc_flag(config.dma_handle, config.rx_dma_stream);
 
-      const std::size_t length = rx_buffer.size() - LL_DMA_GetDataLength(config.dma_handle, config.rx_dma_stream);
-      std::copy(rx_buffer.begin(), rx_buffer.begin() + static_cast<std::ptrdiff_t>(length), rx_user_buffer.begin());
+      std::size_t index      = 0;
+      const bool  have_space = buffer_pool_index_queue_receiver_from_isr.receive_from_isr(index);
 
-      std::span<const std::byte> received_data{rx_user_buffer.data(), length};
+      if (have_space)
+      {
+         auto&             buffer = rx_buffer_pool[index];
+         const std::size_t length = dma_rx_buffer.size() - LL_DMA_GetDataLength(config.dma_handle, config.rx_dma_stream);
 
-      queue_sender_from_isr.send_from_isr(received_data);
+         error::verify(length <= buffer.size());
+         std::copy(dma_rx_buffer.begin(), dma_rx_buffer.begin() + static_cast<std::ptrdiff_t>(length), buffer.begin());
 
-      start_rx(config, rx_buffer);
+         boundaries::BufferWithOwnershipIndex<std::byte> msg{{buffer.data(), length},
+                                                             index};
+
+         [[maybe_unused]] bool result = queue_sender_from_isr.send_from_isr(msg);
+      }
+
+      start_rx(config, dma_rx_buffer);   // re-enable dma receive
    }
 }
 

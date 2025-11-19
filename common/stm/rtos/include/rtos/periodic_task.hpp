@@ -9,11 +9,11 @@ namespace rtos
 {
 
 template <typename PeriodicTask>
-[[noreturn]] void run_periodic_task(PeriodicTask& periodicTask)
+[[noreturn]] void run_periodic_task(PeriodicTask& periodic_task)
 {
-   const uint32_t period_in_ms  = periodicTask.get_period_ms();
-   TickType_t     xLastWakeTime = xTaskGetTickCount();
-   BaseType_t     xWasDelayed;
+   const uint32_t period_in_ms     = periodic_task.get_period_ms();
+   TickType_t     last_wakeup_time = xTaskGetTickCount();
+   BaseType_t     was_delayed;
    UBaseType_t    stack_water_mark;
 
    while (true)
@@ -24,10 +24,11 @@ template <typename PeriodicTask>
          //
       }
 
-      periodicTask.run_once();
+      periodic_task.run_once();
 
-      xWasDelayed = xTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(period_in_ms));
-      error::verify(xWasDelayed == pdTRUE);
+      // was_delayed will be false if the next wakeup time is in past
+      was_delayed = xTaskDelayUntil(&last_wakeup_time, pdMS_TO_TICKS(period_in_ms));
+      error::verify(was_delayed == pdTRUE);
    }
 }
 

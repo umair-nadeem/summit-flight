@@ -28,6 +28,13 @@ static constexpr uint32_t          flight_manager_task_stack_depth_in_words{flig
 static constexpr uint32_t          flight_manager_task_priority{6u};
 static constexpr uint32_t          flight_manager_task_period_in_ms{20u};
 
+// Radio Link Task
+static constexpr const char* const radio_link_task_name{"radio_link"};
+static constexpr uint32_t          radio_link_task_stack_size_in_bytes{4096u};
+static constexpr uint32_t          radio_link_task_stack_depth_in_words{radio_link_task_stack_size_in_bytes / sizeof(uint32_t)};
+static constexpr uint32_t          radio_link_task_priority{6u};
+static constexpr uint32_t          radio_link_task_period_in_ms{20u};
+
 // Health Monitoring Task
 static constexpr const char* const health_monitoring_task_name{"health_mon"};
 static constexpr uint32_t          health_monitoring_task_stack_size_in_bytes{2048u};

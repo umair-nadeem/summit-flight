@@ -9,6 +9,7 @@
 #include "HealthMonitoringTaskData.hpp"
 #include "ImuTaskData.hpp"
 #include "LoggingTaskData.hpp"
+#include "RadioLinkTaskData.hpp"
 #include "SysClockData.hpp"
 #include "aeromight_boundaries/AeromightData.hpp"
 #include "error/error_record.hpp"
@@ -39,6 +40,7 @@ GlobalData               global_data{};
 ImuTaskData              imu_task_data{};
 ControlTaskData          control_task_data{};
 FlightManagerTaskData    flight_manager_task_data{};
+RadioLinkTaskData        radio_link_task_data{};
 HealthMonitoringTaskData health_monitoring_task_data{};
 BarometerTaskData        barometer_task_data{};
 LoggingTaskData          logging_task_data{};
@@ -48,6 +50,7 @@ SysClockData             sys_clock_data{};
 rtos::TCB imu_task_tcb{};
 rtos::TCB control_task_tcb{};
 rtos::TCB flight_manager_task_tcb{};
+rtos::TCB radio_link_task_tcb{};
 rtos::TCB health_monitoring_task_tcb{};
 rtos::TCB barometer_task_tcb{};
 rtos::TCB logging_task_tcb{};
@@ -56,6 +59,7 @@ rtos::TCB logging_task_tcb{};
 alignas(std::max_align_t) uint32_t imu_task_stack_buffer[controller::task::imu_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t control_task_stack_buffer[controller::task::control_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t flight_manager_task_stack_buffer[controller::task::flight_manager_task_stack_depth_in_words];
+alignas(std::max_align_t) uint32_t radio_link_task_stack_buffer[controller::task::radio_link_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t health_monitoring_task_stack_buffer[controller::task::health_monitoring_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t barometer_task_stack_buffer[controller::task::barometer_task_stack_depth_in_words];
 alignas(std::max_align_t) uint32_t logging_task_stack_buffer[controller::task::logging_task_stack_depth_in_words];
@@ -64,16 +68,20 @@ alignas(std::max_align_t) uint32_t logging_task_stack_buffer[controller::task::l
 TaskHandle_t imu_task_handle;
 TaskHandle_t control_task_handle;
 TaskHandle_t flight_manager_task_handle;
+TaskHandle_t radio_link_task_handle;
 TaskHandle_t health_monitoring_task_handle;
 TaskHandle_t barometer_task_handle;
 TaskHandle_t logging_task_handle;
 
 // queues
-rtos::Queue<logging::params::logging_queue_len, sizeof(logging::params::LogBuffer)>                      logging_queue{};
-rtos::Queue<aeromight_boundaries::health_summary_queue_len, sizeof(aeromight_boundaries::HealthSummary)> health_summary_queue{};
+rtos::Queue<logging::params::logging_queue_depth, sizeof(logging::params::LogBuffer)>                      logging_queue{};
+rtos::Queue<aeromight_boundaries::health_summary_queue_depth, sizeof(aeromight_boundaries::HealthSummary)> health_summary_queue{};
+rtos::Queue<radio_link_task_data.queue_depth, sizeof(RadioLinkTaskData::RadioLinkUart::Message)>           radio_input_queue{};
+rtos::Queue<radio_link_task_data.queue_depth, sizeof(std::size_t)>                                         radio_task_buffer_index_queue{};
 
 // semaphore
 rtos::Semaphore logging_uart_semaphore{};
+rtos::Semaphore radio_input_semaphore{};
 
 // tasks
 void register_tasks()
@@ -120,6 +128,20 @@ void register_tasks()
 
    flight_manager_task_handle = rtos::create_task(flight_manager_task_config);
 
+   // radio link task
+   std::memset(radio_link_task_stack_buffer, 0, sizeof(radio_link_task_stack_buffer));
+
+   rtos::RtosTaskConfig radio_link_task_config{
+       .func                 = radio_link_task,
+       .name                 = controller::task::radio_link_task_name,
+       .stack_depth_in_words = controller::task::radio_link_task_stack_depth_in_words,
+       .params               = static_cast<void*>(&radio_link_task_data),
+       .priority             = controller::task::radio_link_task_priority,
+       .stack_buffer         = radio_link_task_stack_buffer,
+       .task_block           = radio_link_task_tcb};
+
+   radio_link_task_handle = rtos::create_task(radio_link_task_config);
+
    // health monitoring task
    std::memset(health_monitoring_task_stack_buffer, 0, sizeof(health_monitoring_task_stack_buffer));
 
@@ -165,9 +187,14 @@ void register_tasks()
 
 void setup_semaphores()
 {
+   // logging uart semaphore
    auto logging_uart_sem_handle = logging_uart_semaphore.create();
    logging_task_data.logging_uart.transmitter_sem_taker.set_handle(logging_uart_sem_handle);
    logging_task_data.logging_uart.isr_sem_giver.set_handle(logging_uart_sem_handle);
+
+   // dummy radio link semaphore
+   auto radio_input_sem_handle = radio_input_semaphore.create();
+   radio_link_task_data.radio_link_uart.dummy_isr_sem_giver.set_handle(radio_input_sem_handle);
 }
 
 void setup_queues()
@@ -181,6 +208,21 @@ void setup_queues()
    auto health_summary_queue_handle = health_summary_queue.create();
    health_monitoring_task_data.health_summary_queue_sender.set_handle(health_summary_queue_handle);
    flight_manager_task_data.health_summary_queue_receiver.set_handle(health_summary_queue_handle);
+
+   // radio link task queues
+   auto radio_input_queue_handle = radio_input_queue.create();
+   radio_link_task_data.radio_link_uart.radio_input_sender_from_isr.set_handle(radio_input_queue_handle);
+   radio_link_task_data.radio_link_uart.radio_input_receiver.set_handle(radio_input_queue_handle);
+
+   auto radio_task_buffer_index_queue_handle = radio_task_buffer_index_queue.create();
+   radio_link_task_data.radio_link_uart.radio_queue_buffer_index_sender.set_handle(radio_task_buffer_index_queue_handle);
+   radio_link_task_data.radio_link_uart.radio_queue_buffer_index_receiver_from_isr.set_handle(radio_task_buffer_index_queue_handle);
+
+   // make all buffers available by pushing all buffer indices to queue
+   for (std::size_t i = 0; i < radio_link_task_data.queue_depth; i++)
+   {
+      radio_link_task_data.radio_link_uart.radio_queue_buffer_index_sender.send_blocking(i);
+   }
 }
 
 void setup_task_notifications()
@@ -207,6 +249,12 @@ void setup_uart()
    hw::uart::prepare_for_communication(logging_task_data.logging_uart.config,
                                        std::as_bytes(std::span{logging_task_data.logging_uart.dma_tx_buffer}),
                                        std::as_bytes(std::span{logging_task_data.logging_uart.dummy_dma_rx_buffer}));
+
+   // USART2
+   hw::uart::prepare_for_communication(radio_link_task_data.radio_link_uart.config,
+                                       radio_link_task_data.radio_link_uart.dummy_dma_tx_buffer,
+                                       radio_link_task_data.radio_link_uart.dma_rx_buffer);
+   hw::uart::start_rx(radio_link_task_data.radio_link_uart.config, radio_link_task_data.radio_link_uart.dma_rx_buffer);
 }
 
 void setup_spi()

@@ -43,6 +43,6 @@ struct HealthSummary
    }
 };
 
-static constexpr std::size_t health_summary_queue_len = 8u;
+static constexpr std::size_t health_summary_queue_depth = 8u;
 
 }   // namespace aeromight_boundaries

@@ -290,7 +290,7 @@ private:
       const math::Vector3 euler = m_local_estimation_data.attitude.to_euler();
 
       m_data_log_counter++;
-      if ((m_data_log_counter % 250u) == 0)
+      if ((m_data_log_counter % 500u) == 0)
       {
          m_logger.printf("z %.2f | vz %.2f | w %.2f | x %.2f | y %.2f | z %.2f | roll %.2f  |  pitch %.2f  |  y %.2f",
                          m_local_estimation_data.altitude,
