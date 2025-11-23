@@ -1,6 +1,7 @@
 #include "RadioLinkTaskData.hpp"
 #include "aeromight_boundaries/AeromightData.hpp"
 #include "aeromight_link/RadioLink.hpp"
+#include "aeromight_link/RadioReceiver.hpp"
 #include "hw/uart/uart.hpp"
 #include "logging/LogClient.hpp"
 #include "rtos/periodic_task.hpp"
@@ -26,14 +27,17 @@ extern "C"
 
       LogClient logger_radio_link{logging::logging_queue_sender, "radioLink"};
 
-      aeromight_link::RadioLink<decltype(data->radio_link_uart.radio_input_receiver),
-                                decltype(data->radio_link_uart.radio_queue_buffer_index_sender),
-                                sys_time::ClockSource,
-                                decltype(logger_radio_link)>
-          radio_link{data->radio_link_uart.radio_input_receiver,
-                     data->radio_link_uart.radio_queue_buffer_index_sender,
-                     logger_radio_link,
-                     controller::task::radio_link_task_period_in_ms};
+      aeromight_link::RadioReceiver<decltype(data->radio_link_uart.radio_input_receiver),
+                                    decltype(data->radio_link_uart.radio_queue_buffer_index_sender),
+                                    sys_time::ClockSource,
+                                    decltype(logger_radio_link)>
+          radio_receiver{
+              data->radio_link_uart.radio_input_receiver,
+              data->radio_link_uart.radio_queue_buffer_index_sender,
+              logger_radio_link};
+
+      aeromight_link::RadioLink<decltype(radio_receiver)> radio_link{radio_receiver,
+                                                                     controller::task::radio_link_task_period_in_ms};
 
       rtos::run_periodic_task(radio_link);
    }

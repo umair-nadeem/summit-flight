@@ -23,11 +23,12 @@ elseif (TOOLCHAIN STREQUAL "stm_m4")
 
 endif()
 
+# add crossfire
+add_subdirectory(crsf)
 
 # boost sml
 add_library(sml INTERFACE)
 target_include_directories(sml SYSTEM INTERFACE sml/include)
-
 
 # printf
 add_library(printf INTERFACE)
