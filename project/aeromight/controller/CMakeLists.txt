@@ -23,10 +23,12 @@ target_sources(aeromight_lib INTERFACE
 )
 
 target_link_libraries(aeromight_lib INTERFACE
-   stm32f411
+   crsf_rc_parser
+   crsf
    hw
    rtos
    sml
+   stm32f411
 
    aeromight_boundaries
    aeromight_barometer

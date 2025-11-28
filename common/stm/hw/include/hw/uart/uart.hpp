@@ -55,8 +55,7 @@ inline void handle_uart_dma_rx_global_interrupt(UartConfig&                     
          error::verify(length <= buffer.size());
          std::copy(dma_rx_buffer.begin(), dma_rx_buffer.begin() + static_cast<std::ptrdiff_t>(length), buffer.begin());
 
-         boundaries::BufferWithOwnershipIndex<std::byte> msg{{buffer.data(), length},
-                                                             index};
+         boundaries::BufferWithOwnershipIndex<std::byte> msg{std::span{buffer.data(), length}, index};
 
          [[maybe_unused]] bool result = queue_sender_from_isr.send_from_isr(msg);
       }

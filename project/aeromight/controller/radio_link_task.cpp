@@ -2,6 +2,7 @@
 #include "aeromight_boundaries/AeromightData.hpp"
 #include "aeromight_link/RadioLink.hpp"
 #include "aeromight_link/RadioReceiver.hpp"
+#include "crsf_rc_parser/CrsfRcChannelsParser.h"
 #include "hw/uart/uart.hpp"
 #include "logging/LogClient.hpp"
 #include "rtos/periodic_task.hpp"
@@ -29,6 +30,7 @@ extern "C"
 
       aeromight_link::RadioReceiver<decltype(data->radio_link_uart.radio_input_receiver),
                                     decltype(data->radio_link_uart.radio_queue_buffer_index_sender),
+                                    crsf::CrsfRcChannelsParser,
                                     sys_time::ClockSource,
                                     decltype(logger_radio_link)>
           radio_receiver{
@@ -58,10 +60,10 @@ extern "C"
       auto& data = controller::radio_link_task_data;
       hw::uart::handle_uart_dma_rx_global_interrupt<decltype(data.radio_link_uart.radio_input_sender_from_isr),
                                                     decltype(data.radio_link_uart.radio_queue_buffer_index_receiver_from_isr),
-                                                    data.max_buffer_len>(data.radio_link_uart.config,
-                                                                         data.radio_link_uart.radio_input_sender_from_isr,
-                                                                         data.radio_link_uart.radio_queue_buffer_index_receiver_from_isr,
-                                                                         data.radio_link_uart.dma_rx_buffer,
-                                                                         std::span{data.radio_link_uart.user_rx_buffer_pool});
+                                                    crsf::params::max_buffer_size>(data.radio_link_uart.config,
+                                                                                   data.radio_link_uart.radio_input_sender_from_isr,
+                                                                                   data.radio_link_uart.radio_queue_buffer_index_receiver_from_isr,
+                                                                                   data.radio_link_uart.dma_rx_buffer,
+                                                                                   std::span{data.radio_link_uart.user_rx_buffer_pool});
    }
 }
