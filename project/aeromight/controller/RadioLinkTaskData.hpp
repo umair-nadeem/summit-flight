@@ -1,7 +1,7 @@
 #pragma once
 
 #include "boundaries/BufferWithOwnershipIndex.hpp"
-#include "crsf/params.h"
+#include "crsf/params.hpp"
 #include "hw/uart/UartConfig.hpp"
 #include "rtos/QueueReceiver.hpp"
 #include "rtos/QueueSender.hpp"
@@ -31,9 +31,9 @@ struct RadioLinkTaskData
           .tx_dma_stream = LL_DMA_STREAM_6,
           .rx_dma_stream = LL_DMA_STREAM_5};
 
-      std::array<std::byte, 1u>                                                     dummy_dma_tx_buffer{};
-      std::array<std::byte, crsf::params::max_buffer_size>                          dma_rx_buffer{};
-      std::array<std::array<std::byte, crsf::params::max_buffer_size>, queue_depth> user_rx_buffer_pool{};
+      std::array<std::byte, 1u>                                             dummy_dma_tx_buffer{};
+      std::array<std::byte, crsf::max_buffer_size>                          dma_rx_buffer{};
+      std::array<std::array<std::byte, crsf::max_buffer_size>, queue_depth> user_rx_buffer_pool{};
 
       rtos::SemaphoreGiver dummy_isr_sem_giver{};
 
