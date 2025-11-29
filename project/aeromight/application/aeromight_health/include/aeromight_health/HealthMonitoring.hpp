@@ -175,19 +175,24 @@ private:
 
    void evaluate_health_status()
    {
+      using namespace aeromight_boundaries;
+
       m_health_summary.imu_health        = get_imu_health();
       m_health_summary.barometer_health  = get_barometer_health();
       m_health_summary.estimation_health = get_estimation_health();
 
-      if ((m_health_summary.imu_health == aeromight_boundaries::SubsystemHealth::fault) ||
-          (m_health_summary.barometer_health == aeromight_boundaries::SubsystemHealth::fault) ||
-          (m_health_summary.estimation_health == aeromight_boundaries::SubsystemHealth::fault))
+      if ((m_health_summary.imu_health == SubsystemHealth::fault) ||
+          (m_health_summary.estimation_health == SubsystemHealth::fault))
       {
-         m_health_summary.flight_critical_fault = true;
+         m_health_summary.flight_health = FlightHealthStatus::critical;
+      }
+      else if (m_health_summary.barometer_health == SubsystemHealth::fault)
+      {
+         m_health_summary.flight_health = FlightHealthStatus::degraded;
       }
       else
       {
-         m_health_summary.flight_critical_fault = false;
+         m_health_summary.flight_health = FlightHealthStatus::nominal;
       }
    }
 

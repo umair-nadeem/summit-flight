@@ -133,7 +133,6 @@ public:
             if (baro_data_is_stale())
             {
                m_local_estimator_health.error.set(static_cast<uint8_t>(Error::stale_baro_sensor_data));
-               move_to_fault();
             }
 
             publish_health();

@@ -255,7 +255,7 @@ public:
    {
       if (!stale_health())
       {
-         return (!m_last_health_summary.flight_critical_fault &&
+         return ((m_last_health_summary.flight_health != aeromight_boundaries::FlightHealthStatus::critical) &&
                  is_imu_operational() &&
                  is_barometer_operational() &&
                  is_estimation_operational() &&
