@@ -21,12 +21,14 @@ public:
                           SetpointsStorage& setpoints_storage,
                           ActualsStorage&   actuals_storage,
                           Logger&           logger,
+                          const float       rc_channel_deadband,
                           const uint8_t     good_link_quality_threshold)
        : m_radio_input_queue_receiver{radio_input_queue_receiver},
          m_free_index_queue_sender(free_index_queue_sender),
          m_setpoints_storage(setpoints_storage),
          m_actuals_storage(actuals_storage),
          m_logger(logger),
+         m_rc_channel_deadband(rc_channel_deadband),
          m_good_link_quality_threshold(good_link_quality_threshold)
    {
       m_logger.enable();
@@ -82,10 +84,10 @@ private:
    void publish_rc_channels(const crsf::CrsfRcChannels& rc_data)
    {
       // update flight stick input
-      m_setpoints.input.roll     = normalize_channel(rc_data.channels[rc_channel_roll]);
-      m_setpoints.input.pitch    = normalize_channel(rc_data.channels[rc_channel_pitch]);
-      m_setpoints.input.throttle = normalize_throttle(rc_data.channels[rc_channel_throttle]);
-      m_setpoints.input.yaw      = normalize_channel(rc_data.channels[rc_channel_yaw]);
+      m_setpoints.input.roll     = apply_deadband(normalize_channel(rc_data.channels[rc_channel_roll]), m_rc_channel_deadband);
+      m_setpoints.input.pitch    = apply_deadband(normalize_channel(rc_data.channels[rc_channel_pitch]), m_rc_channel_deadband);
+      m_setpoints.input.throttle = apply_deadband(normalize_throttle(rc_data.channels[rc_channel_throttle]), m_rc_channel_deadband);
+      m_setpoints.input.yaw      = apply_deadband(normalize_channel(rc_data.channels[rc_channel_yaw]), m_rc_channel_deadband);
 
       // update armed state
       m_setpoints.state              = get_arm_state(normalize_channel(rc_data.channels[rc_channel_arm_state]));
@@ -95,7 +97,7 @@ private:
       // publish to shared buffer
       m_setpoints_storage.update_latest(m_setpoints, ClockSource::now_ms());
 
-      if (m_counter++ % 50 == 0)
+      if (m_counter++ % 20 == 0)
       {
          m_logger.printf("arm=%u mode=%u kill=%u roll=%.2f pitch=%.2f throt=%.2f yaw=%.2f",
                          m_setpoints.state,
@@ -120,7 +122,7 @@ private:
       // publish to shared buffer
       m_actuals_storage.update_latest(m_actuals, ClockSource::now_ms());
 
-      if (m_counter++ % 100 == 0)
+      if (m_counter++ % 250 == 0)
       {
          m_logger.printf("rssi=%d lq=%u snr=%d tx_pow=%u ls=%u",
                          m_actuals.link_rssi_dbm,
@@ -143,22 +145,32 @@ private:
       return static_cast<float>(raw - crsf::rc_channel_value_min) / (crsf::rc_channel_value_max - crsf::rc_channel_value_min);
    }
 
+   static constexpr float apply_deadband(const float x, const float deadband) noexcept
+   {
+      if (fabs(x) < deadband)
+      {
+         return 0.0f;
+      };
+
+      return ((x > 0 ? (x - deadband) : (x + deadband)) / (1.0f - deadband));
+   }
+
    static constexpr aeromight_boundaries::FlightArmedState get_arm_state(const float switch_value) noexcept
    {
-      return (switch_value > 0.5f) ? aeromight_boundaries::FlightArmedState::arm : aeromight_boundaries::FlightArmedState::disarm;
+      return (switch_value > rc_channel_switch_discrete_threshold) ? aeromight_boundaries::FlightArmedState::arm : aeromight_boundaries::FlightArmedState::disarm;
    }
 
    static constexpr aeromight_boundaries::FlightMode get_flight_mode(const float switch_value) noexcept
    {
-      if (switch_value <= -0.5f)
+      if (switch_value <= -rc_channel_switch_discrete_threshold)
       {
          return aeromight_boundaries::FlightMode::stabilized_manual;
       }
-      else if ((-0.5f < switch_value) && (switch_value <= 0.5f))
+      else if ((-rc_channel_switch_discrete_threshold < switch_value) && (switch_value <= rc_channel_switch_discrete_threshold))
       {
          return aeromight_boundaries::FlightMode::altitude_hold;
       }
-      else if (0.5f < switch_value)
+      else if (rc_channel_switch_discrete_threshold < switch_value)
       {
          return aeromight_boundaries::FlightMode::auto_land;
       }
@@ -168,14 +180,17 @@ private:
 
    static constexpr bool get_kill_switch_state(const float switch_value) noexcept
    {
-      return (switch_value > 0.5f) ? true : false;
+      return (switch_value > rc_channel_switch_discrete_threshold) ? true : false;
    }
+
+   static constexpr float rc_channel_switch_discrete_threshold = 0.5f;
 
    QueueReceiver&                               m_radio_input_queue_receiver;
    QueueSender&                                 m_free_index_queue_sender;
    SetpointsStorage&                            m_setpoints_storage;
    ActualsStorage&                              m_actuals_storage;
    Logger&                                      m_logger;
+   const float                                  m_rc_channel_deadband;
    const uint8_t                                m_good_link_quality_threshold;
    aeromight_boundaries::FlightManagerSetpoints m_setpoints{};
    aeromight_boundaries::FlightManagerActuals   m_actuals{};

@@ -26,6 +26,7 @@ extern "C"
 
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
+      constexpr float   rc_channel_deadband         = 0.1f;
       constexpr uint8_t good_link_quality_threshold = 50u;
 
       LogClient logger_radio_link{logging::logging_queue_sender, "radioLink"};
@@ -41,6 +42,7 @@ extern "C"
               aeromight_boundaries::aeromight_data.flight_manager_setpoints,
               aeromight_boundaries::aeromight_data.flight_manager_actuals,
               logger_radio_link,
+              rc_channel_deadband,
               good_link_quality_threshold};
 
       aeromight_link::RadioLink<decltype(radio_receiver)> radio_link{radio_receiver,
