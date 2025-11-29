@@ -1,6 +1,8 @@
 #pragma once
 
+#include "aeromight_boundaries/FlightManagerData.hpp"
 #include "boundaries/BufferWithOwnershipIndex.hpp"
+#include "channel_mappings.hpp"
 #include "crsf/CrsfPacket.hpp"
 #include "interfaces/IClockSource.hpp"
 
@@ -10,13 +12,22 @@ namespace aeromight_link
 template <typename QueueReceiver, typename QueueSender, typename Crsf, interfaces::IClockSource ClockSource, typename Logger>
 class RadioReceiver
 {
+   using SetpointsStorage = boundaries::SharedData<aeromight_boundaries::FlightManagerSetpoints>;
+   using ActualsStorage   = boundaries::SharedData<aeromight_boundaries::FlightManagerActuals>;
+
 public:
-   explicit RadioReceiver(QueueReceiver& radio_input_queue_receiver,
-                          QueueSender&   free_index_queue_sender,
-                          Logger&        logger)
+   explicit RadioReceiver(QueueReceiver&    radio_input_queue_receiver,
+                          QueueSender&      free_index_queue_sender,
+                          SetpointsStorage& setpoints_storage,
+                          ActualsStorage&   actuals_storage,
+                          Logger&           logger,
+                          const uint8_t     good_link_quality_threshold)
        : m_radio_input_queue_receiver{radio_input_queue_receiver},
          m_free_index_queue_sender(free_index_queue_sender),
-         m_logger(logger)
+         m_setpoints_storage(setpoints_storage),
+         m_actuals_storage(actuals_storage),
+         m_logger(logger),
+         m_good_link_quality_threshold(good_link_quality_threshold)
    {
       m_logger.enable();
    }
@@ -48,14 +59,11 @@ private:
       switch (m_crsf_packet.type)   // type
       {
          case crsf::FrameType::rc_channels_packed:
-            print_rc_channels(std::get<crsf::CrsfRcChannels>(m_crsf_packet.data).channels);
+            publish_rc_channels(std::get<crsf::CrsfRcChannels>(m_crsf_packet.data));
             break;
 
          case crsf::FrameType::link_statistics:
-            print_link_stats(std::get<crsf::CrsfLinkStatistics>(m_crsf_packet.data));
-            break;
-
-         case crsf::FrameType::link_statistics_tx:
+            publish_link_stats(std::get<crsf::CrsfLinkStatistics>(m_crsf_packet.data));
             break;
 
          case crsf::FrameType::airspeed:
@@ -64,49 +72,115 @@ private:
          case crsf::FrameType::gps:
          case crsf::FrameType::heartbeat:
          case crsf::FrameType::link_statistics_rx:
+         case crsf::FrameType::link_statistics_tx:
          default:
+            error::stop_operation();
             break;
       }
    }
 
-   void print_rc_channels(std::array<uint16_t, crsf::rc_channel_count>& m_rc_channels)
+   void publish_rc_channels(const crsf::CrsfRcChannels& rc_data)
    {
-      m_counter++;
-      if (m_counter % 10 == 0)
+      // update flight stick input
+      m_setpoints.input.roll     = normalize_channel(rc_data.channels[rc_channel_roll]);
+      m_setpoints.input.pitch    = normalize_channel(rc_data.channels[rc_channel_pitch]);
+      m_setpoints.input.throttle = normalize_throttle(rc_data.channels[rc_channel_throttle]);
+      m_setpoints.input.yaw      = normalize_channel(rc_data.channels[rc_channel_yaw]);
+
+      // update armed state
+      m_setpoints.state              = get_arm_state(normalize_channel(rc_data.channels[rc_channel_arm_state]));
+      m_setpoints.mode               = get_flight_mode(normalize_channel(rc_data.channels[rc_channel_flight_mode]));
+      m_setpoints.kill_switch_active = get_kill_switch_state(normalize_channel(rc_data.channels[rc_channel_kill_switch]));
+
+      // publish to shared buffer
+      m_setpoints_storage.update_latest(m_setpoints, ClockSource::now_ms());
+
+      if (m_counter++ % 50 == 0)
       {
-         m_logger.printf("data: %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u",
-                         m_rc_channels[0], m_rc_channels[1], m_rc_channels[2],
-                         m_rc_channels[3], m_rc_channels[4], m_rc_channels[5],
-                         m_rc_channels[6], m_rc_channels[7], m_rc_channels[8],
-                         m_rc_channels[9], m_rc_channels[10], m_rc_channels[11],
-                         m_rc_channels[12], m_rc_channels[12], m_rc_channels[14]);
+         m_logger.printf("arm=%u mode=%u kill=%u roll=%.2f pitch=%.2f throt=%.2f yaw=%.2f",
+                         m_setpoints.state,
+                         m_setpoints.mode,
+                         m_setpoints.kill_switch_active,
+                         m_setpoints.input.roll,
+                         m_setpoints.input.pitch,
+                         m_setpoints.input.throttle,
+                         m_setpoints.input.yaw);
       }
    }
 
-   void print_link_stats(crsf::CrsfLinkStatistics& stats)
+   void publish_link_stats(const crsf::CrsfLinkStatistics& stats)
    {
-      m_counter++;
-      if (m_counter % 10 == 0)
+      // update stats
+      m_actuals.link_rssi_dbm    = static_cast<int8_t>(stats.uplink_rssi_1) * -1;
+      m_actuals.link_quality_pct = stats.uplink_link_quality;
+      m_actuals.link_snr_db      = stats.uplink_snr;
+      m_actuals.tx_power_mw      = crsf::get_uplink_rf_power_mw(stats.uplink_rf_power);
+      m_actuals.link_status_ok   = (stats.uplink_link_quality > m_good_link_quality_threshold);
+
+      // publish to shared buffer
+      m_actuals_storage.update_latest(m_actuals, ClockSource::now_ms());
+
+      if (m_counter++ % 100 == 0)
       {
-         m_logger.printf("data: %u, %u, %u, %d, %u, %u, %u, %u, %u, %d",
-                         stats.uplink_rssi_1,
-                         stats.uplink_rssi_2,
-                         stats.uplink_link_quality,
-                         stats.uplink_snr,
-                         stats.active_antenna,
-                         stats.rf_profile,
-                         stats.uplink_rf_power,
-                         stats.downlink_rssi,
-                         stats.downlink_link_quality,
-                         stats.downlink_snr);
+         m_logger.printf("rssi=%d lq=%u snr=%d tx_pow=%u ls=%u",
+                         m_actuals.link_rssi_dbm,
+                         m_actuals.link_quality_pct,
+                         m_actuals.link_snr_db,
+                         m_actuals.tx_power_mw,
+                         m_actuals.link_status_ok);
       }
    }
 
-   QueueReceiver&   m_radio_input_queue_receiver;
-   QueueSender&     m_free_index_queue_sender;
-   Logger&          m_logger;
-   crsf::CrsfPacket m_crsf_packet{};
-   std::size_t      m_counter{};
+   static constexpr float normalize_channel(const uint16_t raw) noexcept
+   {
+      constexpr float center = (crsf::rc_channel_value_min + crsf::rc_channel_value_max) / 2.0f;   // 991.5
+
+      return static_cast<float>(raw - center) / ((crsf::rc_channel_value_max - crsf::rc_channel_value_min) / 2.0f);
+   }
+
+   static constexpr float normalize_throttle(const uint16_t raw) noexcept
+   {
+      return static_cast<float>(raw - crsf::rc_channel_value_min) / (crsf::rc_channel_value_max - crsf::rc_channel_value_min);
+   }
+
+   static constexpr aeromight_boundaries::FlightArmedState get_arm_state(const float switch_value) noexcept
+   {
+      return (switch_value > 0.5f) ? aeromight_boundaries::FlightArmedState::arm : aeromight_boundaries::FlightArmedState::disarm;
+   }
+
+   static constexpr aeromight_boundaries::FlightMode get_flight_mode(const float switch_value) noexcept
+   {
+      if (switch_value <= -0.5f)
+      {
+         return aeromight_boundaries::FlightMode::stabilized_manual;
+      }
+      else if ((-0.5f < switch_value) && (switch_value <= 0.5f))
+      {
+         return aeromight_boundaries::FlightMode::altitude_hold;
+      }
+      else if (0.5f < switch_value)
+      {
+         return aeromight_boundaries::FlightMode::auto_land;
+      }
+
+      return aeromight_boundaries::FlightMode::none;
+   }
+
+   static constexpr bool get_kill_switch_state(const float switch_value) noexcept
+   {
+      return (switch_value > 0.5f) ? true : false;
+   }
+
+   QueueReceiver&                               m_radio_input_queue_receiver;
+   QueueSender&                                 m_free_index_queue_sender;
+   SetpointsStorage&                            m_setpoints_storage;
+   ActualsStorage&                              m_actuals_storage;
+   Logger&                                      m_logger;
+   const uint8_t                                m_good_link_quality_threshold;
+   aeromight_boundaries::FlightManagerSetpoints m_setpoints{};
+   aeromight_boundaries::FlightManagerActuals   m_actuals{};
+   crsf::CrsfPacket                             m_crsf_packet{};
+   std::size_t                                  m_counter{};
 };
 
 }   // namespace aeromight_link

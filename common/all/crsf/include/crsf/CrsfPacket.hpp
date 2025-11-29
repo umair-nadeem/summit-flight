@@ -45,4 +45,38 @@ struct CrsfPacket
    std::variant<CrsfRcChannels, CrsfLinkStatistics, CrsfLinkStatisticsTx> data;
 };
 
+static constexpr uint16_t get_uplink_rf_power_mw(const uint8_t uplink_rf_power) noexcept
+{
+   switch (uplink_rf_power)
+   {
+      case 1u:
+         return 10u;
+
+      case 2u:
+         return 25u;
+
+      case 3u:
+         return 100u;
+
+      case 4u:
+         return 500u;
+
+      case 5u:
+         return 1000u;
+
+      case 6u:
+         return 2000u;
+
+      case 7u:
+         return 250u;
+
+      case 8u:
+         return 50u;
+
+      case 0:
+      default:
+         return 0;
+   }
+}
+
 }   // namespace crsf

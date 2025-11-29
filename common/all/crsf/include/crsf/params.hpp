@@ -22,7 +22,7 @@ static constexpr uint8_t num_bytes_frame_type = 1u;
 static constexpr uint8_t num_bytes_frame_crc  = 1u;
 
 static constexpr uint16_t rc_channel_value_min = 172u;
-static constexpr uint16_t rc_channel_value_max = 172u;
+static constexpr uint16_t rc_channel_value_max = 1811u;
 
 enum class DeviceAddress : uint8_t
 {

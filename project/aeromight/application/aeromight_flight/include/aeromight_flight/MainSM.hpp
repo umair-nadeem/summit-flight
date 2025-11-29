@@ -254,8 +254,8 @@ struct FlightManagerStateMachine
           s_wait_control_checkpoint   [timeout_control_readiness]                                                                                 = s_to_fault,
           s_wait_control_checkpoint                                                                                                               = s_wait_control,
 
-          s_disarmed          + e_tick                                              / read_radio_input                                            = s_disarmed_checkpoint,
-          s_disarmed_checkpoint       [arm]                                         / (set_arming_state, set_reference_time)                      = s_arming,
+          s_disarmed          + e_tick                                              / (read_health_summary, read_radio_input, get_time)           = s_disarmed_checkpoint,
+          s_disarmed_checkpoint       [arm && is_health_good && is_radio_link_good] / (set_arming_state, set_reference_time)                      = s_arming,
           s_disarmed_checkpoint                                                                                                                   = s_disarmed,
 
           s_arming            + e_tick                                              / (read_health_summary, read_radio_input, get_time)           = s_arming_checkpoint,
@@ -303,6 +303,7 @@ struct FlightManagerStateMachine
 
           s_killed            + e_tick                                              / read_radio_input                                            = s_killed_checkpoint,
           s_killed_checkpoint         [!kill]                                       / set_disarmed_state                                          = s_disarmed,
+          s_killed_checkpoint                                                                                                                     = s_killed,
 
           s_to_fault                                                                / set_fault_state                                             = s_fault
 

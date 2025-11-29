@@ -26,6 +26,8 @@ extern "C"
 
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
+      constexpr uint8_t good_link_quality_threshold = 50u;
+
       LogClient logger_radio_link{logging::logging_queue_sender, "radioLink"};
 
       aeromight_link::RadioReceiver<decltype(data->radio_link_uart.radio_input_receiver),
@@ -36,7 +38,10 @@ extern "C"
           radio_receiver{
               data->radio_link_uart.radio_input_receiver,
               data->radio_link_uart.radio_queue_buffer_index_sender,
-              logger_radio_link};
+              aeromight_boundaries::aeromight_data.flight_manager_setpoints,
+              aeromight_boundaries::aeromight_data.flight_manager_actuals,
+              logger_radio_link,
+              good_link_quality_threshold};
 
       aeromight_link::RadioLink<decltype(radio_receiver)> radio_link{radio_receiver,
                                                                      controller::task::radio_link_task_period_in_ms};

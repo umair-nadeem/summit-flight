@@ -269,7 +269,7 @@ public:
    {
       if (!stale_radio_input())
       {
-         return (m_last_actuals.data.link_status_ok && (m_last_actuals.data.link_rssi >= m_min_good_signal_rssi_dbm));
+         return (m_last_actuals.data.link_status_ok && (m_last_actuals.data.link_rssi_dbm >= m_min_good_signal_rssi_dbm));
       }
 
       return false;

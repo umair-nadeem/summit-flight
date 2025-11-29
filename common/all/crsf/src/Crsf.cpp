@@ -167,22 +167,22 @@ void Crsf::process_rc_channels(std::span<const uint8_t> frame, crsf::CrsfPacket&
 {
    error::verify(frame.size() == static_cast<uint8_t>(crsf::PayloadSize::rc_channels_packed));
 
-   rc_channels.channels[0]  = static_cast<int16_t>((frame[0] | frame[1] << 8) & 0x07ff);
-   rc_channels.channels[1]  = static_cast<int16_t>((frame[1] >> 3 | frame[2] << 5) & 0x07ff);
-   rc_channels.channels[2]  = static_cast<int16_t>((frame[2] >> 6 | frame[3] << 2 | frame[4] << 10) & 0x07ff);
-   rc_channels.channels[3]  = static_cast<int16_t>((frame[4] >> 1 | frame[5] << 7) & 0x07ff);
-   rc_channels.channels[4]  = static_cast<int16_t>((frame[5] >> 4 | frame[6] << 4) & 0x07ff);
-   rc_channels.channels[5]  = static_cast<int16_t>((frame[6] >> 7 | frame[7] << 1 | frame[8] << 9) & 0x07ff);
-   rc_channels.channels[6]  = static_cast<int16_t>((frame[8] >> 2 | frame[9] << 6) & 0x07ff);
-   rc_channels.channels[7]  = static_cast<int16_t>((frame[9] >> 5 | frame[10] << 3) & 0x07ff);
-   rc_channels.channels[8]  = static_cast<int16_t>((frame[11] | frame[12] << 8) & 0x07ff);
-   rc_channels.channels[9]  = static_cast<int16_t>((frame[12] >> 3 | frame[13] << 5) & 0x07ff);
-   rc_channels.channels[10] = static_cast<int16_t>((frame[13] >> 6 | frame[14] << 2 | frame[15] << 10) & 0x07ff);
-   rc_channels.channels[11] = static_cast<int16_t>((frame[15] >> 1 | frame[16] << 7) & 0x07ff);
-   rc_channels.channels[12] = static_cast<int16_t>((frame[16] >> 4 | frame[17] << 4) & 0x07ff);
-   rc_channels.channels[13] = static_cast<int16_t>((frame[17] >> 7 | frame[18] << 1 | frame[19] << 9) & 0x07ff);
-   rc_channels.channels[14] = static_cast<int16_t>((frame[19] >> 2 | frame[20] << 6) & 0x07ff);
-   rc_channels.channels[15] = static_cast<int16_t>((frame[20] >> 5 | frame[21] << 3) & 0x07ff);
+   rc_channels.channels[0]  = static_cast<uint16_t>((frame[0] | frame[1u] << 8u) & 0x07ff);
+   rc_channels.channels[1]  = static_cast<uint16_t>((frame[1u] >> 3u | frame[2u] << 5u) & 0x07ff);
+   rc_channels.channels[2]  = static_cast<uint16_t>((frame[2u] >> 6u | frame[3u] << 2u | frame[4] << 10u) & 0x07ff);
+   rc_channels.channels[3]  = static_cast<uint16_t>((frame[4u] >> 1u | frame[5u] << 7u) & 0x07ff);
+   rc_channels.channels[4]  = static_cast<uint16_t>((frame[5u] >> 4u | frame[6u] << 4u) & 0x07ff);
+   rc_channels.channels[5]  = static_cast<uint16_t>((frame[6u] >> 7u | frame[7u] << 1u | frame[8] << 9u) & 0x07ff);
+   rc_channels.channels[6]  = static_cast<uint16_t>((frame[8u] >> 2u | frame[9u] << 6u) & 0x07ff);
+   rc_channels.channels[7]  = static_cast<uint16_t>((frame[9u] >> 5u | frame[10u] << 3u) & 0x07ff);
+   rc_channels.channels[8]  = static_cast<uint16_t>((frame[11u] | frame[12u] << 8u) & 0x07ff);
+   rc_channels.channels[9]  = static_cast<uint16_t>((frame[12u] >> 3u | frame[13u] << 5u) & 0x07ff);
+   rc_channels.channels[10] = static_cast<uint16_t>((frame[13u] >> 6u | frame[14u] << 2u | frame[15] << 10u) & 0x07ff);
+   rc_channels.channels[11] = static_cast<uint16_t>((frame[15u] >> 1u | frame[16u] << 7u) & 0x07ff);
+   rc_channels.channels[12] = static_cast<uint16_t>((frame[16u] >> 4u | frame[17u] << 4u) & 0x07ff);
+   rc_channels.channels[13] = static_cast<uint16_t>((frame[17u] >> 7u | frame[18u] << 1u | frame[19] << 9u) & 0x07ff);
+   rc_channels.channels[14] = static_cast<uint16_t>((frame[19u] >> 2u | frame[20u] << 6u) & 0x07ff);
+   rc_channels.channels[15] = static_cast<uint16_t>((frame[20u] >> 5u | frame[21u] << 3u) & 0x07ff);
 
    packet.data = rc_channels;
 }
