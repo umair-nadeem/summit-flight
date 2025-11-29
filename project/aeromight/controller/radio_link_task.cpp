@@ -3,7 +3,6 @@
 #include "aeromight_link/RadioLink.hpp"
 #include "aeromight_link/RadioReceiver.hpp"
 #include "crsf/Crsf.hpp"
-#include "crsf_rc_parser/CrsfRcChannelsParser.h"
 #include "hw/uart/uart.hpp"
 #include "logging/LogClient.hpp"
 #include "rtos/periodic_task.hpp"
@@ -31,7 +30,6 @@ extern "C"
 
       aeromight_link::RadioReceiver<decltype(data->radio_link_uart.radio_input_receiver),
                                     decltype(data->radio_link_uart.radio_queue_buffer_index_sender),
-                                    crsf::CrsfRcChannelsParser,
                                     crsf::Crsf,
                                     sys_time::ClockSource,
                                     decltype(logger_radio_link)>

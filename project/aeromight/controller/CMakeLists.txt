@@ -23,7 +23,6 @@ target_sources(aeromight_lib INTERFACE
 )
 
 target_link_libraries(aeromight_lib INTERFACE
-   crsf_rc_parser
    crsf
    hw
    rtos

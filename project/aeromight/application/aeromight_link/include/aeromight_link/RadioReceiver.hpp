@@ -7,7 +7,7 @@
 namespace aeromight_link
 {
 
-template <typename QueueReceiver, typename QueueSender, typename CrsfRcChannelsParser, typename Crsf, interfaces::IClockSource ClockSource, typename Logger>
+template <typename QueueReceiver, typename QueueSender, typename Crsf, interfaces::IClockSource ClockSource, typename Logger>
 class RadioReceiver
 {
 public:
