@@ -15,15 +15,10 @@ Transmitter::Transmitter(UartConfig&                 uart_config,
    error::verify(m_func_take_semaphore != nullptr);
 }
 
-void Transmitter::send_and_return(const uint32_t size)
+void Transmitter::send_blocking(const uint32_t size)
 {
    start_tx(size);
    m_tx_in_progress = true;
-}
-
-void Transmitter::send_blocking(const uint32_t size)
-{
-   send_and_return(size);
    wait_for_tx_to_complete();
 }
 

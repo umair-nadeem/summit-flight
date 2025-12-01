@@ -2,10 +2,12 @@
 
 #include "boundaries/BufferWithOwnershipIndex.hpp"
 #include "crsf/params.hpp"
+#include "hw/uart/Transmitter.hpp"
 #include "hw/uart/UartConfig.hpp"
 #include "rtos/QueueReceiver.hpp"
 #include "rtos/QueueSender.hpp"
 #include "rtos/SemaphoreGiver.hpp"
+#include "rtos/SemaphoreTaker.hpp"
 
 extern "C"
 {
@@ -31,11 +33,15 @@ struct RadioLinkTaskData
           .tx_dma_stream = LL_DMA_STREAM_6,
           .rx_dma_stream = LL_DMA_STREAM_5};
 
-      std::array<std::byte, 1u>                                             dummy_dma_tx_buffer{};
+      std::array<std::byte, crsf::max_buffer_size>                          dma_tx_buffer{};
       std::array<std::byte, crsf::max_buffer_size>                          dma_rx_buffer{};
       std::array<std::array<std::byte, crsf::max_buffer_size>, queue_depth> user_rx_buffer_pool{};
 
-      rtos::SemaphoreGiver dummy_isr_sem_giver{};
+      rtos::SemaphoreTaker  transmitter_sem_taker{};
+      rtos::SemaphoreGiver  isr_sem_giver{};
+      hw::uart::Transmitter transmitter{config, std::as_writable_bytes(std::span{dma_tx_buffer}),
+                                        [&]()
+                                        { transmitter_sem_taker.take(); }};
 
       // queue's task endpoints
       rtos::QueueReceiver<Message>   radio_input_receiver{};

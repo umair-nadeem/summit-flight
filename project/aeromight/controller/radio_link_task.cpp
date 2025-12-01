@@ -2,6 +2,7 @@
 #include "aeromight_boundaries/AeromightData.hpp"
 #include "aeromight_link/RadioLink.hpp"
 #include "aeromight_link/RadioReceiver.hpp"
+#include "aeromight_link/RadioTransmitter.hpp"
 #include "crsf/Crsf.hpp"
 #include "hw/uart/uart.hpp"
 #include "logging/LogClient.hpp"
@@ -26,10 +27,17 @@ extern "C"
 
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
-      constexpr float   rc_channel_deadband         = 0.1f;
-      constexpr uint8_t good_link_quality_threshold = 50u;
+      constexpr float    rc_channel_deadband                      = 0.1f;
+      constexpr uint8_t  good_uplink_quality_threshold            = 50u;
+      constexpr uint32_t battery_status_transmission_period_in_ms = 5000u;
 
       LogClient logger_radio_link{logging::logging_queue_sender, "radioLink"};
+
+      aeromight_link::RadioTransmitter<decltype(data->radio_link_uart.transmitter),
+                                       crsf::Crsf,
+                                       sys_time::ClockSource>
+          radio_transmitter{data->radio_link_uart.transmitter,
+                            battery_status_transmission_period_in_ms};
 
       aeromight_link::RadioReceiver<decltype(data->radio_link_uart.radio_input_receiver),
                                     decltype(data->radio_link_uart.radio_queue_buffer_index_sender),
@@ -43,10 +51,13 @@ extern "C"
               aeromight_boundaries::aeromight_data.flight_manager_actuals,
               logger_radio_link,
               rc_channel_deadband,
-              good_link_quality_threshold};
+              good_uplink_quality_threshold};
 
-      aeromight_link::RadioLink<decltype(radio_receiver)> radio_link{radio_receiver,
-                                                                     controller::task::radio_link_task_period_in_ms};
+      aeromight_link::RadioLink<decltype(radio_receiver),
+                                decltype(radio_transmitter)>
+          radio_link{radio_receiver,
+                     radio_transmitter,
+                     controller::task::radio_link_task_period_in_ms};
 
       rtos::run_periodic_task(radio_link);
    }
@@ -58,7 +69,7 @@ extern "C"
    void USART2_IRQHandler()
    {
       auto& data = controller::radio_link_task_data;
-      hw::uart::handle_uart_global_interrupt(data.radio_link_uart.config, data.radio_link_uart.dummy_isr_sem_giver);
+      hw::uart::handle_uart_global_interrupt(data.radio_link_uart.config, data.radio_link_uart.isr_sem_giver);
    }
 
    // uart rx

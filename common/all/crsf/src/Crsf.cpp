@@ -163,6 +163,50 @@ bool Crsf::parse_buffer(std::span<const uint8_t> buffer, CrsfPacket& packet)
    return false;
 }
 
+std::size_t Crsf::serialize_battery_telemetry(const CrsfBattery& packet, std::span<uint8_t> out)
+{
+
+   static constexpr std::size_t total_bytes_required = num_bytes_sync_byte +
+                                                       num_bytes_frame_size +
+                                                       num_bytes_frame_type +
+                                                       num_bytes_frame_crc +
+                                                       static_cast<uint8_t>(crsf::PayloadSize::battery);
+   static constexpr std::size_t frame_len                        = total_bytes_required - 2u;
+   static constexpr std::size_t crc_len                          = num_bytes_frame_type + static_cast<uint8_t>(crsf::PayloadSize::battery);
+   static constexpr uint8_t     voltage_and_current_scale_factor = 10u;
+
+   error::verify(out.size() >= total_bytes_required);
+
+   std::size_t bytes_written = 0;
+   out[bytes_written++]      = sync_byte;
+   out[bytes_written++]      = frame_len;
+   out[bytes_written++]      = static_cast<uint8_t>(FrameType::battery_sensor);
+
+   // voltage
+   const int16_t voltage = packet.voltage_v * voltage_and_current_scale_factor;
+   out[bytes_written++]  = static_cast<uint8_t>(voltage >> 8u) & 0xff;
+   out[bytes_written++]  = static_cast<uint8_t>(voltage) & 0xff;
+
+   // current
+   const int16_t current = packet.current_a * voltage_and_current_scale_factor;
+   out[bytes_written++]  = static_cast<uint8_t>(current >> 8u) & 0xff;
+   out[bytes_written++]  = static_cast<uint8_t>(current) & 0xff;
+
+   // capacity uint24_t
+   const uint32_t capacity = packet.capacity_used_mah & 0xffffff;
+   out[bytes_written++]    = static_cast<uint8_t>(capacity >> 16u) & 0xff;
+   out[bytes_written++]    = static_cast<uint8_t>(capacity >> 8u) & 0xff;
+   out[bytes_written++]    = static_cast<uint8_t>(capacity) & 0xff;
+
+   out[bytes_written++] = packet.remaining_pct;
+
+   const uint8_t crc = crc8(std::span{out.data() + num_bytes_sync_byte + num_bytes_frame_size, crc_len});
+
+   out[bytes_written++] = crc;
+
+   return bytes_written;
+}
+
 void Crsf::process_rc_channels(std::span<const uint8_t> frame, crsf::CrsfPacket& packet)
 {
    error::verify(frame.size() == static_cast<uint8_t>(crsf::PayloadSize::rc_channels_packed));

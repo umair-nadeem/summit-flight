@@ -19,7 +19,6 @@ public:
                         const FunctionTakeSemaphore func_take_semaphore);
 
    void                 send_blocking(const uint32_t size);
-   void                 send_and_return(const uint32_t size);
    std::span<std::byte> get_buffer() const;
 
 private:

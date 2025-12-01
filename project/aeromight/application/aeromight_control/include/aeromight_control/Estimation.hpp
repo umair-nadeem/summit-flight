@@ -391,7 +391,6 @@ private:
       const uint32_t baro_data_age_ms = m_current_time_ms - m_last_barometer_sample.timestamp_ms;
       if (baro_data_age_ms > m_max_age_baro_data_ms)
       {
-         m_logger.printf("barometer data stale (age: %u ms)", baro_data_age_ms);
          return true;
       }
 

@@ -22,14 +22,14 @@ public:
                           ActualsStorage&   actuals_storage,
                           Logger&           logger,
                           const float       rc_channel_deadband,
-                          const uint8_t     good_link_quality_threshold)
+                          const uint8_t     good_uplink_quality_threshold)
        : m_radio_input_queue_receiver{radio_input_queue_receiver},
          m_free_index_queue_sender(free_index_queue_sender),
          m_setpoints_storage(setpoints_storage),
          m_actuals_storage(actuals_storage),
          m_logger(logger),
          m_rc_channel_deadband(rc_channel_deadband),
-         m_good_link_quality_threshold(good_link_quality_threshold)
+         m_good_uplink_quality_threshold(good_uplink_quality_threshold)
    {
       m_logger.enable();
    }
@@ -97,7 +97,7 @@ private:
       // publish to shared buffer
       m_setpoints_storage.update_latest(m_setpoints, ClockSource::now_ms());
 
-      if (m_counter++ % 20 == 0)
+      if (m_counter++ % 100 == 0)
       {
          m_logger.printf("arm=%u mode=%u kill=%u roll=%.2f pitch=%.2f throt=%.2f yaw=%.2f",
                          m_setpoints.state,
@@ -117,7 +117,7 @@ private:
       m_actuals.link_quality_pct = stats.uplink_link_quality;
       m_actuals.link_snr_db      = stats.uplink_snr;
       m_actuals.tx_power_mw      = crsf::get_uplink_rf_power_mw(stats.uplink_rf_power);
-      m_actuals.link_status_ok   = (stats.uplink_link_quality > m_good_link_quality_threshold);
+      m_actuals.link_status_ok   = (stats.uplink_link_quality > m_good_uplink_quality_threshold);
 
       // publish to shared buffer
       m_actuals_storage.update_latest(m_actuals, ClockSource::now_ms());
@@ -191,7 +191,7 @@ private:
    ActualsStorage&                              m_actuals_storage;
    Logger&                                      m_logger;
    const float                                  m_rc_channel_deadband;
-   const uint8_t                                m_good_link_quality_threshold;
+   const uint8_t                                m_good_uplink_quality_threshold;
    aeromight_boundaries::FlightManagerSetpoints m_setpoints{};
    aeromight_boundaries::FlightManagerActuals   m_actuals{};
    crsf::CrsfPacket                             m_crsf_packet{};

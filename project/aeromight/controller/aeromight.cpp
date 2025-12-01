@@ -194,7 +194,8 @@ void setup_semaphores()
 
    // dummy radio link semaphore
    auto radio_input_sem_handle = radio_input_semaphore.create();
-   radio_link_task_data.radio_link_uart.dummy_isr_sem_giver.set_handle(radio_input_sem_handle);
+   radio_link_task_data.radio_link_uart.transmitter_sem_taker.set_handle(radio_input_sem_handle);
+   radio_link_task_data.radio_link_uart.isr_sem_giver.set_handle(radio_input_sem_handle);
 }
 
 void setup_queues()
@@ -252,7 +253,7 @@ void setup_uart()
 
    // USART2
    hw::uart::prepare_for_communication(radio_link_task_data.radio_link_uart.config,
-                                       radio_link_task_data.radio_link_uart.dummy_dma_tx_buffer,
+                                       radio_link_task_data.radio_link_uart.dma_tx_buffer,
                                        radio_link_task_data.radio_link_uart.dma_rx_buffer);
    hw::uart::start_rx(radio_link_task_data.radio_link_uart.config, radio_link_task_data.radio_link_uart.dma_rx_buffer);
 }
