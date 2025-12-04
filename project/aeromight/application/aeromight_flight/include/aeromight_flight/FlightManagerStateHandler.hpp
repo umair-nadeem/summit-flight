@@ -257,7 +257,6 @@ public:
       {
          return ((m_last_health_summary.flight_health != aeromight_boundaries::FlightHealthStatus::critical) &&
                  is_imu_operational() &&
-                 is_barometer_operational() &&
                  is_estimation_operational() &&
                  is_control_operational());
       }
@@ -291,11 +290,6 @@ private:
    bool is_imu_operational() const
    {
       return (m_last_health_summary.imu_health == aeromight_boundaries::SubsystemHealth::operational);
-   }
-
-   bool is_barometer_operational() const
-   {
-      return (m_last_health_summary.barometer_health == aeromight_boundaries::SubsystemHealth::operational);
    }
 
    bool is_estimation_operational() const
