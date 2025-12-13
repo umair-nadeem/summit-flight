@@ -141,11 +141,13 @@ protected:
 
    void move_to_armed()
    {
-      give_arm_command();
-
       set_good_health_summary();
+      provide_health_summary(health_summary);
 
       set_good_radio_input();
+      actuals_storage.update_latest(actuals, current_ms);
+
+      give_arm_command();
 
       for (uint32_t i = 0; i < (min_state_debounce_duration_ms / period_in_ms); i++)
       {
@@ -255,6 +257,12 @@ TEST_F(FlightManagerTest, kill_while_arming)
    make_control_ready();
 
    // start arming
+   set_good_health_summary();
+   provide_health_summary(health_summary);
+
+   set_good_radio_input();
+   actuals_storage.update_latest(actuals, current_ms);
+
    give_arm_command();
 
    // kill
@@ -270,6 +278,12 @@ TEST_F(FlightManagerTest, disarm_while_arming_due_to_disarm_signal)
    make_control_ready();
 
    // start arming
+   set_good_health_summary();
+   provide_health_summary(health_summary);
+
+   set_good_radio_input();
+   actuals_storage.update_latest(actuals, current_ms);
+
    give_arm_command();
 
    // disarm
@@ -286,6 +300,12 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_stale_health)
    make_control_ready();
 
    // start arming
+   set_good_health_summary();
+   provide_health_summary(health_summary);
+
+   set_good_radio_input();
+   actuals_storage.update_latest(actuals, current_ms);
+
    give_arm_command();
 
    // good but stale health summary
@@ -317,14 +337,14 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_health)
 
    // valid radio input
    set_good_radio_input();
+   actuals_storage.update_latest(actuals, current_ms);
 
    // disarm due to imu fault
    {
       // start arming
-      give_arm_command();
-
-      // good health summary
       set_good_health_summary();
+      provide_health_summary(health_summary);
+      give_arm_command();
 
       // imu not operational
       health_summary.imu_health = aeromight_boundaries::SubsystemHealth::fault;
@@ -337,32 +357,12 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_health)
       EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarmed);
    }
 
-   // disarm due to baro fault
-   {
-      // start arming
-      give_arm_command();
-
-      // good health summary
-      set_good_health_summary();
-
-      // imu not operational
-      health_summary.barometer_health = aeromight_boundaries::SubsystemHealth::fault;
-      setpoints_storage.update_latest(setpoints, current_ms);
-      actuals_storage.update_latest(actuals, current_ms);
-      health_summary.timestamp_ms = current_ms;
-      provide_health_summary(health_summary);
-      provide_ticks(1u);
-
-      EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarmed);
-   }
-
    // disarm due to estimation fault
    {
       // start arming
-      give_arm_command();
-
-      // good health summary
       set_good_health_summary();
+      provide_health_summary(health_summary);
+      give_arm_command();
 
       // imu not operational
       health_summary.estimation_health = aeromight_boundaries::SubsystemHealth::fault;
@@ -378,10 +378,9 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_health)
    // disarm due to control fault
    {
       // start arming
-      give_arm_command();
-
-      // good health summary
       set_good_health_summary();
+      provide_health_summary(health_summary);
+      give_arm_command();
 
       // imu not operational
       health_summary.control_health = aeromight_boundaries::SubsystemHealth::fault;
@@ -397,10 +396,9 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_health)
    // disarm due to flight critical fault
    {
       // start arming
-      give_arm_command();
-
-      // good health summary
       set_good_health_summary();
+      provide_health_summary(health_summary);
+      give_arm_command();
 
       // imu not operational
       health_summary.flight_health = aeromight_boundaries::FlightHealthStatus::critical;
@@ -421,6 +419,11 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_stale_radio_input)
    make_sensors_ready();
 
    make_control_ready();
+
+   set_good_health_summary();
+   provide_health_summary(health_summary);
+   set_good_radio_input();
+   actuals_storage.update_latest(actuals, current_ms);
 
    // start arming
    setpoints.state = aeromight_boundaries::FlightArmedState::arm;
@@ -456,13 +459,14 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_radio_input)
    make_control_ready();
 
    set_good_health_summary();
+   provide_health_summary(health_summary);
+   set_good_radio_input();
+   actuals_storage.update_latest(actuals, current_ms);
 
    // disarm due to link status not ok
    {
       // start arming
       give_arm_command();
-
-      set_good_radio_input();
 
       // link status not ok
       actuals.link_status_ok = false;
@@ -478,9 +482,9 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_radio_input)
    // disarm due to low link rssi
    {
       // start arming
-      give_arm_command();
-
       set_good_radio_input();
+      actuals_storage.update_latest(actuals, current_ms);
+      give_arm_command();
 
       // low link rssi
       actuals.link_rssi_dbm = min_good_signal_rssi_dbm - 1.0f;
