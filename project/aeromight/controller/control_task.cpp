@@ -42,9 +42,9 @@ extern "C"
       constexpr float    tilt_gating_attitude_angle_rad                 = 0.2f;
       constexpr float    tilt_gating_accel_weight                       = 0.08f;
       // esimation parameters
-      constexpr uint8_t  num_samples_pressure_reference                 = 10u;
+      constexpr uint8_t  num_samples_reference_pressure                 = 10u;
       constexpr uint8_t  max_recovery_attempts                          = 3u;
-      constexpr uint32_t wait_timeout_pressure_reference_acquisition_ms = controller::task::barometer_task_period_in_ms * 50u;
+      constexpr uint32_t wait_timeout_reference_pressure_acquisition_ms = controller::task::barometer_task_period_in_ms * 50u;
       constexpr uint32_t max_age_imu_data_ms                            = controller::task::imu_task_period_in_ms * 10u;
       constexpr uint32_t max_age_baro_data_ms                           = controller::task::barometer_task_period_in_ms * 10u;
       constexpr float    max_valid_imu_sample_dt_s                      = 0.02f;
@@ -74,9 +74,8 @@ extern "C"
                      aeromight_boundaries::aeromight_data.barometer_sensor_data_storage,
                      logger_estimation,
                      max_recovery_attempts,
-                     num_samples_pressure_reference,
-                     controller::task::control_task_period_in_ms,
-                     wait_timeout_pressure_reference_acquisition_ms,
+                     num_samples_reference_pressure,
+                     wait_timeout_reference_pressure_acquisition_ms,
                      max_age_imu_data_ms,
                      max_age_baro_data_ms,
                      max_valid_imu_sample_dt_s,
