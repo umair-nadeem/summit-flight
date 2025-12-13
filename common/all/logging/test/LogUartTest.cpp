@@ -40,7 +40,7 @@ TEST_F(LogUartTest, log_without_line_feed)
 
    EXPECT_CALL(uart_transmitter_mock, get_buffer()).WillOnce(testing::Return(std::span{uart_tx_buffer}));
 
-   EXPECT_CALL(uart_transmitter_mock, send_and_return(logging::params::max_log_len));
+   EXPECT_CALL(uart_transmitter_mock, send_blocking(logging::params::max_log_len));
 
    log_uart.publish_log(test_print);
 
@@ -54,7 +54,7 @@ TEST_F(LogUartTest, log_with_line_feed)
 
    EXPECT_CALL(uart_transmitter_mock, get_buffer()).WillOnce(testing::Return(std::span{uart_tx_buffer}));
 
-   EXPECT_CALL(uart_transmitter_mock, send_and_return(static_cast<uint32_t>(strlen(test_print.data()))));
+   EXPECT_CALL(uart_transmitter_mock, send_blocking(static_cast<uint32_t>(strlen(test_print.data()))));
 
    log_uart.publish_log(test_print);
 

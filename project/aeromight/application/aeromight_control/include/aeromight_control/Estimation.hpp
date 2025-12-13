@@ -32,11 +32,11 @@ public:
                        Logger&              logger,
                        const uint8_t        max_recovery_attempts,
                        const uint8_t        num_samples_reference_pressure,
-                       const uint32_t       execution_period_ms,
                        const uint32_t       wait_timeout_reference_pressure_acquisition_ms,
                        const uint32_t       max_age_imu_data_ms,
                        const uint32_t       max_age_baro_data_ms,
-                       const float          max_valid_imu_sample_dt_s)
+                       const float          max_valid_imu_sample_dt_s,
+                       const float          max_valid_barometer_sample_dt_s)
        : m_ahrs_filter{ahrs_filter},
          m_altitude_ekf{altitude_ekf},
          m_estimator_health_storage{estimator_health_storage},
@@ -46,28 +46,28 @@ public:
          m_logger{logger},
          m_max_recovery_attempts{max_recovery_attempts},
          m_num_samples_reference_pressure{num_samples_reference_pressure},
-         m_execution_period_ms{execution_period_ms},
          m_wait_timeout_reference_pressure_acquisition_ms{wait_timeout_reference_pressure_acquisition_ms},
          m_max_age_imu_data_ms{max_age_imu_data_ms},
          m_max_age_baro_data_ms{max_age_baro_data_ms},
-         m_max_valid_imu_sample_dt_s{max_valid_imu_sample_dt_s}
+         m_max_valid_imu_sample_dt_s{max_valid_imu_sample_dt_s},
+         m_max_valid_barometer_sample_dt_s{max_valid_barometer_sample_dt_s}
    {
       m_logger.enable();
    }
 
    void start()
    {
-      m_local_estimator_health.state = State::get_reference_pressure;
-      reset();
       update_reference_time();
+      reset();
+      m_local_estimator_health.state = State::get_reference_pressure;
       publish_health();
       m_logger.print("started");
    }
 
    void stop()
    {
-      m_local_estimator_health.state = State::idle;
       update_reference_time();
+      m_local_estimator_health.state = State::idle;
       publish_health();
       m_logger.print("stopped");
    }
@@ -93,7 +93,6 @@ public:
 
          case State::get_reference_pressure:
 
-            m_reference_pressure_wait_timer_ms += m_execution_period_ms;
             try_read_pressure();
 
             if (all_pressure_samples_acquired())
@@ -156,13 +155,13 @@ private:
 
    void reset()
    {
-      m_accumulated_pressure_values      = 0.0f;
-      m_reference_pressure               = 0.0f;
-      m_pressure_sample_counter          = 0;
-      m_reference_pressure_wait_timer_ms = 0;
-      m_imu_sample_dt_s                  = 0.0f;
-      m_last_barometer_sample            = BarometerData::Sample{};
-      m_last_imu_sample                  = ImuData::Sample{};
+      m_accumulated_pressure_values                 = 0.0f;
+      m_reference_pressure                          = 0.0f;
+      m_pressure_sample_counter                     = 0;
+      m_reference_pressure_estimation_start_time_ms = m_current_time_ms;
+      m_imu_sample_dt_s                             = 0.0f;
+      m_last_barometer_sample                       = BarometerData::Sample{};
+      m_last_imu_sample                             = ImuData::Sample{};
 
       m_ahrs_filter.reset();
       m_altitude_ekf.reset();
@@ -203,8 +202,8 @@ private:
          }
          else
          {
-            m_local_estimator_health.state = State::get_reference_pressure;
             reset();
+            m_local_estimator_health.state = State::get_reference_pressure;
          }
 
          m_local_estimator_health.recovery_attempts++;
@@ -269,6 +268,12 @@ private:
 
    void run_altitude_estimation()
    {
+      if (m_barometer_sample_dt_s > m_max_valid_barometer_sample_dt_s)
+      {
+         m_altitude_ekf.reset();
+         return;
+      }
+
       const float pressure_pa = m_last_barometer_sample.data.pressure_pa.value();
       const auto  altitude_m  = utilities::Barometric::convert_pressure_to_altitude(pressure_pa);
 
@@ -339,12 +344,13 @@ private:
 
    bool read_from_barometer()
    {
-      const auto pressure_sample = m_barometer_data.get_latest();
-      if (pressure_sample.timestamp_ms > m_last_barometer_sample.timestamp_ms)
+      const auto barometer_sample = m_barometer_data.get_latest();
+      if (barometer_sample.timestamp_ms > m_last_barometer_sample.timestamp_ms)
       {
-         if (pressure_sample.data.pressure_pa.has_value())
+         if (barometer_sample.data.pressure_pa.has_value())
          {
-            m_last_barometer_sample = pressure_sample;
+            m_barometer_sample_dt_s = static_cast<float>(barometer_sample.timestamp_ms - m_last_barometer_sample.timestamp_ms) * 0.001f;
+            m_last_barometer_sample = barometer_sample;
             return true;
          }
          else
@@ -363,7 +369,7 @@ private:
 
    bool pressure_samples_read_timeout() const
    {
-      return (m_reference_pressure_wait_timer_ms >= m_wait_timeout_reference_pressure_acquisition_ms);
+      return ((m_current_time_ms - m_reference_pressure_estimation_start_time_ms) >= m_wait_timeout_reference_pressure_acquisition_ms);
    }
 
    bool reference_pressure_is_valid() const
@@ -412,22 +418,23 @@ private:
    Logger&                               m_logger;
    const uint8_t                         m_max_recovery_attempts;
    const uint8_t                         m_num_samples_reference_pressure;
-   const uint32_t                        m_execution_period_ms;
    const uint32_t                        m_wait_timeout_reference_pressure_acquisition_ms;
    const uint32_t                        m_max_age_imu_data_ms;
    const uint32_t                        m_max_age_baro_data_ms;
    const float                           m_max_valid_imu_sample_dt_s;
+   const float                           m_max_valid_barometer_sample_dt_s;
    aeromight_boundaries::EstimatorHealth m_local_estimator_health{};
    StateEstimation                       m_local_estimation_data{};
    ImuData::Sample                       m_last_imu_sample{};
    BarometerData::Sample                 m_last_barometer_sample{};
    float                                 m_imu_sample_dt_s{};
+   float                                 m_barometer_sample_dt_s{};
    float                                 m_accumulated_pressure_values{};
    float                                 m_reference_pressure{};
-   uint8_t                               m_pressure_sample_counter{};
+   uint8_t                               m_pressure_sample_counter{0};
    uint32_t                              m_current_time_ms{0};
-   uint32_t                              m_reference_pressure_wait_timer_ms{};
-   std::size_t                           m_data_log_counter{};
+   uint32_t                              m_reference_pressure_estimation_start_time_ms{0};
+   std::size_t                           m_data_log_counter{0};
 };
 
 }   // namespace aeromight_control

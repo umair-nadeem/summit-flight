@@ -47,7 +47,7 @@ protected:
    void set_good_radio_input()
    {
       actuals.link_status_ok = true;
-      actuals.link_rssi      = min_good_signal_rssi_dbm + 1.0f;
+      actuals.link_rssi_dbm  = min_good_signal_rssi_dbm + 1.0f;
    }
 
    void give_arm_command()
@@ -90,7 +90,7 @@ protected:
    void create_bad_health_summary()
    {
       set_good_radio_input();
-      health_summary.flight_critical_fault = true;   // bad health
+      health_summary.flight_health = aeromight_boundaries::FlightHealthStatus::critical;   // bad health
       setpoints_storage.update_latest(setpoints, current_ms);
       actuals_storage.update_latest(actuals, current_ms);
       health_summary.timestamp_ms = current_ms;
@@ -403,7 +403,7 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_health)
       set_good_health_summary();
 
       // imu not operational
-      health_summary.flight_critical_fault = true;
+      health_summary.flight_health = aeromight_boundaries::FlightHealthStatus::critical;
       setpoints_storage.update_latest(setpoints, current_ms);
       actuals_storage.update_latest(actuals, current_ms);
       health_summary.timestamp_ms = current_ms;
@@ -483,7 +483,7 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_radio_input)
       set_good_radio_input();
 
       // low link rssi
-      actuals.link_rssi = min_good_signal_rssi_dbm - 1.0f;
+      actuals.link_rssi_dbm = min_good_signal_rssi_dbm - 1.0f;
       setpoints_storage.update_latest(setpoints, current_ms);
       actuals_storage.update_latest(actuals, current_ms);
       health_summary.timestamp_ms = current_ms;

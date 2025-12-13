@@ -48,6 +48,7 @@ extern "C"
       constexpr uint32_t max_age_imu_data_ms                            = controller::task::imu_task_period_in_ms * 10u;
       constexpr uint32_t max_age_baro_data_ms                           = controller::task::barometer_task_period_in_ms * 10u;
       constexpr float    max_valid_imu_sample_dt_s                      = 0.02f;
+      constexpr float    max_valid_barometer_sample_dt_s                = 10.0f;
 
       LogClient logger_estimation{logging::logging_queue_sender, "estimation"};
       LogClient logger_control{logging::logging_queue_sender, "control"};
@@ -78,7 +79,8 @@ extern "C"
                      wait_timeout_pressure_reference_acquisition_ms,
                      max_age_imu_data_ms,
                      max_age_baro_data_ms,
-                     max_valid_imu_sample_dt_s};
+                     max_valid_imu_sample_dt_s,
+                     max_valid_barometer_sample_dt_s};
 
       aeromight_control::Control<LogClient> control{logger_control};
 

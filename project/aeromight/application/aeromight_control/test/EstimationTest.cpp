@@ -31,9 +31,12 @@ class EstimationTest : public testing::Test
 protected:
    void provide_ticks(const uint32_t n)
    {
-      const uint32_t ms_count_after_ticks = n + current_ms;
-      for (; current_ms < ms_count_after_ticks; current_ms++)
+      uint32_t       current_ms_copy      = current_ms + 1u;
+      const uint32_t ms_count_after_ticks = n + current_ms_copy;
+      for (; current_ms_copy < ms_count_after_ticks; current_ms_copy++)
       {
+         current_ms      = current_ms_copy;
+         sys_clock.m_sec = current_ms;
          estimation.execute();
       }
    }
@@ -52,7 +55,7 @@ protected:
 
    void provide_valid_reference_pressure()
    {
-      const uint32_t ms_count_after_ticks = num_samples_reference_pressure + current_ms;
+      const uint32_t ms_count_after_ticks = num_samples_reference_pressure + 1u;
       for (; current_ms < ms_count_after_ticks; current_ms++)
       {
          float pressure;
@@ -74,11 +77,11 @@ protected:
 
    static constexpr uint8_t  max_recovery_attempts                          = 3u;
    static constexpr uint8_t  num_samples_reference_pressure                 = 3u;
-   static constexpr uint32_t execution_period_ms                            = 4u;
    static constexpr uint32_t wait_timeout_reference_pressure_acquisition_ms = 40;
    static constexpr uint32_t max_age_imu_data_ms                            = 8u;
    static constexpr uint32_t max_age_baro_data_ms                           = 16u;
    static constexpr float    max_valid_imu_sample_dt_s                      = 0.01f;
+   static constexpr float    max_valid_barometer_sample_dt_s                = 2.0f;
 
    testing::NiceMock<AhrsFilterMock>                               ahrs_filter_mock{};
    testing::NiceMock<EkfMock>                                      ekf_mock{};
@@ -88,7 +91,7 @@ protected:
    ::boundaries::SharedData<imu_sensor::ImuData>                   imu_data{};
    ::boundaries::SharedData<barometer_sensor::BarometerData>       baro_data{};
    mocks::common::Logger                                           logger{"estmation"};
-   uint32_t                                                        current_ms{1u};
+   uint32_t                                                        current_ms{0};
 
    aeromight_control::Estimation<decltype(ahrs_filter_mock),
                                  decltype(ekf_mock),
@@ -103,11 +106,11 @@ protected:
                   logger,
                   max_recovery_attempts,
                   num_samples_reference_pressure,
-                  execution_period_ms,
                   wait_timeout_reference_pressure_acquisition_ms,
                   max_age_imu_data_ms,
                   max_age_baro_data_ms,
-                  max_valid_imu_sample_dt_s};
+                  max_valid_imu_sample_dt_s,
+                  max_valid_barometer_sample_dt_s};
 };
 
 TEST_F(EstimationTest, start_and_stop)
@@ -122,7 +125,7 @@ TEST_F(EstimationTest, start_and_stop)
 TEST_F(EstimationTest, fault_due_to_reference_pressure_acquisition_timeout)
 {
    estimation.start();
-   provide_ticks(wait_timeout_reference_pressure_acquisition_ms / execution_period_ms);
+   provide_ticks(wait_timeout_reference_pressure_acquisition_ms - current_ms);   // just enough ticks to go to fault without attempting recovery
 
    aeromight_boundaries::EstimatorHealth::ErrorBits error{};
    error.set(static_cast<uint8_t>(aeromight_boundaries::EstimatorHealth::Error::reference_pressure_estimate_timeout));
@@ -136,10 +139,12 @@ TEST_F(EstimationTest, fault_due_to_pressure_sample_with_missing_data)
 {
    estimation.start();
 
-   const uint32_t ticks_to_execute = (wait_timeout_reference_pressure_acquisition_ms / execution_period_ms) + current_ms;
-   for (; current_ms < ticks_to_execute; current_ms++)
+   const uint32_t ticks_needed = wait_timeout_reference_pressure_acquisition_ms + 2u;   // extra 2 ticks needed to start
+   for (uint32_t i = 0; i < ticks_needed; i++)
    {
+      current_ms++;
       prepare_baro_sample(std::nullopt, current_ms);
+      sys_clock.m_sec = current_ms;
       estimation.execute();
    }
 
@@ -152,30 +157,11 @@ TEST_F(EstimationTest, fault_due_to_pressure_sample_with_missing_data)
    EXPECT_EQ(estimation.get_state(), aeromight_boundaries::EstimatorState::fault);
 }
 
-TEST_F(EstimationTest, fault_due_to_reference_pressure_acquisition_timeout_with_only_one_valid_sample_acquired)
-{
-   estimation.start();
-   prepare_baro_sample(bmp390::params::max_plauisble_range_pressure_pa, current_ms++);
-
-   const uint32_t ticks_to_execute = (wait_timeout_reference_pressure_acquisition_ms / execution_period_ms) + current_ms;
-   for (; current_ms < ticks_to_execute; current_ms++)
-   {
-      estimation.execute();
-   }
-
-   aeromight_boundaries::EstimatorHealth::ErrorBits error{};
-   error.set(static_cast<uint8_t>(aeromight_boundaries::EstimatorHealth::Error::reference_pressure_estimate_timeout));
-
-   const aeromight_boundaries::EstimatorHealth health = estimator_health_storage.get_latest().data;
-   EXPECT_EQ(health.error.to_ulong(), error.to_ulong());
-   EXPECT_EQ(estimation.get_state(), aeromight_boundaries::EstimatorState::fault);
-}
-
 TEST_F(EstimationTest, fault_due_to_reference_pressure_below_plausible_range)
 {
    estimation.start();
 
-   const uint32_t ticks_to_execute = num_samples_reference_pressure + current_ms;
+   const uint32_t ticks_to_execute = num_samples_reference_pressure + +1u;
    for (; current_ms < ticks_to_execute; current_ms++)
    {
       prepare_baro_sample(bmp390::params::min_plauisble_range_pressure_pa - 1.0f, current_ms);
@@ -195,7 +181,7 @@ TEST_F(EstimationTest, fault_due_to_reference_pressure_above_plausible_range)
 {
    estimation.start();
 
-   const uint32_t ticks_to_execute = num_samples_reference_pressure + current_ms;
+   const uint32_t ticks_to_execute = num_samples_reference_pressure + 1u;
    for (; current_ms < ticks_to_execute; current_ms++)
    {
       prepare_baro_sample(bmp390::params::max_plauisble_range_pressure_pa + 1.0f, current_ms);
@@ -235,12 +221,48 @@ TEST_F(EstimationTest, filters_reset_due_to_large_time_gap_in_imu_samples)
    sys_clock.m_sec = current_ms++;
    estimation.execute();
 
+   const uint32_t ticks_needed = static_cast<uint32_t>(max_valid_imu_sample_dt_s * 1000.0f);
+   for (uint32_t i = 0; i < ticks_needed; i++)
+   {
+      prepare_baro_sample(bmp390::params::max_plauisble_range_pressure_pa, current_ms);   // normal update for baro
+      sys_clock.m_sec = current_ms++;
+      estimation.execute();
+   }
+
    EXPECT_CALL(ahrs_filter_mock, reset());
    EXPECT_CALL(ekf_mock, reset());
 
-   current_ms = static_cast<uint32_t>(max_valid_imu_sample_dt_s * 1000.0f) + current_ms;
    prepare_imu_sample(math::Vector3{}, math::Vector3{}, current_ms);
-   sys_clock.m_sec = current_ms;
+   sys_clock.m_sec = current_ms++;
+   estimation.execute();
+
+   EXPECT_EQ(estimation.get_state(), aeromight_boundaries::EstimatorState::running);
+}
+
+TEST_F(EstimationTest, filters_reset_due_to_large_time_gap_in_barometer_samples)
+{
+   estimation.start();
+
+   provide_valid_reference_pressure();
+
+   // provide one valid imu and baro sample
+   prepare_imu_sample(math::Vector3{}, math::Vector3{}, current_ms);
+   prepare_baro_sample(bmp390::params::max_plauisble_range_pressure_pa, current_ms);
+   sys_clock.m_sec = current_ms++;
+   estimation.execute();
+
+   const uint32_t ticks_needed = static_cast<uint32_t>(max_valid_barometer_sample_dt_s * 1000.0f);
+   for (uint32_t i = 0; i < ticks_needed; i++)
+   {
+      prepare_imu_sample(math::Vector3{}, math::Vector3{}, current_ms);   // normal update for imu
+      sys_clock.m_sec = current_ms++;
+      estimation.execute();
+   }
+
+   EXPECT_CALL(ekf_mock, reset());
+
+   prepare_baro_sample(bmp390::params::max_plauisble_range_pressure_pa, current_ms);
+   sys_clock.m_sec = current_ms++;
    estimation.execute();
 
    EXPECT_EQ(estimation.get_state(), aeromight_boundaries::EstimatorState::running);
@@ -340,7 +362,7 @@ TEST_F(EstimationTest, fault_due_to_stale_imu_data)
    EXPECT_EQ(estimation.get_state(), aeromight_boundaries::EstimatorState::fault);
 }
 
-TEST_F(EstimationTest, fault_due_to_stale_baro_data)
+TEST_F(EstimationTest, no_fault_due_to_stale_baro_data)
 {
    estimation.start();
 
@@ -366,7 +388,7 @@ TEST_F(EstimationTest, fault_due_to_stale_baro_data)
    const aeromight_boundaries::EstimatorHealth health = estimator_health_storage.get_latest().data;
    EXPECT_TRUE(health.valid_reference_pressure_acquired);
    EXPECT_EQ(health.error.to_ulong(), error.to_ulong());
-   EXPECT_EQ(estimation.get_state(), aeromight_boundaries::EstimatorState::fault);
+   EXPECT_EQ(estimation.get_state(), aeromight_boundaries::EstimatorState::running);
 }
 
 TEST_F(EstimationTest, fault_recovery_before_reference_pressure_acquisition)
@@ -376,13 +398,13 @@ TEST_F(EstimationTest, fault_recovery_before_reference_pressure_acquisition)
    aeromight_boundaries::EstimatorHealth health{};
    for (uint32_t i = 0; i < max_recovery_attempts; i++)
    {
-      provide_ticks(wait_timeout_reference_pressure_acquisition_ms / execution_period_ms);
+      provide_ticks(wait_timeout_reference_pressure_acquisition_ms);
       estimation.execute();   // attempt recovery
       health = estimator_health_storage.get_latest().data;
       EXPECT_EQ(health.recovery_attempts, i + 1u);
    }
 
-   provide_ticks(wait_timeout_reference_pressure_acquisition_ms / execution_period_ms);
+   provide_ticks(wait_timeout_reference_pressure_acquisition_ms);
    estimation.execute();   // don't attempt recovery
    health = estimator_health_storage.get_latest().data;
    EXPECT_EQ(health.recovery_attempts, 3u);
