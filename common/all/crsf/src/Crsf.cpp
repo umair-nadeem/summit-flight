@@ -163,7 +163,7 @@ bool Crsf::parse_buffer(std::span<const uint8_t> buffer, CrsfPacket& packet)
    return false;
 }
 
-std::size_t Crsf::serialize_battery_telemetry(const CrsfBattery& packet, std::span<uint8_t> out)
+uint32_t Crsf::serialize_battery_telemetry(const CrsfBattery& packet, std::span<uint8_t> out)
 {
 
    static constexpr std::size_t total_bytes_required = num_bytes_sync_byte +
@@ -177,10 +177,10 @@ std::size_t Crsf::serialize_battery_telemetry(const CrsfBattery& packet, std::sp
 
    error::verify(out.size() >= total_bytes_required);
 
-   std::size_t bytes_written = 0;
-   out[bytes_written++]      = sync_byte;
-   out[bytes_written++]      = frame_len;
-   out[bytes_written++]      = static_cast<uint8_t>(FrameType::battery_sensor);
+   uint32_t bytes_written = 0;
+   out[bytes_written++]   = sync_byte;
+   out[bytes_written++]   = frame_len;
+   out[bytes_written++]   = static_cast<uint8_t>(FrameType::battery_sensor);
 
    // voltage
    const int16_t voltage = packet.voltage_v * voltage_and_current_scale_factor;

@@ -25,8 +25,8 @@ struct AeromightData
    boundaries::SharedData<EstimatorHealth> estimator_health_storage{};
 
    // Flight Manager
-   boundaries::SharedData<FlightManagerSetpoints> flight_manager_setpoints{};
-   boundaries::SharedData<FlightManagerActuals>   flight_manager_actuals{};
+   boundaries::SharedData<FlightSetpoints> flight_setpoints{};
+   boundaries::SharedData<RadioLinkStats>  radio_link_actuals{};
 };
 
 extern AeromightData aeromight_data;

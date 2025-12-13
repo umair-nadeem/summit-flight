@@ -20,12 +20,15 @@ public:
       return sec;
    }
 
-   static uint32_t m_sec;
-   static uint32_t sec;
-};
+   static void reset()
+   {
+      m_sec = 0;
+      sec   = 0;
+   }
 
-uint32_t ClockSource::m_sec = 0;
-uint32_t ClockSource::sec   = 0;
+   inline static uint32_t m_sec = 0;
+   inline static uint32_t sec   = 0;
+};
 
 static_assert(interfaces::IClockSource<ClockSource>);
 

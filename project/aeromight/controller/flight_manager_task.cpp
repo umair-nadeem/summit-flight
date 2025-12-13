@@ -41,8 +41,8 @@ extern "C"
                                       LogClient>
           flight_manager{data->health_summary_queue_receiver,
                          data->control_task_start_notifier,
-                         aeromight_boundaries::aeromight_data.flight_manager_setpoints,
-                         aeromight_boundaries::aeromight_data.flight_manager_actuals,
+                         aeromight_boundaries::aeromight_data.flight_setpoints,
+                         aeromight_boundaries::aeromight_data.radio_link_actuals,
                          logger_flight_manager_task,
                          stick_input_deadband_abs,
                          min_good_signal_rssi_dbm,

@@ -27,7 +27,7 @@ struct FlightStickInput
    float yaw{};        // -1.0 (CCW) to +1.0 (CW)
 };
 
-struct FlightManagerSetpoints
+struct FlightSetpoints
 {
    FlightArmedState state{FlightArmedState::disarm};
    FlightMode       mode{FlightMode::none};
@@ -35,7 +35,7 @@ struct FlightManagerSetpoints
    bool             kill_switch_active{false};
 };
 
-struct FlightManagerActuals
+struct RadioLinkStats
 {
    int8_t   link_rssi_dbm{};
    uint8_t  link_quality_pct{};

@@ -20,6 +20,7 @@ public:
          m_battery_status_transmission_period_in_ms{battery_status_transmission_period_in_ms}
 
    {
+      get_battery_status();
    }
 
    void execute()
@@ -27,12 +28,11 @@ public:
       const uint32_t clock_ms = ClockSource::now_ms();
       if (clock_ms - m_last_battery_transmission_time > m_battery_status_transmission_period_in_ms)
       {
-         get_battery_status();
          std::span<std::byte> tx_buffer = m_uart_transmitter.get_buffer();
 
          // serialize
-         const auto bytes_written = Crsf::serialize_battery_telemetry(m_crsf_battery,
-                                                                      std::span{reinterpret_cast<uint8_t*>(tx_buffer.data()), tx_buffer.size()});
+         const uint32_t bytes_written = Crsf::serialize_battery_telemetry(m_crsf_battery,
+                                                                          std::span{reinterpret_cast<uint8_t*>(tx_buffer.data()), tx_buffer.size()});
 
          m_uart_transmitter.send_blocking(bytes_written);
 

@@ -97,5 +97,15 @@
             "env": {},
             "stopOnEntry": false
         },
+        {
+            "name": "AeromightRadioLinkTest",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/out/build/native/project/aeromight/application/aeromight_link/test/aeromight_link_test",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {},
+            "stopOnEntry": false
+        },
       ]
 }
