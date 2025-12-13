@@ -7,6 +7,5 @@ target_sources(hw INTERFACE
    src/i2c/I2c.cpp
    src/timer/CpuCycleTimer.cpp
    src/timer/Timer.cpp
-   src/uart/Transmitter.cpp
    src/uart/uart.cpp
 )

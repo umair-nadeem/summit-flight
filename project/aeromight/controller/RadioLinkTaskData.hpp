@@ -37,11 +37,11 @@ struct RadioLinkTaskData
       std::array<std::byte, crsf::max_buffer_size>                          dma_rx_buffer{};
       std::array<std::array<std::byte, crsf::max_buffer_size>, queue_depth> user_rx_buffer_pool{};
 
-      rtos::SemaphoreTaker  transmitter_sem_taker{};
-      rtos::SemaphoreGiver  isr_sem_giver{};
-      hw::uart::Transmitter transmitter{config, std::as_writable_bytes(std::span{dma_tx_buffer}),
-                                        [&]()
-                                        { transmitter_sem_taker.take(); }};
+      rtos::SemaphoreTaker                                   transmitter_sem_taker{};
+      rtos::SemaphoreGiver                                   isr_sem_giver{};
+      hw::uart::Transmitter<decltype(transmitter_sem_taker)> transmitter{config,
+                                                                         std::as_writable_bytes(std::span{dma_tx_buffer}),
+                                                                         transmitter_sem_taker};
 
       // queue's task endpoints
       rtos::QueueReceiver<Message>   radio_input_receiver{};

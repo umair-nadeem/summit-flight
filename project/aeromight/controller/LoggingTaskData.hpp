@@ -29,11 +29,11 @@ struct LoggingTaskData
       std::array<uint8_t, logging::params::max_log_len> dma_tx_buffer{};
       std::array<uint8_t, 1u>                           dummy_dma_rx_buffer{};
 
-      rtos::SemaphoreTaker  transmitter_sem_taker{};
-      rtos::SemaphoreGiver  isr_sem_giver{};
-      hw::uart::Transmitter transmitter{config, std::as_writable_bytes(std::span{dma_tx_buffer}),
-                                        [&]()
-                                        { transmitter_sem_taker.take(); }};
+      rtos::SemaphoreTaker                                   transmitter_sem_taker{};
+      rtos::SemaphoreGiver                                   isr_sem_giver{};
+      hw::uart::Transmitter<decltype(transmitter_sem_taker)> transmitter{config,
+                                                                         std::as_writable_bytes(std::span{dma_tx_buffer}),
+                                                                         transmitter_sem_taker};
 
    } logging_uart{};
 
