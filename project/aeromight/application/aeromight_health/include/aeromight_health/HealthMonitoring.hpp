@@ -93,7 +93,8 @@ public:
             {
                if (!imu_ready)
                {
-                  m_health_summary.imu_health = aeromight_boundaries::SubsystemHealth::fault;
+                  m_health_summary.imu_health    = aeromight_boundaries::SubsystemHealth::fault;
+                  m_health_summary.flight_health = aeromight_boundaries::FlightHealthStatus::critical;
                }
 
                if (!barometer_ready)
@@ -128,6 +129,7 @@ public:
                m_health_summary.estimation_health = aeromight_boundaries::SubsystemHealth::fault;
                m_health_summary.estimation_ready  = false;
                m_health_summary.control_ready     = false;
+               m_health_summary.flight_health     = aeromight_boundaries::FlightHealthStatus::critical;
                m_state                            = HealthMonitoringState::general_monitoring;
                m_state_entry_time_ms              = m_current_time_ms;
                m_logger.print("estimation & control health couldn't be determined");
@@ -181,12 +183,15 @@ private:
       m_health_summary.barometer_health  = get_barometer_health();
       m_health_summary.estimation_health = get_estimation_health();
 
-      if ((m_health_summary.imu_health == SubsystemHealth::fault) ||
-          (m_health_summary.estimation_health == SubsystemHealth::fault))
+      if ((m_health_summary.imu_health == SubsystemHealth::fault) ||          // imu fault
+          (m_health_summary.estimation_health == SubsystemHealth::fault) ||   // estimation fault
+          (m_health_summary.control_health == SubsystemHealth::fault))        // control fault
       {
          m_health_summary.flight_health = FlightHealthStatus::critical;
       }
-      else if (m_health_summary.barometer_health == SubsystemHealth::fault)
+      else if ((m_health_summary.imu_health == SubsystemHealth::degraded) ||          // imu degraded
+               (m_health_summary.estimation_health == SubsystemHealth::degraded) ||   // estimation degraded
+               (m_health_summary.control_health == SubsystemHealth::degraded))        // control degraded
       {
          m_health_summary.flight_health = FlightHealthStatus::degraded;
       }

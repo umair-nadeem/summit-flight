@@ -141,7 +141,7 @@ TEST_F(HealthMonitoringTest, timeout_occurs_while_waiting_for_sensor_readiness_i
    const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
    EXPECT_EQ(health.all_sensors_ready, false);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);
+   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);
    EXPECT_EQ(health.queue_failure_count, 0);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::fault);
@@ -203,7 +203,7 @@ TEST_F(HealthMonitoringTest, wait_sensor_readiness_both_ready)
    EXPECT_EQ(health.timestamp_ms, current_ms);
    EXPECT_EQ(health.all_sensors_ready, true);
    EXPECT_EQ(health.estimation_ready, false);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);
+   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::init);
@@ -243,7 +243,7 @@ TEST_F(HealthMonitoringTest, wait_estimation_readiness)
    EXPECT_EQ(health.timestamp_ms, current_ms);
    EXPECT_EQ(health.all_sensors_ready, true);
    EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);
+   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -273,7 +273,7 @@ TEST_F(HealthMonitoringTest, stale_imu_data_causes_degraded_health)
    EXPECT_EQ(health.timestamp_ms, current_ms);
    EXPECT_EQ(health.all_sensors_ready, true);
    EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);
+   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::degraded);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::degraded);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -303,7 +303,7 @@ TEST_F(HealthMonitoringTest, stale_baro_data_causes_degraded_health)
    EXPECT_EQ(health.timestamp_ms, current_ms);
    EXPECT_EQ(health.all_sensors_ready, true);
    EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);
+   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::degraded);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -333,7 +333,7 @@ TEST_F(HealthMonitoringTest, stale_estimation_data_causes_degraded_health)
    EXPECT_EQ(health.timestamp_ms, current_ms);
    EXPECT_EQ(health.all_sensors_ready, true);
    EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);
+   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::degraded);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::degraded);
@@ -357,7 +357,7 @@ TEST_F(HealthMonitoringTest, imu_non_zero_read_failures_cause_degraded_health)
    EXPECT_EQ(health.timestamp_ms, current_ms);
    EXPECT_EQ(health.all_sensors_ready, true);
    EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);
+   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::degraded);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::degraded);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -381,7 +381,7 @@ TEST_F(HealthMonitoringTest, baro_non_zero_read_failures_cause_degraded_health)
    EXPECT_EQ(health.timestamp_ms, current_ms);
    EXPECT_EQ(health.all_sensors_ready, true);
    EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);
+   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::degraded);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -470,7 +470,7 @@ TEST_F(HealthMonitoringTest, imu_failure_causes_flight_critical_fault)
    EXPECT_EQ(health.timestamp_ms, current_ms);
    EXPECT_EQ(health.all_sensors_ready, true);
    EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);   // no longer flight critical
+   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::degraded);   // no longer flight critical
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::degraded);         // still degraded
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -488,7 +488,7 @@ TEST_F(HealthMonitoringTest, imu_failure_causes_flight_critical_fault)
    EXPECT_EQ(health.timestamp_ms, current_ms);
    EXPECT_EQ(health.all_sensors_ready, true);
    EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);   // no longer flight critical
+   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);   // no longer flight critical
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -537,7 +537,7 @@ TEST_F(HealthMonitoringTest, baro_failure_causes_flight_critical_fault)
       EXPECT_EQ(health.timestamp_ms, current_ms);
       EXPECT_EQ(health.all_sensors_ready, true);
       EXPECT_EQ(health.estimation_ready, true);
-      EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);   // baro failure -> flight critical
+      EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);   // baro failure -> non flight critical
       EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
       EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::fault);
       EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -557,7 +557,7 @@ TEST_F(HealthMonitoringTest, baro_failure_causes_flight_critical_fault)
    EXPECT_EQ(health.timestamp_ms, current_ms);
    EXPECT_EQ(health.all_sensors_ready, true);
    EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);   // baro failure -> flight critical
+   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);   // baro failure -> non flight critical
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::fault);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -575,7 +575,7 @@ TEST_F(HealthMonitoringTest, baro_failure_causes_flight_critical_fault)
    EXPECT_EQ(health.timestamp_ms, current_ms);
    EXPECT_EQ(health.all_sensors_ready, true);
    EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);   // no longer flight critical
+   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);    // non flight critical
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::degraded);   // still degraded
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -593,7 +593,7 @@ TEST_F(HealthMonitoringTest, baro_failure_causes_flight_critical_fault)
    EXPECT_EQ(health.timestamp_ms, current_ms);
    EXPECT_EQ(health.all_sensors_ready, true);
    EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);   // no longer flight critical
+   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -679,7 +679,7 @@ TEST_F(HealthMonitoringTest, estimation_failure_causes_flight_critical_fault)
    EXPECT_EQ(health.timestamp_ms, current_ms);
    EXPECT_EQ(health.all_sensors_ready, true);
    EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);   // no longer flight critical
+   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);   // no longer flight critical
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
