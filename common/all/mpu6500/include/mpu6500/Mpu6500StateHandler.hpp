@@ -505,7 +505,7 @@ private:
 
    void calculate_bias()
    {
-      const float magnitude = m_self_test_stats.mean_accel.get_norm();
+      const float magnitude = m_self_test_stats.mean_accel.norm();
       error::verify(magnitude > 0);
 
       // unit vector -> a^ = a/|a|
@@ -589,7 +589,7 @@ private:
 
    bool is_platform_stationary() const
    {
-      const float magnitude = m_self_test_stats.mean_accel.get_norm();
+      const float magnitude = m_self_test_stats.mean_accel.norm();
       return std::abs(magnitude - physics::constants::g_to_mps2) <= m_accel_tolerance_mps2;
    }
 

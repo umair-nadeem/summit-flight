@@ -89,6 +89,22 @@ struct Quaternion
       return *this;
    }
 
+   Quaternion operator*(const Quaternion& other) const
+   {
+      return Quaternion{
+          (w * other.w) - (x * other.x) - (y * other.y) - (z * other.z),
+          (x * other.w) + (w * other.x) - (z * other.y) + (y * other.z),
+          (y * other.w) + (z * other.x) + (w * other.y) - (x * other.z),
+          (z * other.w) - (y * other.x) + (x * other.y) + (w * other.z)};
+   }
+
+   Quaternion& operator*=(const Quaternion& other)
+   {
+      Quaternion& self = *this;
+      self             = self * other;
+      return self;
+   }
+
    Quaternion operator*(const float v) const
    {
       Quaternion result{};
@@ -99,16 +115,36 @@ struct Quaternion
       return result;
    }
 
+   // derivative when rotated with angular velocity expressed in frame 1 (typically body frame)
+   Quaternion derivative1(const Vector3& other) const
+   {
+      const Quaternion& q = *this;
+      Quaternion        v(0, other.x, other.y, other.z);
+      return q * v * 0.5f;
+   }
+
+   // derivative when rotated with angular velocity expressed in frame 2 (typically reference frame)
+   Quaternion derivative2(const Vector3& other) const
+   {
+      const Quaternion& q = *this;
+      Quaternion        v(0, other.x, other.y, other.z);
+      return v * q * 0.5f;
+   }
+
+   bool is_all_finite() const
+   {
+      return (std::isfinite(w) && std::isfinite(x) && std::isfinite(y) && std::isfinite(z));
+   }
+
    void normalize()
    {
-      const float norm = get_norm();
-      if (norm > 1e-6f)
+      const float v = norm();
+      if (v > 1e-6f)
       {
-         const float inv_norm = 1.0f / norm;
-         w *= inv_norm;
-         x *= inv_norm;
-         y *= inv_norm;
-         z *= inv_norm;
+         w /= v;
+         x /= v;
+         y /= v;
+         z /= v;
       }
       else
       {
@@ -125,9 +161,19 @@ struct Quaternion
       epsilon = eps;
    }
 
-   float get_norm() const
+   float norm() const
    {
       return sqrtf((w * w) + (x * x) + (y * y) + (z * z));
+   }
+
+   float norm_squared() const
+   {
+      return ((w * w) + (x * x) + (y * y) + (z * z));
+   }
+
+   float length() const
+   {
+      return norm();
    }
 
    Vector3 to_euler() const

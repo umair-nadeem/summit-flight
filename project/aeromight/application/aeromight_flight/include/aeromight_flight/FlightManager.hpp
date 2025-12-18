@@ -15,6 +15,7 @@ class FlightManager
 public:
    explicit FlightManager(QueueReceiver&                                                       health_summary_queue_receiver,
                           EstimationNotifier&                                                  control_start_notifier,
+                          boundaries::SharedData<aeromight_boundaries::ControlSetpoints>&      control_setpoints_storage,
                           const boundaries::SharedData<aeromight_boundaries::FlightSetpoints>& flight_setpoints_storage,
                           const boundaries::SharedData<aeromight_boundaries::RadioLinkStats>&  radio_link_actuals_storage,
                           Logger&                                                              logger,
@@ -29,6 +30,7 @@ public:
        : m_period_ms{period_ms},
          m_state_handler{health_summary_queue_receiver,
                          control_start_notifier,
+                         control_setpoints_storage,
                          flight_setpoints_storage,
                          radio_link_actuals_storage,
                          logger,

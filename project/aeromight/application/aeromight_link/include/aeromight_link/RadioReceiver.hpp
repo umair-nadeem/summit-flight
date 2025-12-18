@@ -101,17 +101,17 @@ private:
       // publish to shared buffer
       m_flight_setpoints_storage.update_latest(m_flight_setpoints, ClockSource::now_ms());
 
-      if (m_counter++ % 100 == 0)
-      {
-         m_logger.printf("arm=%u mode=%u kill=%u roll=%.2f pitch=%.2f throt=%.2f yaw=%.2f",
-                         static_cast<uint8_t>(m_flight_setpoints.state),
-                         static_cast<uint8_t>(m_flight_setpoints.mode),
-                         m_flight_setpoints.kill_switch_active,
-                         m_flight_setpoints.input.roll,
-                         m_flight_setpoints.input.pitch,
-                         m_flight_setpoints.input.throttle,
-                         m_flight_setpoints.input.yaw);
-      }
+      // if (m_counter++ % 100 == 0)
+      // {
+      //    m_logger.printf("arm=%u mode=%u kill=%u roll=%.2f pitch=%.2f throt=%.2f yaw=%.2f",
+      //                    static_cast<uint8_t>(m_flight_setpoints.state),
+      //                    static_cast<uint8_t>(m_flight_setpoints.mode),
+      //                    m_flight_setpoints.kill_switch_active,
+      //                    m_flight_setpoints.input.roll,
+      //                    m_flight_setpoints.input.pitch,
+      //                    m_flight_setpoints.input.throttle,
+      //                    m_flight_setpoints.input.yaw);
+      // }
    }
 
    void publish_link_stats(const crsf::CrsfLinkStatistics& stats)
@@ -126,15 +126,15 @@ private:
       // publish to shared buffer
       m_radio_link_actuals_storage.update_latest(m_radio_link_actuals, ClockSource::now_ms());
 
-      if (m_counter++ % 250 == 0)
-      {
-         m_logger.printf("rssi=%d lq=%u snr=%d tx_pow=%u ls=%u",
-                         m_radio_link_actuals.link_rssi_dbm,
-                         m_radio_link_actuals.link_quality_pct,
-                         m_radio_link_actuals.link_snr_db,
-                         m_radio_link_actuals.tx_power_mw,
-                         m_radio_link_actuals.link_status_ok);
-      }
+      // if (m_counter++ % 250 == 0)
+      // {
+      //    m_logger.printf("rssi=%d lq=%u snr=%d tx_pow=%u ls=%u",
+      //                    m_radio_link_actuals.link_rssi_dbm,
+      //                    m_radio_link_actuals.link_quality_pct,
+      //                    m_radio_link_actuals.link_snr_db,
+      //                    m_radio_link_actuals.tx_power_mw,
+      //                    m_radio_link_actuals.link_status_ok);
+      // }
    }
 
    static constexpr float normalize_channel(const uint16_t raw) noexcept

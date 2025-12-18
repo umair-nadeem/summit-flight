@@ -1,6 +1,7 @@
 #pragma once
 
 #include "HealthMonitoringState.hpp"
+#include "aeromight_boundaries/ControlHealth.hpp"
 #include "aeromight_boundaries/EstimatorHealth.hpp"
 #include "aeromight_boundaries/HealthSummary.hpp"
 #include "barometer_sensor/BarometerHealth.hpp"
@@ -22,6 +23,7 @@ public:
                              const boundaries::SharedData<imu_sensor::ImuHealth>&                 imu_sensor_health,
                              const boundaries::SharedData<barometer_sensor::BarometerHealth>&     barometer_sensor_health,
                              const boundaries::SharedData<aeromight_boundaries::EstimatorHealth>& estimation_health,
+                             const boundaries::SharedData<aeromight_boundaries::ControlHealth>&   control_health,
                              Logger&                                                              logger,
                              const uint32_t                                                       period_in_ms,
                              const uint32_t                                                       startup_wait_ms,
@@ -35,6 +37,7 @@ public:
          m_imu_sensor_health{imu_sensor_health},
          m_barometer_sensor_health{barometer_sensor_health},
          m_estimation_health{estimation_health},
+         m_control_health{control_health},
          m_logger{logger},
          m_period_in_ms{period_in_ms},
          m_startup_wait_ms{startup_wait_ms},
@@ -173,6 +176,7 @@ private:
       m_imu_health_snapshot        = m_imu_sensor_health.get_latest();
       m_barometer_health_snapshot  = m_barometer_sensor_health.get_latest();
       m_estimation_health_snapshot = m_estimation_health.get_latest();
+      m_control_health_snapshot    = m_control_health.get_latest();
    }
 
    void evaluate_health_status()
@@ -182,6 +186,7 @@ private:
       m_health_summary.imu_health        = get_imu_health();
       m_health_summary.barometer_health  = get_barometer_health();
       m_health_summary.estimation_health = get_estimation_health();
+      m_health_summary.control_health    = get_control_health();
 
       if ((m_health_summary.imu_health == SubsystemHealth::fault) ||          // imu fault
           (m_health_summary.estimation_health == SubsystemHealth::fault) ||   // estimation fault
@@ -271,6 +276,22 @@ private:
       return aeromight_boundaries::SubsystemHealth::operational;
    }
 
+   aeromight_boundaries::SubsystemHealth get_control_health() const
+   {
+      const bool control_stale = (((m_current_time_ms - m_control_health_snapshot.timestamp_ms) > m_max_age_control_health_ms));
+
+      if (!m_control_health_snapshot.data.enabled)
+      {
+         return aeromight_boundaries::SubsystemHealth::fault;
+      }
+      else if (control_stale)
+      {
+         return aeromight_boundaries::SubsystemHealth::degraded;
+      }
+
+      return aeromight_boundaries::SubsystemHealth::operational;
+   }
+
    bool startup_wait_duration_passed() const
    {
       return (m_current_time_ms - m_state_entry_time_ms) >= m_startup_wait_ms;
@@ -309,13 +330,15 @@ private:
    bool estimation_control_is_ready() const
    {
       return (m_estimation_health_snapshot.data.valid_reference_pressure_acquired &&
-              (m_estimation_health_snapshot.data.state == aeromight_boundaries::EstimatorState::running));
+              (m_estimation_health_snapshot.data.state == aeromight_boundaries::EstimatorState::running) &&
+              (m_control_health_snapshot.data.enabled));
    }
 
    QueueSender&                                                          m_queue_sender;
    const boundaries::SharedData<imu_sensor::ImuHealth>&                  m_imu_sensor_health;
    const boundaries::SharedData<barometer_sensor::BarometerHealth>&      m_barometer_sensor_health;
    const boundaries::SharedData<aeromight_boundaries::EstimatorHealth>&  m_estimation_health;
+   const boundaries::SharedData<aeromight_boundaries::ControlHealth>&    m_control_health;
    Logger&                                                               m_logger;
    const uint32_t                                                        m_period_in_ms;
    const uint32_t                                                        m_startup_wait_ms;
@@ -329,6 +352,7 @@ private:
    boundaries::SharedData<imu_sensor::ImuHealth>::Sample                 m_imu_health_snapshot{};
    boundaries::SharedData<barometer_sensor::BarometerHealth>::Sample     m_barometer_health_snapshot{};
    boundaries::SharedData<aeromight_boundaries::EstimatorHealth>::Sample m_estimation_health_snapshot{};
+   boundaries::SharedData<aeromight_boundaries::ControlHealth>::Sample   m_control_health_snapshot{};
    HealthMonitoringState                                                 m_state{HealthMonitoringState::startup};
    uint32_t                                                              m_current_time_ms{0};
    uint32_t                                                              m_state_entry_time_ms{0};

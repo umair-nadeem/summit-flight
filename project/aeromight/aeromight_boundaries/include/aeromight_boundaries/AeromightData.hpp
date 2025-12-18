@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ControlHealth.hpp"
+#include "ControlSetpoints.hpp"
 #include "EstimatorHealth.hpp"
 #include "FlightManagerData.hpp"
 #include "barometer_sensor/BarometerData.hpp"
@@ -23,6 +25,10 @@ struct AeromightData
 
    // Estimator
    boundaries::SharedData<EstimatorHealth> estimator_health_storage{};
+
+   // Control
+   boundaries::SharedData<ControlHealth>    control_health_storage{};
+   boundaries::SharedData<ControlSetpoints> control_setpoints{};
 
    // Flight Manager
    boundaries::SharedData<FlightSetpoints> flight_setpoints{};

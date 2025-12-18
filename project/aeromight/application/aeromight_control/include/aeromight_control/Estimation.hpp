@@ -13,7 +13,7 @@
 namespace aeromight_control
 {
 
-template <typename MadgwickFilter, typename AltitudeEkf, interfaces::IClockSource ClockSource, typename Logger>
+template <typename AttitudeEstimator, typename AltitudeEkf, interfaces::IClockSource ClockSource, typename Logger>
 class Estimation
 {
    using ImuData         = ::boundaries::SharedData<imu_sensor::ImuData>;
@@ -23,7 +23,7 @@ class Estimation
    using Error           = aeromight_boundaries::EstimatorHealth::Error;
 
 public:
-   explicit Estimation(MadgwickFilter&      ahrs_filter,
+   explicit Estimation(AttitudeEstimator&   attitude_estimator,
                        AltitudeEkf&         altitude_ekf,
                        EstimatorHealth&     estimator_health_storage,
                        StateEstimation&     state_estimation_data_storage,
@@ -37,7 +37,7 @@ public:
                        const uint32_t       max_age_baro_data_ms,
                        const float          max_valid_imu_sample_dt_s,
                        const float          max_valid_barometer_sample_dt_s)
-       : m_ahrs_filter{ahrs_filter},
+       : m_attitude_estimator{attitude_estimator},
          m_altitude_ekf{altitude_ekf},
          m_estimator_health_storage{estimator_health_storage},
          m_state_estimation_data_storage{state_estimation_data_storage},
@@ -57,7 +57,7 @@ public:
 
    void start()
    {
-      update_reference_time();
+      get_time();
       reset();
       m_local_estimator_health.state = State::get_reference_pressure;
       publish_health();
@@ -66,7 +66,7 @@ public:
 
    void stop()
    {
-      update_reference_time();
+      get_time();
       m_local_estimator_health.state = State::idle;
       publish_health();
       m_logger.print("stopped");
@@ -84,7 +84,7 @@ public:
 
    void execute()
    {
-      update_reference_time();
+      get_time();
 
       switch (m_local_estimator_health.state)
       {
@@ -148,7 +148,7 @@ public:
    }
 
 private:
-   void update_reference_time()
+   void get_time()
    {
       m_current_time_ms = ClockSource::now_ms();
    }
@@ -163,7 +163,7 @@ private:
       m_last_barometer_sample                       = BarometerData::Sample{};
       m_last_imu_sample                             = ImuData::Sample{};
 
-      m_ahrs_filter.reset();
+      m_attitude_estimator.reset();
       m_altitude_ekf.reset();
    }
 
@@ -242,25 +242,26 @@ private:
    {
       if (m_imu_sample_dt_s > m_max_valid_imu_sample_dt_s)
       {
-         m_ahrs_filter.reset();
+         m_attitude_estimator.reset();
          m_altitude_ekf.reset();
          return;
       }
 
-      // imu sensor mpu6500 reports data in FLU/ENU sensor frame
-      const math::Vector3 accel_enu = m_last_imu_sample.data.accel_mps2.value();
-      const math::Vector3 gyro_enu  = m_last_imu_sample.data.gyro_radps.value();
+      // imu sensor mpu6500 gives data in FLU body frame
+      const math::Vector3 accel_flu = m_last_imu_sample.data.accel_mps2.value();
+      const math::Vector3 gyro_flu  = m_last_imu_sample.data.gyro_radps.value();
 
-      // convert sensor axes from ENU frame to FRD/NED
-      const math::Vector3 accel_mps2 = map_imu_sensor_axes_to_ned(accel_enu);
-      const math::Vector3 gyro_radps = map_imu_sensor_axes_to_ned(gyro_enu);
+      // convert sensor axes from FLU body frame to FRD
+      const math::Vector3 accel_mps2 = map_imu_sensor_axes_to_frd(accel_flu);
+      const math::Vector3 gyro_radps = map_imu_sensor_axes_to_frd(gyro_flu);
 
       // update attitude state estimation
-      m_ahrs_filter.update_in_ned_frame(accel_mps2, gyro_radps, m_imu_sample_dt_s);
+      m_attitude_estimator.update(accel_mps2, gyro_radps, m_imu_sample_dt_s);
 
-      m_local_estimation_data.attitude   = m_ahrs_filter.get_quaternion();
-      m_local_estimation_data.gyro_radps = m_ahrs_filter.get_unbiased_gyro_data(gyro_radps);
-      m_local_estimation_data.gyro_bias  = m_ahrs_filter.get_gyro_bias();
+      m_local_estimation_data.attitude   = m_attitude_estimator.get_quaternion();
+      m_local_estimation_data.gyro_radps = m_attitude_estimator.get_unbiased_gyro_data(gyro_radps);
+      m_local_estimation_data.gyro_bias  = m_attitude_estimator.get_gyro_bias();
+      m_local_estimation_data.euler      = m_local_estimation_data.attitude.to_euler();
 
       // predict altitude with ekf2
       m_altitude_ekf.predict(accel_mps2, m_local_estimation_data.attitude, m_imu_sample_dt_s);
@@ -291,22 +292,20 @@ private:
       m_local_estimation_data.timestamp_ms = m_current_time_ms;
       m_state_estimation_data_storage      = m_local_estimation_data;
 
-      const math::Vector3 euler = m_local_estimation_data.attitude.to_euler();
-
-      m_data_log_counter++;
-      if ((m_data_log_counter % 500u) == 0)
-      {
-         m_logger.printf("z %.2f | vz %.2f | w %.2f | x %.2f | y %.2f | z %.2f | roll %.2f  |  pitch %.2f  |  y %.2f",
-                         m_local_estimation_data.altitude,
-                         m_local_estimation_data.vertical_velocity,
-                         m_local_estimation_data.attitude.w,
-                         m_local_estimation_data.attitude.x,
-                         m_local_estimation_data.attitude.y,
-                         m_local_estimation_data.attitude.z,
-                         euler.x,
-                         euler.y,
-                         euler.z);
-      }
+      // m_data_log_counter++;
+      // if ((m_data_log_counter % 50u) == 0)
+      // {
+      //    m_logger.printf("z %.2f | vz %.2f | w %.2f | x %.2f | y %.2f | z %.2f | roll %.2f  |  pitch %.2f  |  y %.2f",
+      //                    m_local_estimation_data.altitude,
+      //                    m_local_estimation_data.vertical_velocity,
+      //                    m_local_estimation_data.attitude.w,
+      //                    m_local_estimation_data.attitude.x,
+      //                    m_local_estimation_data.attitude.y,
+      //                    m_local_estimation_data.attitude.z,
+      //                    m_local_estimation_data.euler.x,
+      //                    m_local_estimation_data.euler.y,
+      //                    m_local_estimation_data.euler.z);
+      // }
    }
 
    void publish_health()
@@ -403,13 +402,13 @@ private:
       return false;
    }
 
-   // converts sensor axes from East-North-Up from to North-East-Down frame
-   static constexpr math::Vector3 map_imu_sensor_axes_to_ned(const math::Vector3& enu_vector)
+   // converts sensor axes from Front-Left-Up to Front_Right-Down
+   static constexpr math::Vector3 map_imu_sensor_axes_to_frd(const math::Vector3& enu_vector)
    {
       return {-enu_vector.y, -enu_vector.x, -enu_vector.z};
    }
 
-   MadgwickFilter&                       m_ahrs_filter;
+   AttitudeEstimator&                    m_attitude_estimator;
    AltitudeEkf&                          m_altitude_ekf;
    EstimatorHealth&                      m_estimator_health_storage;
    StateEstimation&                      m_state_estimation_data_storage;

@@ -40,6 +40,7 @@ extern "C"
                             aeromight_boundaries::aeromight_data.imu_sensor_health_storage,
                             aeromight_boundaries::aeromight_data.barometer_sensor_health_storage,
                             aeromight_boundaries::aeromight_data.estimator_health_storage,
+                            aeromight_boundaries::aeromight_data.control_health_storage,
                             logger_health_monitoring,
                             controller::task::health_monitoring_task_period_in_ms,
                             wait_before_first_summary_update_ms,

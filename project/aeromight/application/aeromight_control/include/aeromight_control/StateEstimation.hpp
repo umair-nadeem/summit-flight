@@ -17,9 +17,7 @@ struct StateEstimation
    math::Vector3 gyro_bias{};
 
    // Euler angles
-   float roll;
-   float pitch;
-   float yaw;
+   math::Vector3 euler{};
 
    // altitude control
    float altitude;

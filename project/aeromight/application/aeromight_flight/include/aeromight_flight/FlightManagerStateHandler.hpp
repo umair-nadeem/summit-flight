@@ -1,6 +1,7 @@
 #pragma once
 
 #include "FlightManagerState.hpp"
+#include "aeromight_boundaries/ControlSetpoints.hpp"
 #include "aeromight_boundaries/FlightManagerData.hpp"
 #include "aeromight_boundaries/HealthSummary.hpp"
 #include "boundaries/SharedData.hpp"
@@ -18,24 +19,27 @@ template <interfaces::rtos::IQueueReceiver<aeromight_boundaries::HealthSummary> 
           typename Logger>
 class FlightManagerStateHandler
 {
-   using Setpoints = boundaries::SharedData<aeromight_boundaries::FlightSetpoints>;
-   using Actuals   = boundaries::SharedData<aeromight_boundaries::RadioLinkStats>;
+   using ControlSetpoints = boundaries::SharedData<aeromight_boundaries::ControlSetpoints>;
+   using FlightSetpoints  = boundaries::SharedData<aeromight_boundaries::FlightSetpoints>;
+   using RadioActuals     = boundaries::SharedData<aeromight_boundaries::RadioLinkStats>;
 
 public:
-   explicit FlightManagerStateHandler(QueueReceiver&      health_summary_queue_receiver,
-                                      EstimationNotifier& control_start_notifier,
-                                      const Setpoints&    flight_setpoints_storage,
-                                      const Actuals&      radio_link_actuals_storage,
-                                      Logger&             logger,
-                                      const float         stick_input_deadband_abs,
-                                      const float         min_good_signal_rssi_dbm,
-                                      const uint32_t      max_age_stale_data_ms,
-                                      const uint32_t      min_state_debounce_duration_ms,
-                                      const uint32_t      timeout_sensors_readiness_ms,
-                                      const uint32_t      timeout_control_readiness_ms,
-                                      const uint32_t      timeout_auto_land_ms)
+   explicit FlightManagerStateHandler(QueueReceiver&         health_summary_queue_receiver,
+                                      EstimationNotifier&    control_start_notifier,
+                                      ControlSetpoints&      control_setpoints_storage,
+                                      const FlightSetpoints& flight_setpoints_storage,
+                                      const RadioActuals&    radio_link_actuals_storage,
+                                      Logger&                logger,
+                                      const float            stick_input_deadband_abs,
+                                      const float            min_good_signal_rssi_dbm,
+                                      const uint32_t         max_age_stale_data_ms,
+                                      const uint32_t         min_state_debounce_duration_ms,
+                                      const uint32_t         timeout_sensors_readiness_ms,
+                                      const uint32_t         timeout_control_readiness_ms,
+                                      const uint32_t         timeout_auto_land_ms)
        : m_health_summary_queue_receiver{health_summary_queue_receiver},
          m_control_start_notifier(control_start_notifier),
+         m_control_setpoints_storage(control_setpoints_storage),
          m_flight_setpoints_storage(flight_setpoints_storage),
          m_radio_link_actuals_storage(radio_link_actuals_storage),
          m_logger{logger},
@@ -80,29 +84,68 @@ public:
       m_logger.print("started control");
    }
 
-   // cppcheck-suppress functionStatic
-   void start_motors()
+   void arm_control()
    {
+      m_local_control_setpoints.mode  = aeromight_boundaries::ControlMode::idle;
+      m_local_control_setpoints.armed = true;
+      m_local_control_setpoints.kill  = false;
+      m_control_setpoints_storage.update_latest(m_local_control_setpoints, m_current_time_ms);
    }
 
-   // cppcheck-suppress functionStatic
-   void stop_motors()
+   void disarm_control()
    {
+      m_local_control_setpoints.mode  = aeromight_boundaries::ControlMode::idle;
+      m_local_control_setpoints.armed = false;
+      m_local_control_setpoints.kill  = false;
+      m_control_setpoints_storage.update_latest(m_local_control_setpoints, m_current_time_ms);
    }
 
-   // cppcheck-suppress functionStatic
+   void kill_motors()
+   {
+      m_local_control_setpoints.mode  = aeromight_boundaries::ControlMode::disabled;
+      m_local_control_setpoints.armed = false;
+      m_local_control_setpoints.kill  = true;
+      m_control_setpoints_storage.update_latest(m_local_control_setpoints, m_current_time_ms);
+   }
+
    void publish_manual_setpoint()
    {
+      m_local_control_setpoints.throttle = m_last_flight_setpoints_storage.data.input.throttle;
+      m_local_control_setpoints.roll     = m_last_flight_setpoints_storage.data.input.roll;
+      m_local_control_setpoints.pitch    = m_last_flight_setpoints_storage.data.input.pitch;
+      m_local_control_setpoints.yaw      = m_last_flight_setpoints_storage.data.input.yaw;
+
+      m_local_control_setpoints.mode  = aeromight_boundaries::ControlMode::manual_rate;
+      m_local_control_setpoints.armed = true;
+      m_local_control_setpoints.kill  = false;
+
+      m_control_setpoints_storage.update_latest(m_local_control_setpoints, m_current_time_ms);
    }
 
-   // cppcheck-suppress functionStatic
    void publish_hover_setpoint()
    {
+      m_local_control_setpoints.roll  = m_last_flight_setpoints_storage.data.input.roll;
+      m_local_control_setpoints.pitch = m_last_flight_setpoints_storage.data.input.pitch;
+      m_local_control_setpoints.yaw   = m_last_flight_setpoints_storage.data.input.yaw;
+
+      m_local_control_setpoints.mode  = aeromight_boundaries::ControlMode::altitude_hold;
+      m_local_control_setpoints.armed = true;
+      m_local_control_setpoints.kill  = false;
+
+      m_control_setpoints_storage.update_latest(m_local_control_setpoints, m_current_time_ms);
    }
 
-   // cppcheck-suppress functionStatic
    void publish_auto_land_setpoint()
    {
+      m_local_control_setpoints.roll  = 0.0f;
+      m_local_control_setpoints.pitch = 0.0f;
+      m_local_control_setpoints.yaw   = m_last_flight_setpoints_storage.data.input.yaw;
+
+      m_local_control_setpoints.mode  = aeromight_boundaries::ControlMode::auto_land;
+      m_local_control_setpoints.armed = true;
+      m_local_control_setpoints.kill  = false;
+
+      m_control_setpoints_storage.update_latest(m_local_control_setpoints, m_current_time_ms);
    }
 
    void set_state(const FlightManagerState state)
@@ -302,24 +345,26 @@ private:
       return (m_last_health_summary.control_health == aeromight_boundaries::SubsystemHealth::operational);
    }
 
-   QueueReceiver&                      m_health_summary_queue_receiver;
-   EstimationNotifier&                 m_control_start_notifier;
-   const Setpoints&                    m_flight_setpoints_storage;
-   const Actuals&                      m_radio_link_actuals_storage;
-   Logger&                             m_logger;
-   const float                         m_stick_input_deadband_abs;
-   const float                         m_min_good_signal_rssi_dbm;
-   const uint32_t                      m_max_age_stale_data_ms;
-   const uint32_t                      m_min_state_debounce_duration_ms;
-   const uint32_t                      m_timeout_sensors_readiness_ms;
-   const uint32_t                      m_timeout_control_readiness_ms;
-   const uint32_t                      m_timeout_auto_land_ms;
-   aeromight_boundaries::HealthSummary m_last_health_summary{};
-   Setpoints::Sample                   m_last_flight_setpoints_storage{};
-   Actuals::Sample                     m_last_radio_link_actuals_storage{};
-   FlightManagerState                  m_state{FlightManagerState::init};
-   uint32_t                            m_current_time_ms{0};
-   uint32_t                            m_reference_time_ms{0};
+   QueueReceiver&                         m_health_summary_queue_receiver;
+   EstimationNotifier&                    m_control_start_notifier;
+   ControlSetpoints&                      m_control_setpoints_storage;
+   const FlightSetpoints&                 m_flight_setpoints_storage;
+   const RadioActuals&                    m_radio_link_actuals_storage;
+   Logger&                                m_logger;
+   const float                            m_stick_input_deadband_abs;
+   const float                            m_min_good_signal_rssi_dbm;
+   const uint32_t                         m_max_age_stale_data_ms;
+   const uint32_t                         m_min_state_debounce_duration_ms;
+   const uint32_t                         m_timeout_sensors_readiness_ms;
+   const uint32_t                         m_timeout_control_readiness_ms;
+   const uint32_t                         m_timeout_auto_land_ms;
+   aeromight_boundaries::ControlSetpoints m_local_control_setpoints{};
+   aeromight_boundaries::HealthSummary    m_last_health_summary{};
+   FlightSetpoints::Sample                m_last_flight_setpoints_storage{};
+   RadioActuals::Sample                   m_last_radio_link_actuals_storage{};
+   FlightManagerState                     m_state{FlightManagerState::init};
+   uint32_t                               m_current_time_ms{0};
+   uint32_t                               m_reference_time_ms{0};
 };
 
 }   // namespace aeromight_flight

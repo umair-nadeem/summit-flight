@@ -72,14 +72,19 @@ struct FlightManagerStateMachine
          state.start_control();
       };
 
-      constexpr auto start_motors = [](StateHandler& state)
+      constexpr auto arm_control = [](StateHandler& state)
       {
-         state.start_motors();
+         state.arm_control();
       };
 
-      constexpr auto stop_motors = [](StateHandler& state)
+      constexpr auto disarm_control = [](StateHandler& state)
       {
-         state.stop_motors();
+         state.disarm_control();
+      };
+
+      constexpr auto kill_motors = [](StateHandler& state)
+      {
+         state.kill_motors();
       };
 
       constexpr auto publish_manual_setpoint = [](StateHandler& state)
@@ -259,50 +264,50 @@ struct FlightManagerStateMachine
           s_disarmed_checkpoint                                                                                                                   = s_disarmed,
 
           s_arming            + e_tick                                              / (read_health_summary, read_radio_input, get_time)           = s_arming_checkpoint,
-          s_arming_checkpoint         [kill]                                        / (stop_motors, set_killed_state)                             = s_killed,
+          s_arming_checkpoint         [kill]                                        / (kill_motors, set_killed_state)                             = s_killed,
           s_arming_checkpoint         [disarm || !is_health_good || !is_radio_link_good]                   / set_disarmed_state                   = s_disarmed,
-          s_arming_checkpoint         [is_state_change_persistent && is_health_good && is_radio_link_good] / (start_motors, set_armed_state)      = s_armed,
+          s_arming_checkpoint         [is_state_change_persistent && is_health_good && is_radio_link_good] / (arm_control, set_armed_state)       = s_armed,
           s_arming_checkpoint                                                                                                                     = s_arming,
 
           s_armed             + e_tick                                              / (read_health_summary, read_radio_input, get_time)           = s_armed_checkpoint,
-          s_armed_checkpoint          [kill]                                        / (stop_motors, set_killed_state)                             = s_killed,
+          s_armed_checkpoint          [kill]                                        / (kill_motors, set_killed_state)                             = s_killed,
           s_armed_checkpoint          [disarm]                                      / (set_disarming_state, set_reference_time)                   = s_disarming,
           s_armed_checkpoint          [manual_mode]                                 / set_manual_state                                            = s_manual,
           s_armed_checkpoint          [hover_mode]                                  / set_hover_state                                             = s_hover,
-          s_armed_checkpoint          [!is_health_good || !is_radio_link_good]      / stop_motors                                                 = s_to_fault,
+          s_armed_checkpoint          [!is_health_good || !is_radio_link_good]      / disarm_control                                              = s_to_fault,
           s_armed_checkpoint                                                                                                                      = s_armed,
 
           s_disarming         + e_tick                                              / (read_health_summary, read_radio_input, get_time)           = s_disarming_checkpoint,
-          s_disarming_checkpoint      [kill]                                        / (stop_motors, set_killed_state)                             = s_killed,
+          s_disarming_checkpoint      [kill]                                        / (kill_motors, set_killed_state)                             = s_killed,
           s_disarming_checkpoint      [arm && is_health_good && is_radio_link_good]                                                               = s_armed,
-          s_disarming_checkpoint      [is_state_change_persistent]                  / (stop_motors, set_disarmed_state)                           = s_disarmed,
+          s_disarming_checkpoint      [is_state_change_persistent]                  / (disarm_control, set_disarmed_state)                        = s_disarmed,
           s_disarming_checkpoint                                                                                                                  = s_disarming,
 
           s_manual            + e_tick                                              / (read_health_summary, read_radio_input, get_time, publish_manual_setpoint) = s_manual_checkpoint,
-          s_manual_checkpoint         [kill]                                        / (stop_motors, set_killed_state)                             = s_killed,
+          s_manual_checkpoint         [kill]                                        / (kill_motors, set_killed_state)                             = s_killed,
           s_manual_checkpoint         [disarm]                                      / (set_disarming_state, set_reference_time)                   = s_disarming,
           s_manual_checkpoint         [hover_mode]                                  / set_hover_state                                             = s_hover,
-          s_manual_checkpoint         [!is_health_good]                             / stop_motors                                                 = s_to_fault,
+          s_manual_checkpoint         [!is_health_good]                             / disarm_control                                              = s_to_fault,
           s_manual_checkpoint         [!is_radio_link_good]                         / set_auto_land_state                                         = s_auto_land,
           s_manual_checkpoint                                                                                                                     = s_manual,
 
           s_hover             + e_tick                                              / (read_health_summary, read_radio_input, get_time, publish_hover_setpoint) = s_hover_checkpoint,
-          s_hover_checkpoint          [kill]                                        / (stop_motors, set_killed_state)                             = s_killed,
+          s_hover_checkpoint          [kill]                                        / (kill_motors, set_killed_state)                             = s_killed,
           s_hover_checkpoint          [disarm]                                      / (set_disarming_state, set_reference_time)                   = s_disarming,
           s_hover_checkpoint          [manual_mode]                                 / set_manual_state                                            = s_manual,
-          s_hover_checkpoint          [!is_health_good]                             / stop_motors                                                 = s_to_fault,
+          s_hover_checkpoint          [!is_health_good]                             / disarm_control                                              = s_to_fault,
           s_hover_checkpoint          [!is_radio_link_good]                         / set_auto_land_state                                         = s_auto_land,
           s_hover_checkpoint                                                                                                                      = s_hover,
 
           s_auto_land         + e_tick                                              / (read_health_summary, read_radio_input, get_time, publish_auto_land_setpoint) = s_auto_land_checkpoint,
-          s_auto_land_checkpoint      [kill]                                        / (stop_motors, set_killed_state)                             = s_killed,
-          s_auto_land_checkpoint      [!is_health_good || timeout_auto_land]        / stop_motors                                                 = s_to_fault,
-          s_auto_land_checkpoint      [landing_complete]                            / (stop_motors, set_disarmed_state)                           = s_disarmed,
+          s_auto_land_checkpoint      [kill]                                        / (kill_motors, set_killed_state)                             = s_killed,
+          s_auto_land_checkpoint      [!is_health_good || timeout_auto_land]        / disarm_control                                              = s_to_fault,
+          s_auto_land_checkpoint      [landing_complete]                            / (disarm_control, set_disarmed_state)                        = s_disarmed,
           s_auto_land_checkpoint      [is_radio_link_good && takeover_requested]    / set_manual_state                                            = s_manual,
           s_auto_land_checkpoint                                                                                                                  = s_auto_land,
 
-          s_killed            + e_tick                                              / read_radio_input                                            = s_killed_checkpoint,
-          s_killed_checkpoint         [!kill]                                       / set_disarmed_state                                          = s_disarmed,
+          s_killed            + e_tick                                              / (read_health_summary, read_radio_input, get_time)           = s_killed_checkpoint,
+          s_killed_checkpoint         [is_health_good && !kill]                     / set_disarmed_state                                          = s_disarmed,
           s_killed_checkpoint                                                                                                                     = s_killed,
 
           s_to_fault                                                                / set_fault_state                                             = s_fault

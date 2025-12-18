@@ -1,6 +1,6 @@
 add_module(
    SOURCES
-      src/MadgwickFilter.cpp
+      src/AttitudeEstimator.cpp
    LIBS
       math
       physics

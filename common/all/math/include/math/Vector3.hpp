@@ -82,6 +82,11 @@ struct Vector3
       return result;
    }
 
+   Vector3 operator%(const Vector3& other) const
+   {
+      return (*this).cross(other);
+   }
+
    Vector3 operator/(const float v) const
    {
       Vector3 result{};
@@ -91,16 +96,27 @@ struct Vector3
       return result;
    }
 
+   void zero()
+   {
+      x = 0;
+      y = 0;
+      z = 0;
+   }
+
    void normalize()
    {
-      const float norm = get_norm();
-      if (norm > 1e-6f)
+      const float v = norm();
+      if (v > 1e-6f)
       {
-         const float inv_norm = 1.0f / norm;
-         x *= inv_norm;
-         y *= inv_norm;
-         z *= inv_norm;
+         x /= v;
+         y /= v;
+         z /= v;
       }
+   }
+
+   Vector3 normalized() const
+   {
+      return (*this) / norm();
    }
 
    void set_epsilon(const float eps)
@@ -108,9 +124,27 @@ struct Vector3
       epsilon = eps;
    }
 
-   float get_norm() const
+   float norm() const
    {
       return sqrtf((x * x) + (y * y) + (z * z));
+   }
+
+   float norm_squared() const
+   {
+      return ((x * x) + (y * y) + (z * z));
+   }
+
+   float length() const
+   {
+      return norm();
+   }
+
+private:
+   Vector3 cross(const Vector3& other) const
+   {
+      return {(y * other.z) - (z * other.y),
+              (-x * other.z) + (z * other.x),
+              (x * other.y) - (y * other.x)};
    }
 };
 
