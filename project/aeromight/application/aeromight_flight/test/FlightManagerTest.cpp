@@ -173,6 +173,7 @@ protected:
    mocks::rtos::QueueReceiver<aeromight_boundaries::HealthSummary> health_summary_queue_mock{};
    mocks::rtos::Notifier                                           control_start_notifer_mock{};
    mocks::common::ClockSource                                      sys_clock{};
+   boundaries::SharedData<aeromight_boundaries::ControlSetpoints>  control_setpoints_storage{};
    Setpoints                                                       flight_setpoints_storage{};
    Actuals                                                         radio_link_actuals_storage{};
    mocks::common::Logger                                           logger{"flight"};
@@ -187,6 +188,7 @@ protected:
                                    decltype(sys_clock), mocks::common::Logger>
        flight_manager{health_summary_queue_mock,
                       control_start_notifer_mock,
+                      control_setpoints_storage,
                       flight_setpoints_storage,
                       radio_link_actuals_storage,
                       logger,

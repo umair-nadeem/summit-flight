@@ -7,10 +7,10 @@
 #include "mocks/common/ClockSource.hpp"
 #include "mocks/common/Logger.hpp"
 
-class AhrsFilterMock
+class AttitudeEstimatorMock
 {
 public:
-   MOCK_METHOD(void, update_in_ned_frame, (const math::Vector3&, const math::Vector3&, const float&), ());
+   MOCK_METHOD(void, update, (const math::Vector3&, const math::Vector3&, const float&), ());
    MOCK_METHOD(void, reset, ());
    MOCK_METHOD(math::Quaternion, get_quaternion, (), (const));
    MOCK_METHOD(math::Vector3, get_unbiased_gyro_data, (const math::Vector3&), ());
@@ -83,7 +83,7 @@ protected:
    static constexpr float    max_valid_imu_sample_dt_s                      = 0.01f;
    static constexpr float    max_valid_barometer_sample_dt_s                = 2.0f;
 
-   testing::NiceMock<AhrsFilterMock>                               ahrs_filter_mock{};
+   testing::NiceMock<AttitudeEstimatorMock>                        ahrs_filter_mock{};
    testing::NiceMock<EkfMock>                                      ekf_mock{};
    mocks::common::ClockSource                                      sys_clock{};
    ::boundaries::SharedData<aeromight_boundaries::EstimatorHealth> estimator_health_storage{};
@@ -287,7 +287,7 @@ TEST_F(EstimationTest, run_attitude_estimation)
    const auto  quat          = math::Quaternion{1, 0, 9, 17};
    const float dt_s          = static_cast<float>(current_ms - (current_ms - 1u)) * 0.001f;
 
-   EXPECT_CALL(ahrs_filter_mock, update_in_ned_frame(accel_ned, gyro_ned, dt_s));
+   EXPECT_CALL(ahrs_filter_mock, update(accel_ned, gyro_ned, dt_s));
    EXPECT_CALL(ahrs_filter_mock, get_quaternion()).WillOnce(::testing::Return(quat));
    EXPECT_CALL(ahrs_filter_mock, get_unbiased_gyro_data(gyro_ned)).WillOnce(::testing::Return(unbiased_gyro));
    EXPECT_CALL(ekf_mock, predict(accel_ned, quat, dt_s));
