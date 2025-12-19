@@ -824,7 +824,7 @@ TEST_F(HealthMonitoringTest, control_failure_causes_flight_critical_fault)
    EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::operational);
 
    // control has now error
-   control_health.enabled = false;
+   control_health.error = 1;
    imu_health_storage.update_latest(imu_health, current_ms);                 // keep providing good imu health status
    barometer_health_storage.update_latest(baro_health, current_ms);          // keep providing good baro health status
    estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
@@ -845,7 +845,7 @@ TEST_F(HealthMonitoringTest, control_failure_causes_flight_critical_fault)
    EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::fault);
 
    // removing cause of fault
-   control_health.enabled = true;
+   control_health.error = 0;
    imu_health_storage.update_latest(imu_health, current_ms);                 // keep providing good imu health status
    barometer_health_storage.update_latest(baro_health, current_ms);          // keep providing good baro health status
    estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status

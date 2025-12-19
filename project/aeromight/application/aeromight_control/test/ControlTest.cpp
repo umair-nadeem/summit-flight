@@ -3,37 +3,51 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "mocks/common/ClockSource.hpp"
 #include "mocks/common/Logger.hpp"
-#include "sys_time/ClockSource.hpp"
 
 class AttitudeControllerMock
 {
 public:
-   MOCK_METHOD(void, update, (const math::Vector3&, const math::Vector3&), ());
+   MOCK_METHOD(math::Vector3, update, (const math::Vector3&, const math::Vector3&), ());
 };
 
 class RateControllerMock
 {
 public:
-   MOCK_METHOD(void, update, (const float, const math::Vector3&, const math::Vector3&), ());
+   MOCK_METHOD(math::Vector3, update, (const math::Vector3&, const math::Vector3&, const float, const bool), ());
    MOCK_METHOD(void, reset, (), ());
 };
 
 class ControlTest : public testing::Test
 {
 protected:
+   void provide_ticks(const uint32_t n)
+   {
+      uint32_t       current_ms_copy      = current_ms + 1u;
+      const uint32_t ms_count_after_ticks = n + current_ms_copy;
+      for (; current_ms_copy < ms_count_after_ticks; current_ms_copy++)
+      {
+         current_ms      = current_ms_copy;
+         sys_clock.m_sec = current_ms;
+         control.execute();
+      }
+   }
+
    static constexpr float max_roll_rate_radps  = 3.5f;
    static constexpr float max_pitch_rate_radps = 3.5f;
    static constexpr float max_yaw_rate_radps   = 2.0f;
    static constexpr float max_tilt_angle_rad   = 30 * physics::constants::deg_to_rad;   // 30 degrees
+   static constexpr float lift_throttle        = 0.05f;
 
    AttitudeControllerMock                                         attitude_controller_mock{};
    RateControllerMock                                             rate_controller_mock{};
-   sys_time::ClockSource                                          sys_clock{};
+   mocks::common::ClockSource                                     sys_clock{};
    mocks::common::Logger                                          logger{"controlTest"};
    boundaries::SharedData<aeromight_boundaries::ControlHealth>    control_health_storage{};
    boundaries::SharedData<aeromight_boundaries::ControlSetpoints> control_setpoints_storage{};
    aeromight_control::StateEstimation                             state_estimation{};
+   uint32_t                                                       current_ms{0};
 
    aeromight_control::Control<decltype(attitude_controller_mock),
                               decltype(rate_controller_mock),
@@ -48,11 +62,32 @@ protected:
                max_roll_rate_radps,
                max_pitch_rate_radps,
                max_yaw_rate_radps,
-               max_tilt_angle_rad};
+               max_tilt_angle_rad,
+               lift_throttle};
 };
 
-TEST_F(ControlTest, check_start_and_stop)
+TEST_F(ControlTest, do_nothing_and_set_time_delta_error)
 {
+   EXPECT_CALL(attitude_controller_mock, update).Times(0);
+   EXPECT_CALL(rate_controller_mock, update).Times(0);
 
-   control.start();
+   control.execute();
+   control.execute();
+
+   aeromight_boundaries::ControlHealth::ErrorBits error{};
+   error.set(static_cast<uint8_t>(aeromight_boundaries::ControlHealth::Error::invalid_time_delta));
+
+   const auto control_health = control_health_storage.get_latest();
+   EXPECT_EQ(control_health.data.state, aeromight_boundaries::ControlState::inactive);
+   EXPECT_EQ(control_health.data.error, error.to_ulong());
+}
+
+TEST_F(ControlTest, do_nothing_until_activated)
+{
+   EXPECT_CALL(attitude_controller_mock, update).Times(0);
+   EXPECT_CALL(rate_controller_mock, update).Times(0);
+
+   provide_ticks(1u);
+   const auto control_health = control_health_storage.get_latest();
+   EXPECT_EQ(control_health.data.state, aeromight_boundaries::ControlState::inactive);
 }

@@ -9,7 +9,7 @@ enum class ControlState
    disarmed,
    armed_on_ground,
    airborne,
-
+   emergency_kill
 };
 
 }   // namespace aeromight_boundaries

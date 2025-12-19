@@ -114,8 +114,7 @@ extern "C"
                                                         rate_controller_output_limit,
                                                         max_roll_rate_radps,
                                                         max_pitch_rate_radps,
-                                                        max_yaw_rate_radps,
-                                                        lift_throttle};
+                                                        max_yaw_rate_radps};
 
       aeromight_control::Control<decltype(attitude_controller),
                                  decltype(rate_controller),
@@ -130,7 +129,8 @@ extern "C"
                   max_roll_rate_radps,
                   max_pitch_rate_radps,
                   max_yaw_rate_radps,
-                  max_tilt_angle_rad};
+                  max_tilt_angle_rad,
+                  lift_throttle};
 
       aeromight_control::EstimationAndControl<decltype(estimation),
                                               decltype(control)>

@@ -57,19 +57,14 @@ public:
 
    void start()
    {
-      get_time();
-      reset();
-      m_local_estimator_health.state = State::get_reference_pressure;
-      publish_health();
-      m_logger.print("started");
-   }
-
-   void stop()
-   {
-      get_time();
-      m_local_estimator_health.state = State::idle;
-      publish_health();
-      m_logger.print("stopped");
+      if (m_local_estimator_health.state == State::idle)
+      {
+         get_time();
+         reset();
+         m_local_estimator_health.state = State::get_reference_pressure;
+         publish_health();
+         m_logger.print("started");
+      }
    }
 
    State get_state() const
@@ -86,6 +81,17 @@ public:
    {
       get_time();
 
+      run_state_machine();
+   }
+
+private:
+   void get_time()
+   {
+      m_current_time_ms = ClockSource::now_ms();
+   }
+
+   void run_state_machine()
+   {
       switch (m_local_estimator_health.state)
       {
          case State::idle:
@@ -145,12 +151,6 @@ public:
             error::stop_operation();
             break;
       }
-   }
-
-private:
-   void get_time()
-   {
-      m_current_time_ms = ClockSource::now_ms();
    }
 
    void reset()

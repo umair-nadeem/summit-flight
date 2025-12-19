@@ -7,8 +7,6 @@ namespace aeromight_boundaries
 
 enum class ControlMode : uint8_t
 {
-   disabled,
-   idle,
    manual_rate,
    altitude_hold,
    auto_land

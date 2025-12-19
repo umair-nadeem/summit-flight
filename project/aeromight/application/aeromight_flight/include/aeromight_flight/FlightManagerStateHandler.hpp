@@ -86,7 +86,6 @@ public:
 
    void arm_control()
    {
-      m_local_control_setpoints.mode  = aeromight_boundaries::ControlMode::idle;
       m_local_control_setpoints.armed = true;
       m_local_control_setpoints.kill  = false;
       m_control_setpoints_storage.update_latest(m_local_control_setpoints, m_current_time_ms);
@@ -94,7 +93,6 @@ public:
 
    void disarm_control()
    {
-      m_local_control_setpoints.mode  = aeromight_boundaries::ControlMode::idle;
       m_local_control_setpoints.armed = false;
       m_local_control_setpoints.kill  = false;
       m_control_setpoints_storage.update_latest(m_local_control_setpoints, m_current_time_ms);
@@ -102,7 +100,6 @@ public:
 
    void kill_motors()
    {
-      m_local_control_setpoints.mode  = aeromight_boundaries::ControlMode::disabled;
       m_local_control_setpoints.armed = false;
       m_local_control_setpoints.kill  = true;
       m_control_setpoints_storage.update_latest(m_local_control_setpoints, m_current_time_ms);

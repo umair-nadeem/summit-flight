@@ -303,7 +303,7 @@ private:
    {
       const bool control_stale = (((m_current_time_ms - m_control_health_snapshot.timestamp_ms) > m_max_age_control_health_ms));
 
-      if (!m_control_health_snapshot.data.enabled)
+      if (m_control_health_snapshot.data.error.to_ulong() != 0)
       {
          return aeromight_boundaries::SubsystemHealth::fault;
       }
@@ -358,7 +358,7 @@ private:
 
    bool control_is_ready() const
    {
-      return m_control_health_snapshot.data.enabled;
+      return (m_control_health_snapshot.data.state == aeromight_boundaries::ControlState::disarmed);
    }
 
    QueueSender&                                                          m_queue_sender;

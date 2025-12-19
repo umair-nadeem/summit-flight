@@ -19,8 +19,7 @@ public:
                            const float          torque_output_limit,
                            const float          max_roll_rate_radps,
                            const float          max_pitch_rate_radps,
-                           const float          max_yaw_rate_radps,
-                           const float          lift_throttle)
+                           const float          max_yaw_rate_radps)
        : m_gains_p{gains_p},
          m_gains_i{gains_i},
          m_gains_d{gains_d},
@@ -28,15 +27,14 @@ public:
          m_torque_output_limit{torque_output_limit},
          m_max_roll_rate_radps{max_roll_rate_radps},
          m_max_pitch_rate_radps{max_pitch_rate_radps},
-         m_max_yaw_rate_radps{max_yaw_rate_radps},
-         m_lift_throttle{lift_throttle}
+         m_max_yaw_rate_radps{max_yaw_rate_radps}
    {
    }
 
-   math::Vector3 update(const float          throttle_setpoint,
-                        const math::Vector3& rate_setpoint_radps,
+   math::Vector3 update(const math::Vector3& rate_setpoint_radps,
                         const math::Vector3& rate_measured_radps,
-                        const float          dt_s)
+                        const float          dt_s,
+                        const bool           run_integrator)
    {
 
       if (!initialized || (dt_s <= 0.0f))
@@ -57,7 +55,7 @@ public:
       torque_cmd.y = std::clamp(torque_cmd.y, -m_torque_output_limit, m_torque_output_limit);
       torque_cmd.z = std::clamp(torque_cmd.z, -m_torque_output_limit, m_torque_output_limit);
 
-      if (throttle_setpoint > m_lift_throttle)
+      if (run_integrator)
       {
          update_integrator(rate_error, dt_s);
       }
@@ -129,7 +127,6 @@ private:
    const float                m_max_roll_rate_radps;
    const float                m_max_pitch_rate_radps;
    const float                m_max_yaw_rate_radps;
-   const float                m_lift_throttle;
    math::Vector3              m_rate_integrator{};
    math::Vector3              m_previous_rate_measured{};
    bool                       initialized{false};

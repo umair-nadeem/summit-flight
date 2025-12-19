@@ -113,13 +113,11 @@ protected:
                   max_valid_barometer_sample_dt_s};
 };
 
-TEST_F(EstimationTest, start_and_stop)
+TEST_F(EstimationTest, start)
 {
+   EXPECT_EQ(estimation.get_state(), aeromight_boundaries::EstimatorState::idle);
    estimation.start();
    EXPECT_EQ(estimation.get_state(), aeromight_boundaries::EstimatorState::get_reference_pressure);
-
-   estimation.stop();
-   EXPECT_EQ(estimation.get_state(), aeromight_boundaries::EstimatorState::idle);
 }
 
 TEST_F(EstimationTest, fault_due_to_reference_pressure_acquisition_timeout)
