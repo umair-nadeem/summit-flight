@@ -121,9 +121,9 @@ extern "C"
                                  decltype(rate_controller),
                                  sys_time::ClockSource,
                                  LogClient>
-          control{aeromight_boundaries::aeromight_data.control_health_storage,
-                  attitude_controller,
+          control{attitude_controller,
                   rate_controller,
+                  aeromight_boundaries::aeromight_data.control_health_storage,
                   aeromight_boundaries::aeromight_data.control_setpoints,
                   data->state_estimation,
                   logger_control,

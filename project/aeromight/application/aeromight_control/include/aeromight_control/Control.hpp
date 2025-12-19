@@ -3,6 +3,7 @@
 #include "StateEstimation.hpp"
 #include "aeromight_boundaries/ControlHealth.hpp"
 #include "aeromight_boundaries/ControlSetpoints.hpp"
+#include "aeromight_boundaries/ControlState.hpp"
 #include "boundaries/SharedData.hpp"
 #include "interfaces/IClockSource.hpp"
 
@@ -12,13 +13,13 @@ namespace aeromight_control
 template <typename AttitudeController, typename RateController, interfaces::IClockSource ClockSource, typename Logger>
 class Control
 {
-   using ControlHealth = ::boundaries::SharedData<aeromight_boundaries::ControlHealth>;
+   using ControlHealth = boundaries::SharedData<aeromight_boundaries::ControlHealth>;
    using Setpoints     = boundaries::SharedData<aeromight_boundaries::ControlSetpoints>;
 
 public:
-   explicit Control(ControlHealth&         control_health_storage,
-                    AttitudeController&    attitude_controller,
+   explicit Control(AttitudeController&    attitude_controller,
                     RateController&        rate_controller,
+                    ControlHealth&         control_health_storage,
                     const Setpoints&       control_setpoints,
                     const StateEstimation& state_estimation_data,
                     Logger&                logger,
@@ -26,9 +27,9 @@ public:
                     const float            max_pitch_rate_radps,
                     const float            max_yaw_rate_radps,
                     const float            max_tilt_angle_rad)
-       : m_control_health_storage{control_health_storage},
-         m_attitude_controller{attitude_controller},
+       : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
+         m_control_health_storage{control_health_storage},
          m_control_setpoints{control_setpoints},
          m_state_estimation_data{state_estimation_data},
          m_logger{logger},
@@ -103,6 +104,11 @@ public:
       }
    }
 
+   aeromight_boundaries::ControlState get_state() const
+   {
+      return m_state;
+   }
+
 private:
    void get_time()
    {
@@ -114,9 +120,9 @@ private:
       m_control_health_storage.update_latest(m_local_control_health, m_current_time_ms);
    }
 
-   ControlHealth&                      m_control_health_storage;
    AttitudeController&                 m_attitude_controller;
    RateController&                     m_rate_controller;
+   ControlHealth&                      m_control_health_storage;
    const Setpoints&                    m_control_setpoints;
    const StateEstimation&              m_state_estimation_data;
    Logger&                             m_logger;
@@ -125,6 +131,7 @@ private:
    const float                         m_max_yaw_rate_radps;
    const float                         m_max_tilt_angle_rad;
    aeromight_boundaries::ControlHealth m_local_control_health{};
+   aeromight_boundaries::ControlState  m_state{aeromight_boundaries::ControlState::inactive};
    uint32_t                            m_current_time_ms{0};
    uint32_t                            m_last_execution_time_ms{0};
    bool                                m_attitude_controller_to_be_updated{false};
