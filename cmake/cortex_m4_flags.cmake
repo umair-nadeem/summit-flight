@@ -23,19 +23,19 @@ function(add_cortex_m4_compile_flags library)
        >
 
        ## Optimization & Performance
-       -O2
+       -O0
        -g
 
        # explicit -O3 flags
-       -fgcse-after-reload
-       -floop-interchange
-       -fpeel-loops
-       -fpredictive-commoning
-        -fsplit-loops
-       -fsplit-paths
-       -ftree-loop-distribution
-       -ftree-partial-pre
-       -fvect-cost-model=dynamic
+    #    -fgcse-after-reload
+    #    -floop-interchange
+    #    -fpeel-loops
+    #    -fpredictive-commoning
+    #     -fsplit-loops
+    #    -fsplit-paths
+    #    -ftree-loop-distribution
+    #    -ftree-partial-pre
+    #    -fvect-cost-model=dynamic
    )
 endfunction()
 

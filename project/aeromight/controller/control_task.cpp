@@ -52,6 +52,7 @@ extern "C"
       constexpr float    max_valid_imu_sample_dt_s                      = 0.02f;
       constexpr float    max_valid_barometer_sample_dt_s                = 10.0f;
       // control parameters
+      constexpr float    idle_thrust                                    = 0.05f;
       constexpr float    lift_throttle                                  = 0.1f;
       constexpr float    attitude_controller_roll_kp                    = 4.0f;
       constexpr float    attitude_controller_pitch_kp                   = 4.0f;
@@ -65,7 +66,7 @@ extern "C"
       constexpr float    rate_controller_yaw_ki                         = 0.025f;
       constexpr float    rate_controller_roll_kd                        = 0.01f;
       constexpr float    rate_controller_pitch_kd                       = 0.01f;
-      constexpr float    rate_controller_yaw_kd                         = 0.0f;
+      constexpr float    rate_controller_yaw_kd                         = 0.00f;
       constexpr float    rate_controller_roll_integrator_limit          = 0.3f;
       constexpr float    rate_controller_pitch_integrator_limit         = 0.3f;
       constexpr float    rate_controller_yaw_integrator_limit           = 0.3f;
@@ -130,6 +131,7 @@ extern "C"
                   max_pitch_rate_radps,
                   max_yaw_rate_radps,
                   max_tilt_angle_rad,
+                  idle_thrust,
                   lift_throttle};
 
       aeromight_control::EstimationAndControl<decltype(estimation),

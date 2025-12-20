@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include "StateEstimation.hpp"
 #include "aeromight_boundaries/ControlHealth.hpp"
 #include "aeromight_boundaries/ControlSetpoints.hpp"
@@ -28,6 +30,7 @@ public:
                     const float            max_pitch_rate_radps,
                     const float            max_yaw_rate_radps,
                     const float            max_tilt_angle_rad,
+                    const float            idle_thrust,
                     const float            lift_throttle)
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
@@ -39,6 +42,7 @@ public:
          m_max_pitch_rate_radps{max_pitch_rate_radps},
          m_max_yaw_rate_radps{max_yaw_rate_radps},
          m_max_tilt_angle_rad{max_tilt_angle_rad},
+         m_idle_thrust{idle_thrust},
          m_lift_throttle{lift_throttle}
 
    {
@@ -50,9 +54,8 @@ public:
       if (m_local_control_health.state == aeromight_boundaries::ControlState::inactive)
       {
          get_time();
-         m_local_control_health.state = aeromight_boundaries::ControlState::disarmed;
+         move_to_disarmed();
          publish_health();
-         m_logger.print("started control");
       }
    }
 
@@ -92,11 +95,13 @@ private:
             if (kill())
             {
                move_to_killed();
+               break;
             }
 
             if (!armed())
             {
                move_to_disarmed();
+               break;
             }
 
             if (airborne())
@@ -104,14 +109,18 @@ private:
                move_to_airborne();
             }
 
+            estimate_collective_thrust();
             run_attitude_controller();
             run_rate_controller(false);
+            run_mixer();
+            publish_actuator_setpoints();
             break;
 
          case aeromight_boundaries::ControlState::airborne:
             if (kill())
             {
                move_to_killed();
+               break;
             }
 
             if (!armed())
@@ -119,12 +128,18 @@ private:
                move_to_armed_on_ground();
             }
 
+            estimate_collective_thrust();
             run_attitude_controller();
             run_rate_controller(true);
+            run_mixer();
+            publish_actuator_setpoints();
             break;
 
          case aeromight_boundaries::ControlState::emergency_kill:
-            // do nothing
+            if (!kill() && !armed())
+            {
+               move_to_disarmed();
+            }
             break;
 
          default:
@@ -152,6 +167,9 @@ private:
 
    void reset()
    {
+      m_collective_thrust = 0.0f;
+      m_desired_rate_radps.zero();
+      m_torque_cmd.zero();
       m_rate_controller.reset();
    }
 
@@ -159,37 +177,45 @@ private:
    {
       reset();
       stop_motors();
-      m_logger.print("killed");
+      publish_actuator_setpoints();
       m_local_control_health.state = aeromight_boundaries::ControlState::emergency_kill;
+      m_logger.print("killed");
    }
 
    void move_to_disarmed()
    {
       reset();
       stop_motors();
-      m_logger.print("stopped motors");
+      publish_actuator_setpoints();
       m_local_control_health.state = aeromight_boundaries::ControlState::disarmed;
+      m_logger.print("disarmed");
    }
 
    void move_to_armed()
    {
       reset();
       start_motors();
-      m_logger.print("started motors");
       m_local_control_health.state = aeromight_boundaries::ControlState::armed_on_ground;
+      m_logger.print("armed on ground");
    }
 
    void move_to_armed_on_ground()
    {
       reset();
-      m_logger.print("landed");
       m_local_control_health.state = aeromight_boundaries::ControlState::armed_on_ground;
+      m_logger.print("armed on ground");
    }
 
    void move_to_airborne()
    {
-      m_logger.print("airborne");
+      reset();
       m_local_control_health.state = aeromight_boundaries::ControlState::airborne;
+      m_logger.print("airborne");
+   }
+
+   void estimate_collective_thrust()
+   {
+      m_collective_thrust = m_idle_thrust + m_last_control_setpoints.data.throttle * (1.0f - m_idle_thrust);
    }
 
    void run_attitude_controller()
@@ -223,6 +249,11 @@ private:
       {
          m_logger.printf("torque x=%.2f, y=%.2f, z=%.2f, throt=%0.2f", m_torque_cmd.x, m_torque_cmd.y, m_torque_cmd.z, m_last_control_setpoints.data.throttle);
       }
+   }
+
+   // cppcheck-suppress functionStatic
+   void run_mixer()
+   {
    }
 
    // cppcheck-suppress functionStatic
@@ -261,15 +292,17 @@ private:
    const float                         m_max_pitch_rate_radps;
    const float                         m_max_yaw_rate_radps;
    const float                         m_max_tilt_angle_rad;
+   const float                         m_idle_thrust;
    const float                         m_lift_throttle;
    aeromight_boundaries::ControlHealth m_local_control_health{};
    Setpoints::Sample                   m_last_control_setpoints{};
-   uint32_t                            m_current_time_ms{0};
-   uint32_t                            m_last_execution_time_ms{0};
-   float                               m_time_delta_s{0.0f};
-   bool                                m_attitude_controller_to_be_updated{false};
    math::Vector3                       m_desired_rate_radps{};
    math::Vector3                       m_torque_cmd{};
+   float                               m_collective_thrust{};
+   float                               m_time_delta_s{0.0f};
+   uint32_t                            m_current_time_ms{0};
+   uint32_t                            m_last_execution_time_ms{0};
+   bool                                m_attitude_controller_to_be_updated{false};
 
    uint32_t m_counter{};
 };

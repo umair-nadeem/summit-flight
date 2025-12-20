@@ -37,9 +37,15 @@ public:
                         const bool           run_integrator)
    {
 
-      if (!initialized || (dt_s <= 0.0f))
+      if (!initialized)
       {
+         reset();
          initialized = true;
+         return {};
+      }
+
+      if (dt_s <= 0.0f)
+      {
          return {};
       }
 
@@ -47,9 +53,9 @@ public:
                                           std::clamp(rate_setpoint_radps.y, -m_max_pitch_rate_radps, m_max_pitch_rate_radps),
                                           std::clamp(rate_setpoint_radps.z, -m_max_yaw_rate_radps, m_max_yaw_rate_radps)};
 
-      math::Vector3 rate_error = setpoints_radps - rate_measured_radps;
+      const math::Vector3 rate_error = setpoints_radps - rate_measured_radps;
 
-      math::Vector3 torque_cmd = (m_gains_p * rate_error) + m_rate_integrator + (m_gains_d * (rate_measured_radps - m_previous_rate_measured) / dt_s);
+      math::Vector3 torque_cmd = (m_gains_p * rate_error) + m_rate_integrator - (m_gains_d * (rate_measured_radps - m_previous_rate_measured) / dt_s);
 
       torque_cmd.x = std::clamp(torque_cmd.x, -m_torque_output_limit, m_torque_output_limit);
       torque_cmd.y = std::clamp(torque_cmd.y, -m_torque_output_limit, m_torque_output_limit);
@@ -81,39 +87,40 @@ public:
    }
 
 private:
-   void update_integrator(math::Vector3& error, const float dt_s)
+   void update_integrator(const math::Vector3 error, const float dt_s)
    {
+      auto integrator_error = error;
       if (m_control_saturation_positive[0])
       {
-         error.x = std::min(error.x, 0.0f);
+         integrator_error.x = std::min(integrator_error.x, 0.0f);
       }
 
       if (m_control_saturation_negative[0])
       {
-         error.x = std::max(error.x, 0.0f);
+         integrator_error.x = std::max(integrator_error.x, 0.0f);
       }
 
       if (m_control_saturation_positive[1])
       {
-         error.y = std::min(error.y, 0.0f);
+         integrator_error.y = std::min(integrator_error.y, 0.0f);
       }
 
       if (m_control_saturation_negative[1])
       {
-         error.y = std::max(error.y, 0.0f);
+         integrator_error.y = std::max(integrator_error.y, 0.0f);
       }
 
       if (m_control_saturation_positive[2])
       {
-         error.z = std::min(error.z, 0.0f);
+         integrator_error.z = std::min(integrator_error.z, 0.0f);
       }
 
       if (m_control_saturation_negative[2])
       {
-         error.z = std::max(error.z, 0.0f);
+         integrator_error.z = std::max(integrator_error.z, 0.0f);
       }
 
-      m_rate_integrator += m_gains_i * error * dt_s;
+      m_rate_integrator += m_gains_i * integrator_error * dt_s;
       m_rate_integrator.x = std::clamp(m_rate_integrator.x, -m_integrator_limit.x, m_integrator_limit.x);
       m_rate_integrator.y = std::clamp(m_rate_integrator.y, -m_integrator_limit.y, m_integrator_limit.y);
       m_rate_integrator.z = std::clamp(m_rate_integrator.z, -m_integrator_limit.z, m_integrator_limit.z);
