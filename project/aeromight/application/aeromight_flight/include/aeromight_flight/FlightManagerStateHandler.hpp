@@ -98,7 +98,7 @@ public:
       m_control_setpoints_storage.update_latest(m_local_control_setpoints, m_current_time_ms);
    }
 
-   void kill_motors()
+   void kill_actuator()
    {
       m_local_control_setpoints.armed = false;
       m_local_control_setpoints.kill  = true;
