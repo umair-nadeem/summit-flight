@@ -307,7 +307,7 @@ struct FlightManagerStateMachine
           s_auto_land_checkpoint                                                                                                                  = s_auto_land,
 
           s_killed            + e_tick                                              / (read_health_summary, read_radio_input, get_time)           = s_killed_checkpoint,
-          s_killed_checkpoint         [is_health_good && !kill]                     / set_disarmed_state                                          = s_disarmed,
+          s_killed_checkpoint         [is_health_good && !kill && disarm]           / set_disarmed_state                                          = s_disarmed,
           s_killed_checkpoint                                                                                                                     = s_killed,
 
           s_to_fault                                                                / set_fault_state                                             = s_fault

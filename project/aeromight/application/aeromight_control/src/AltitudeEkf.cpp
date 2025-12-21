@@ -46,8 +46,8 @@ void AltitudeEkf::predict(const math::Vector3&    accel_body_mps2,
    float accel_world_z = transform_accel_to_world_z(accel_body, attitude) + physics::constants::g_to_mps2;
 
    // apply tilt-compensation gate to accel_z
-   const math::Vector3 euler = attitude.to_euler();
-   if ((fabsf(euler.x) > m_tilt_gating_attitude_angle_rad) || (fabsf(euler.y) > m_tilt_gating_attitude_angle_rad))
+   const math::Euler euler = attitude.to_euler();
+   if ((fabsf(euler.roll()) > m_tilt_gating_attitude_angle_rad) || (fabsf(euler.pitch()) > m_tilt_gating_attitude_angle_rad))
    {
       accel_world_z = (fabsf(1.0f - m_tilt_gating_accel_weight) * m_last_accel_world_z) + (m_tilt_gating_accel_weight * accel_world_z);
    }

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "math/Euler.hpp"
 #include "math/Quaternion.hpp"
 
 namespace aeromight_control
@@ -13,11 +14,9 @@ struct StateEstimation
 
    math::Quaternion attitude{};
    math::Vector3    gyro_radps{};
+   math::Vector3    gyro_bias{};
 
-   math::Vector3 gyro_bias{};
-
-   // Euler angles
-   math::Vector3 euler{};
+   math::Euler euler{};
 
    // altitude control
    float altitude;

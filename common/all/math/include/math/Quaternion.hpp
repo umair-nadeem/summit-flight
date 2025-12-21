@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "Euler.hpp"
 #include "Vector3.hpp"
 #include "physics/constants.hpp"
 
@@ -176,7 +177,7 @@ struct Quaternion
       return norm();
    }
 
-   Vector3 to_euler() const
+   Euler to_euler() const
    {
       // Roll (rotation around X axis)
       const float sinr_cosp = 2.0f * (w * x + y * z);
@@ -193,7 +194,7 @@ struct Quaternion
       const float pitch = (std::abs(sinp) >= 1.0f) ? std::copysign(physics::constants::pi_by_2, sinp) : std::asin(sinp);
       const float yaw   = std::atan2(siny_cosp, cosy_cosp);
 
-      return Vector3{roll, pitch, yaw};
+      return Euler{roll, pitch, yaw};
    }
 };
 

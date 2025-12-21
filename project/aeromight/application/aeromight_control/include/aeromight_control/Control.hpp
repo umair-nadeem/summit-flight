@@ -31,7 +31,8 @@ public:
                     const float            max_yaw_rate_radps,
                     const float            max_tilt_angle_rad,
                     const float            idle_thrust,
-                    const float            lift_throttle)
+                    const float            lift_throttle,
+                    const float            thrust_model_factor)
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
          m_control_health_storage{control_health_storage},
@@ -43,7 +44,8 @@ public:
          m_max_yaw_rate_radps{max_yaw_rate_radps},
          m_max_tilt_angle_rad{max_tilt_angle_rad},
          m_idle_thrust{idle_thrust},
-         m_lift_throttle{lift_throttle}
+         m_lift_throttle{lift_throttle},
+         m_thrust_model_factor{thrust_model_factor}
 
    {
       m_logger.enable();
@@ -136,7 +138,7 @@ private:
             break;
 
          case aeromight_boundaries::ControlState::emergency_kill:
-            if (!kill() && !armed())
+            if (!kill())
             {
                move_to_disarmed();
             }
@@ -163,6 +165,11 @@ private:
    void publish_health()
    {
       m_control_health_storage.update_latest(m_local_control_health, m_current_time_ms);
+   }
+
+   // cppcheck-suppress functionStatic
+   void publish_actuator_setpoints()
+   {
    }
 
    void reset()
@@ -215,21 +222,26 @@ private:
 
    void estimate_collective_thrust()
    {
-      m_collective_thrust = m_idle_thrust + m_last_control_setpoints.data.throttle * (1.0f - m_idle_thrust);
+      const float thurst_signal = m_idle_thrust + m_last_control_setpoints.data.throttle * (1.0f - m_idle_thrust);
+      m_collective_thrust       = m_thrust_model_factor * (thurst_signal * thurst_signal) + (1.0f - m_thrust_model_factor) * thurst_signal;
    }
 
    void run_attitude_controller()
    {
       if (m_attitude_controller_to_be_updated)
       {
-         const math::Vector3 angle_setpoint_rad   = {m_last_control_setpoints.data.roll * m_max_tilt_angle_rad, m_last_control_setpoints.data.pitch * m_max_tilt_angle_rad, 0.0f};
-         const math::Vector3 angle_estimation_rad = {m_state_estimation_data.euler.x, m_state_estimation_data.euler.y, m_state_estimation_data.euler.z};
+         const math::Vector3 angle_setpoint_rad   = {m_last_control_setpoints.data.roll * m_max_tilt_angle_rad,
+                                                     m_last_control_setpoints.data.pitch * m_max_tilt_angle_rad,
+                                                     0.0f};
+         const math::Vector3 angle_estimation_rad = {m_state_estimation_data.euler.roll(),
+                                                     m_state_estimation_data.euler.pitch(),
+                                                     m_state_estimation_data.euler.yaw()};
 
-         m_desired_rate_radps = m_attitude_controller.update(angle_setpoint_rad, angle_estimation_rad);
+         m_desired_rate_radps.set(m_attitude_controller.update(angle_setpoint_rad, angle_estimation_rad));
       }
 
       // yaw always rate-controlled
-      m_desired_rate_radps.z = m_last_control_setpoints.data.yaw * m_max_yaw_rate_radps;
+      m_desired_rate_radps.yaw(m_last_control_setpoints.data.yaw * m_max_yaw_rate_radps);
 
       m_attitude_controller_to_be_updated = !m_attitude_controller_to_be_updated;
    }
@@ -238,16 +250,22 @@ private:
    {
       if (m_time_delta_s <= 0.0f)   // can't run rate controller
       {
-         m_last_execution_time_ms = m_current_time_ms;
          m_local_control_health.error.set(static_cast<uint8_t>(aeromight_boundaries::ControlHealth::Error::invalid_time_delta));
          return;
       }
 
-      m_torque_cmd = m_rate_controller.update(m_desired_rate_radps, m_state_estimation_data.gyro_radps, m_time_delta_s, run_integrator);
+      m_torque_cmd.set(m_rate_controller.update(m_desired_rate_radps.vector(), m_state_estimation_data.gyro_radps, m_time_delta_s, run_integrator));
 
       if ((m_counter++ % 250) == 0)
       {
-         m_logger.printf("torque x=%.2f, y=%.2f, z=%.2f, throt=%0.2f", m_torque_cmd.x, m_torque_cmd.y, m_torque_cmd.z, m_last_control_setpoints.data.throttle);
+         m_logger.printf("imu r=%.2f, p=%.2f, y=%.2f, throt=%.2f, r=%.2f, p=%.2f, y=%.2f",
+                         m_state_estimation_data.euler.roll(),
+                         m_state_estimation_data.euler.pitch(),
+                         m_state_estimation_data.euler.yaw(),
+                         m_collective_thrust,
+                         m_torque_cmd.roll(),
+                         m_torque_cmd.pitch(),
+                         m_torque_cmd.yaw());
       }
    }
 
@@ -294,10 +312,11 @@ private:
    const float                         m_max_tilt_angle_rad;
    const float                         m_idle_thrust;
    const float                         m_lift_throttle;
+   const float                         m_thrust_model_factor;
    aeromight_boundaries::ControlHealth m_local_control_health{};
    Setpoints::Sample                   m_last_control_setpoints{};
-   math::Vector3                       m_desired_rate_radps{};
-   math::Vector3                       m_torque_cmd{};
+   math::Euler                         m_desired_rate_radps{};
+   math::Euler                         m_torque_cmd{};
    float                               m_collective_thrust{};
    float                               m_time_delta_s{0.0f};
    uint32_t                            m_current_time_ms{0};

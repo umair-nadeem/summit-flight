@@ -283,20 +283,25 @@ private:
 
    aeromight_boundaries::SubsystemHealth get_estimation_health() const
    {
+      using namespace aeromight_boundaries;
+
       const bool estimation_stale = (((m_current_time_ms - m_estimation_health_snapshot.timestamp_ms) > m_max_age_estimation_health_ms));
 
-      const bool estimation_fault = ((m_estimation_health_snapshot.data.state == aeromight_boundaries::EstimatorState::fault) ||
-                                     (m_estimation_health_snapshot.data.error.to_ulong() != 0));
+      const bool estimation_fault = ((m_estimation_health_snapshot.data.state == EstimatorState::fault) ||
+                                     m_estimation_health_snapshot.data.error.test(static_cast<uint8_t>(EstimatorHealth::Error::reference_pressure_estimate_timeout)) ||
+                                     m_estimation_health_snapshot.data.error.test(static_cast<uint8_t>(EstimatorHealth::Error::reference_pressure_implausible)) ||
+                                     m_estimation_health_snapshot.data.error.test(static_cast<uint8_t>(EstimatorHealth::Error::stale_imu_sensor_data)) ||
+                                     m_estimation_health_snapshot.data.error.test(static_cast<uint8_t>(EstimatorHealth::Error::missing_valid_imu_data)));
       if (estimation_fault)
       {
-         return aeromight_boundaries::SubsystemHealth::fault;
+         return SubsystemHealth::fault;
       }
       else if (estimation_stale)
       {
-         return aeromight_boundaries::SubsystemHealth::degraded;
+         return SubsystemHealth::degraded;
       }
 
-      return aeromight_boundaries::SubsystemHealth::operational;
+      return SubsystemHealth::operational;
    }
 
    aeromight_boundaries::SubsystemHealth get_control_health() const

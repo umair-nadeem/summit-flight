@@ -32,7 +32,7 @@ public:
    }
 
    math::Vector3 update(const math::Vector3& rate_setpoint_radps,
-                        const math::Vector3& rate_measured_radps,
+                        const math::Vector3& rate_gyro_measured_radps,
                         const float          dt_s,
                         const bool           run_integrator)
    {
@@ -53,9 +53,9 @@ public:
                                           std::clamp(rate_setpoint_radps.y, -m_max_pitch_rate_radps, m_max_pitch_rate_radps),
                                           std::clamp(rate_setpoint_radps.z, -m_max_yaw_rate_radps, m_max_yaw_rate_radps)};
 
-      const math::Vector3 rate_error = setpoints_radps - rate_measured_radps;
+      const math::Vector3 rate_error = setpoints_radps - rate_gyro_measured_radps;
 
-      math::Vector3 torque_cmd = (m_gains_p * rate_error) + m_rate_integrator - (m_gains_d * (rate_measured_radps - m_previous_rate_measured) / dt_s);
+      math::Vector3 torque_cmd = (m_gains_p * rate_error) + m_rate_integrator - (m_gains_d * (rate_gyro_measured_radps - m_previous_gyro_rate_measured) / dt_s);
 
       torque_cmd.x = std::clamp(torque_cmd.x, -m_torque_output_limit, m_torque_output_limit);
       torque_cmd.y = std::clamp(torque_cmd.y, -m_torque_output_limit, m_torque_output_limit);
@@ -70,7 +70,7 @@ public:
          m_rate_integrator.zero();
       }
 
-      m_previous_rate_measured = rate_measured_radps;
+      m_previous_gyro_rate_measured = rate_gyro_measured_radps;
       return torque_cmd;
    }
 
@@ -83,7 +83,7 @@ public:
    void reset()
    {
       m_rate_integrator.zero();
-      m_previous_rate_measured.zero();
+      m_previous_gyro_rate_measured.zero();
    }
 
 private:
@@ -135,7 +135,7 @@ private:
    const float                m_max_pitch_rate_radps;
    const float                m_max_yaw_rate_radps;
    math::Vector3              m_rate_integrator{};
-   math::Vector3              m_previous_rate_measured{};
+   math::Vector3              m_previous_gyro_rate_measured{};
    bool                       initialized{false};
    std::array<bool, num_axis> m_control_saturation_positive{};
    std::array<bool, num_axis> m_control_saturation_negative{};

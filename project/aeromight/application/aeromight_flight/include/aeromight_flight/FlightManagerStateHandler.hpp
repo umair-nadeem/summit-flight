@@ -295,10 +295,39 @@ public:
    {
       if (!stale_health())
       {
-         return ((m_last_health_summary.flight_health != aeromight_boundaries::FlightHealthStatus::critical) &&
-                 is_imu_operational() &&
-                 is_estimation_operational() &&
-                 is_control_operational());
+         if (m_last_health_summary.flight_health != aeromight_boundaries::FlightHealthStatus::critical)
+         {
+            if (is_imu_operational())
+            {
+               if (is_estimation_operational())
+               {
+                  if (is_control_operational())
+                  {
+                     return true;
+                  }
+                  else
+                  {
+                     m_logger.print("control failure");
+                  }
+               }
+               else
+               {
+                  m_logger.print("estimation failure");
+               }
+            }
+            else
+            {
+               m_logger.print("imu failure");
+            }
+         }
+         else
+         {
+            m_logger.print("flight health critical");
+         }
+      }
+      else
+      {
+         m_logger.print("stale health data");
       }
 
       return false;
@@ -308,7 +337,8 @@ public:
    {
       if (!stale_radio_input())
       {
-         return (m_last_radio_link_actuals_storage.data.link_status_ok && (m_last_radio_link_actuals_storage.data.link_rssi_dbm >= m_min_good_signal_rssi_dbm));
+         return (m_last_radio_link_actuals_storage.data.link_status_ok &&
+                 (m_last_radio_link_actuals_storage.data.link_rssi_dbm >= m_min_good_signal_rssi_dbm));
       }
 
       return false;

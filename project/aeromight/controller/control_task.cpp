@@ -54,6 +54,7 @@ extern "C"
       // control parameters
       constexpr float    idle_thrust                                    = 0.05f;
       constexpr float    lift_throttle                                  = 0.1f;
+      constexpr float    thrust_model_factor                            = 0.0f;
       constexpr float    attitude_controller_roll_kp                    = 4.0f;
       constexpr float    attitude_controller_pitch_kp                   = 4.0f;
       constexpr float    attitude_controller_yaw_kp                     = 0.0f;
@@ -132,7 +133,8 @@ extern "C"
                   max_yaw_rate_radps,
                   max_tilt_angle_rad,
                   idle_thrust,
-                  lift_throttle};
+                  lift_throttle,
+                  thrust_model_factor};
 
       aeromight_control::EstimationAndControl<decltype(estimation),
                                               decltype(control)>
