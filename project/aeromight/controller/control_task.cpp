@@ -53,6 +53,7 @@ extern "C"
       constexpr float    max_valid_barometer_sample_dt_s                = 10.0f;
       // control parameters
       constexpr float    idle_thrust                                    = 0.05f;
+      constexpr float    max_thrust                                     = 1.0f;
       constexpr float    lift_throttle                                  = 0.1f;
       constexpr float    thrust_model_factor                            = 0.0f;
       constexpr float    attitude_controller_roll_kp                    = 4.0f;
@@ -134,6 +135,7 @@ extern "C"
                   max_yaw_rate_radps,
                   max_tilt_angle_rad,
                   idle_thrust,
+                  max_thrust,
                   lift_throttle,
                   thrust_model_factor};
 

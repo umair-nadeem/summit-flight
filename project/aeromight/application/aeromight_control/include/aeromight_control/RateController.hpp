@@ -9,9 +9,10 @@ namespace aeromight_control
 
 class RateController
 {
-   static constexpr std::size_t num_axis = 3u;
 
 public:
+   static constexpr std::size_t num_axis = 3u;
+
    explicit RateController(const math::Vector3& gains_p,
                            const math::Vector3& gains_i,
                            const math::Vector3& gains_d,

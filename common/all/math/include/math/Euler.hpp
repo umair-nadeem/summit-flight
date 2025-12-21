@@ -18,7 +18,7 @@ struct Euler
    {
    }
 
-   explicit Euler(Vector3& v)
+   explicit Euler(const Vector3& v)
        : m_vector3{v}
    {
    }
