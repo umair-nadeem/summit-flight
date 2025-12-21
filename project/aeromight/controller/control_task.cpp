@@ -124,6 +124,7 @@ extern "C"
                                  LogClient>
           control{attitude_controller,
                   rate_controller,
+                  aeromight_boundaries::aeromight_data.actuator_setpoints,
                   aeromight_boundaries::aeromight_data.control_health_storage,
                   aeromight_boundaries::aeromight_data.control_setpoints,
                   data->state_estimation,

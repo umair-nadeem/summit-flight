@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "StateEstimation.hpp"
+#include "aeromight_boundaries/ActuatorSetpoints.hpp"
 #include "aeromight_boundaries/ControlHealth.hpp"
 #include "aeromight_boundaries/ControlSetpoints.hpp"
 #include "aeromight_boundaries/ControlState.hpp"
@@ -16,25 +17,28 @@ namespace aeromight_control
 template <typename AttitudeController, typename RateController, interfaces::IClockSource ClockSource, typename Logger>
 class Control
 {
-   using ControlHealth = boundaries::SharedData<aeromight_boundaries::ControlHealth>;
-   using Setpoints     = boundaries::SharedData<aeromight_boundaries::ControlSetpoints>;
+   using ActuatorSetpoints = boundaries::SharedData<aeromight_boundaries::ActuatorSetpoints>;
+   using ControlHealth     = boundaries::SharedData<aeromight_boundaries::ControlHealth>;
+   using ControlSetpoints  = boundaries::SharedData<aeromight_boundaries::ControlSetpoints>;
 
 public:
-   explicit Control(AttitudeController&    attitude_controller,
-                    RateController&        rate_controller,
-                    ControlHealth&         control_health_storage,
-                    const Setpoints&       control_setpoints_storage,
-                    const StateEstimation& state_estimation_data,
-                    Logger&                logger,
-                    const float            max_roll_rate_radps,
-                    const float            max_pitch_rate_radps,
-                    const float            max_yaw_rate_radps,
-                    const float            max_tilt_angle_rad,
-                    const float            idle_thrust,
-                    const float            lift_throttle,
-                    const float            thrust_model_factor)
+   explicit Control(AttitudeController&     attitude_controller,
+                    RateController&         rate_controller,
+                    ActuatorSetpoints&      actuator_setpoints_storage,
+                    ControlHealth&          control_health_storage,
+                    const ControlSetpoints& control_setpoints_storage,
+                    const StateEstimation&  state_estimation_data,
+                    Logger&                 logger,
+                    const float             max_roll_rate_radps,
+                    const float             max_pitch_rate_radps,
+                    const float             max_yaw_rate_radps,
+                    const float             max_tilt_angle_rad,
+                    const float             idle_thrust,
+                    const float             lift_throttle,
+                    const float             thrust_model_factor)
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
+         m_actuator_setpoints_storage{actuator_setpoints_storage},
          m_control_health_storage{control_health_storage},
          m_control_setpoints_storage{control_setpoints_storage},
          m_state_estimation_data{state_estimation_data},
@@ -167,9 +171,9 @@ private:
       m_control_health_storage.update_latest(m_local_control_health, m_current_time_ms);
    }
 
-   // cppcheck-suppress functionStatic
    void publish_actuator_setpoints()
    {
+      m_actuator_setpoints_storage.update_latest(m_local_actuator_setpoints, m_current_time_ms);
    }
 
    void reset()
@@ -178,12 +182,13 @@ private:
       m_desired_rate_radps.zero();
       m_torque_cmd.zero();
       m_rate_controller.reset();
+      m_local_actuator_setpoints = {};
    }
 
    void move_to_killed()
    {
       reset();
-      stop_motors();
+      stop_actuator();
       publish_actuator_setpoints();
       m_local_control_health.state = aeromight_boundaries::ControlState::emergency_kill;
       m_logger.print("killed");
@@ -192,7 +197,7 @@ private:
    void move_to_disarmed()
    {
       reset();
-      stop_motors();
+      stop_actuator();
       publish_actuator_setpoints();
       m_local_control_health.state = aeromight_boundaries::ControlState::disarmed;
       m_logger.print("disarmed");
@@ -201,7 +206,7 @@ private:
    void move_to_armed()
    {
       reset();
-      start_motors();
+      start_actuator();
       m_local_control_health.state = aeromight_boundaries::ControlState::armed_on_ground;
       m_logger.print("armed on ground");
    }
@@ -258,31 +263,37 @@ private:
 
       if ((m_counter++ % 250) == 0)
       {
-         m_logger.printf("imu r=%.2f, p=%.2f, y=%.2f, throt=%.2f, r=%.2f, p=%.2f, y=%.2f",
+         m_logger.printf("imu r=%.2f, p=%.2f, y=%.2f, t=%.2f, r=%.2f, p=%.2f, y=%.2f, %.2f, %.2f, %.2f, %.2f",
                          m_state_estimation_data.euler.roll(),
                          m_state_estimation_data.euler.pitch(),
                          m_state_estimation_data.euler.yaw(),
                          m_collective_thrust,
                          m_torque_cmd.roll(),
                          m_torque_cmd.pitch(),
-                         m_torque_cmd.yaw());
+                         m_torque_cmd.yaw(),
+                         m_local_actuator_setpoints.m1,
+                         m_local_actuator_setpoints.m2,
+                         m_local_actuator_setpoints.m3,
+                         m_local_actuator_setpoints.m4);
       }
    }
 
-   // cppcheck-suppress functionStatic
    void run_mixer()
    {
+      m_local_actuator_setpoints.m1 = m_collective_thrust + m_torque_cmd.roll() + m_torque_cmd.pitch() + m_torque_cmd.yaw();   // front-left CCW
+      m_local_actuator_setpoints.m2 = m_collective_thrust - m_torque_cmd.roll() + m_torque_cmd.pitch() - m_torque_cmd.yaw();   // front-right CW
+      m_local_actuator_setpoints.m3 = m_collective_thrust - m_torque_cmd.roll() - m_torque_cmd.pitch() + m_torque_cmd.yaw();   // rear-right CCW
+      m_local_actuator_setpoints.m4 = m_collective_thrust + m_torque_cmd.roll() - m_torque_cmd.pitch() - m_torque_cmd.yaw();   // rear-left CW
    }
 
-   // cppcheck-suppress functionStatic
-   void start_motors()
+   void start_actuator()
    {
-      // throttle is clamp of collective thrust and min idle
+      m_local_actuator_setpoints.enabled = true;
    }
 
-   // cppcheck-suppress functionStatic
-   void stop_motors()
+   void stop_actuator()
    {
+      m_local_actuator_setpoints.enabled = false;
    }
 
    bool armed() const
@@ -300,28 +311,30 @@ private:
       return (m_last_control_setpoints.data.throttle > m_lift_throttle);
    }
 
-   AttitudeController&                 m_attitude_controller;
-   RateController&                     m_rate_controller;
-   ControlHealth&                      m_control_health_storage;
-   const Setpoints&                    m_control_setpoints_storage;
-   const StateEstimation&              m_state_estimation_data;
-   Logger&                             m_logger;
-   const float                         m_max_roll_rate_radps;
-   const float                         m_max_pitch_rate_radps;
-   const float                         m_max_yaw_rate_radps;
-   const float                         m_max_tilt_angle_rad;
-   const float                         m_idle_thrust;
-   const float                         m_lift_throttle;
-   const float                         m_thrust_model_factor;
-   aeromight_boundaries::ControlHealth m_local_control_health{};
-   Setpoints::Sample                   m_last_control_setpoints{};
-   math::Euler                         m_desired_rate_radps{};
-   math::Euler                         m_torque_cmd{};
-   float                               m_collective_thrust{};
-   float                               m_time_delta_s{0.0f};
-   uint32_t                            m_current_time_ms{0};
-   uint32_t                            m_last_execution_time_ms{0};
-   bool                                m_attitude_controller_to_be_updated{false};
+   AttitudeController&                     m_attitude_controller;
+   RateController&                         m_rate_controller;
+   ActuatorSetpoints&                      m_actuator_setpoints_storage;
+   ControlHealth&                          m_control_health_storage;
+   const ControlSetpoints&                 m_control_setpoints_storage;
+   const StateEstimation&                  m_state_estimation_data;
+   Logger&                                 m_logger;
+   const float                             m_max_roll_rate_radps;
+   const float                             m_max_pitch_rate_radps;
+   const float                             m_max_yaw_rate_radps;
+   const float                             m_max_tilt_angle_rad;
+   const float                             m_idle_thrust;
+   const float                             m_lift_throttle;
+   const float                             m_thrust_model_factor;
+   aeromight_boundaries::ActuatorSetpoints m_local_actuator_setpoints{};
+   aeromight_boundaries::ControlHealth     m_local_control_health{};
+   ControlSetpoints::Sample                m_last_control_setpoints{};
+   math::Euler                             m_desired_rate_radps{};
+   math::Euler                             m_torque_cmd{};
+   float                                   m_collective_thrust{};
+   float                                   m_time_delta_s{0.0f};
+   uint32_t                                m_current_time_ms{0};
+   uint32_t                                m_last_execution_time_ms{0};
+   bool                                    m_attitude_controller_to_be_updated{false};
 
    uint32_t m_counter{};
 };
