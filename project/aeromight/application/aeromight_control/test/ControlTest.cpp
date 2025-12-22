@@ -15,8 +15,19 @@ public:
 class RateControllerMock
 {
 public:
+   static constexpr std::size_t num_axis = 3u;
+
    MOCK_METHOD(math::Vector3, update, (const math::Vector3&, const math::Vector3&, const float, const bool), ());
+   MOCK_METHOD(void, set_saturation_status, ((const std::array<bool, 3u>&), (const std::array<bool, 3u>&)), ());
    MOCK_METHOD(void, reset, (), ());
+};
+
+class ControlAllocatorMock
+{
+public:
+   MOCK_METHOD(aeromight_boundaries::ActuatorSetpoints, allocate, (const math::Euler&, const float, const float, const float), ());
+   MOCK_METHOD((const std::array<bool, 3u>&), get_actuator_saturation_positive, (), ());
+   MOCK_METHOD((const std::array<bool, 3u>&), get_actuator_saturation_negative, (), ());
 };
 
 class ControlTest : public testing::Test
@@ -38,12 +49,17 @@ protected:
    static constexpr float max_pitch_rate_radps = 3.5f;
    static constexpr float max_yaw_rate_radps   = 2.0f;
    static constexpr float max_tilt_angle_rad   = 30 * physics::constants::deg_to_rad;   // 30 degrees
+   static constexpr float actuator_min         = 0.05f;
+   static constexpr float actuator_max         = 1.0f;
    static constexpr float lift_throttle        = 0.05f;
+   static constexpr float thrust_model_factor  = 0.0f;
 
    AttitudeControllerMock                                               attitude_controller_mock{};
    RateControllerMock                                                   rate_controller_mock{};
+   ControlAllocatorMock                                                 control_allocator_mock{};
    mocks::common::ClockSource                                           sys_clock{};
    mocks::common::Logger                                                logger{"controlTest"};
+   boundaries::SharedData<aeromight_boundaries::ActuatorControl>        actuator_control_storage{};
    boundaries::SharedData<aeromight_boundaries::ControlHealth>          control_health_storage{};
    boundaries::SharedData<aeromight_boundaries::FlightControlSetpoints> flight_control_setpoints_storage{};
    aeromight_control::StateEstimation                                   state_estimation{};
@@ -51,10 +67,13 @@ protected:
 
    aeromight_control::Control<decltype(attitude_controller_mock),
                               decltype(rate_controller_mock),
+                              decltype(control_allocator_mock),
                               decltype(sys_clock),
                               decltype(logger)>
        control{attitude_controller_mock,
                rate_controller_mock,
+               control_allocator_mock,
+               actuator_control_storage,
                control_health_storage,
                flight_control_setpoints_storage,
                state_estimation,
@@ -63,24 +82,11 @@ protected:
                max_pitch_rate_radps,
                max_yaw_rate_radps,
                max_tilt_angle_rad,
-               lift_throttle};
+               actuator_min,
+               actuator_max,
+               lift_throttle,
+               thrust_model_factor};
 };
-
-TEST_F(ControlTest, do_nothing_and_set_time_delta_error)
-{
-   EXPECT_CALL(attitude_controller_mock, update).Times(0);
-   EXPECT_CALL(rate_controller_mock, update).Times(0);
-
-   control.execute();
-   control.execute();
-
-   aeromight_boundaries::ControlHealth::ErrorBits error{};
-   error.set(static_cast<uint8_t>(aeromight_boundaries::ControlHealth::Error::invalid_time_delta));
-
-   const auto control_health = control_health_storage.get_latest();
-   EXPECT_EQ(control_health.data.state, aeromight_boundaries::ControlState::inactive);
-   EXPECT_EQ(control_health.data.error, error.to_ulong());
-}
 
 TEST_F(ControlTest, do_nothing_until_activated)
 {

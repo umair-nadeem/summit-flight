@@ -96,7 +96,7 @@ TEST_F(QuaternionTest, check_euler_conversion)
    a.normalize();
    const auto euler = a.to_euler();
 
-   EXPECT_NEAR(euler.x, 2.9918f, tolerance);
-   EXPECT_NEAR(euler.y, 0.05077f, tolerance);
-   EXPECT_NEAR(euler.z, -1.5736f, tolerance);
+   EXPECT_NEAR(euler.roll(), 2.9918f, tolerance);
+   EXPECT_NEAR(euler.pitch(), 0.05077f, tolerance);
+   EXPECT_NEAR(euler.yaw(), -1.5736f, tolerance);
 }
