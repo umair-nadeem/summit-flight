@@ -3,6 +3,7 @@
 #include "aeromight_control/AltitudeEkf.hpp"
 #include "aeromight_control/AttitudeController.hpp"
 #include "aeromight_control/Control.hpp"
+#include "aeromight_control/ControlAllocator.hpp"
 #include "aeromight_control/Estimation.hpp"
 #include "aeromight_control/EstimationAndControl.hpp"
 #include "aeromight_control/RateController.hpp"
@@ -119,13 +120,17 @@ extern "C"
                                                         max_pitch_rate_radps,
                                                         max_yaw_rate_radps};
 
+      aeromight_control::ControlAllocator control_allocator{};
+
       aeromight_control::Control<decltype(attitude_controller),
                                  decltype(rate_controller),
+                                 decltype(control_allocator),
                                  sys_time::ClockSource,
                                  LogClient>
           control{attitude_controller,
                   rate_controller,
-                  aeromight_boundaries::aeromight_data.actuator_setpoints,
+                  control_allocator,
+                  aeromight_boundaries::aeromight_data.actuator_control,
                   aeromight_boundaries::aeromight_data.control_health_storage,
                   aeromight_boundaries::aeromight_data.control_setpoints,
                   data->state_estimation,
@@ -155,8 +160,10 @@ extern "C"
          }
       }
 
+      // Won't reach here
       while (true)
       {
+         error::stop_operation();
       }
    }
 

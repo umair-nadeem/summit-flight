@@ -9,7 +9,6 @@ namespace aeromight_control
 
 class RateController
 {
-
 public:
    static constexpr std::size_t num_axis = 3u;
 
