@@ -132,7 +132,7 @@ extern "C"
                   control_allocator,
                   aeromight_boundaries::aeromight_data.actuator_control,
                   aeromight_boundaries::aeromight_data.control_health_storage,
-                  aeromight_boundaries::aeromight_data.control_setpoints,
+                  aeromight_boundaries::aeromight_data.flight_control_setpoints,
                   data->state_estimation,
                   logger_control,
                   max_roll_rate_radps,

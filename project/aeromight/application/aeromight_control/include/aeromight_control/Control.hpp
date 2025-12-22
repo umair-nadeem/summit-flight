@@ -3,10 +3,10 @@
 #include <algorithm>
 
 #include "StateEstimation.hpp"
-#include "aeromight_boundaries/ActuatorSetpoint.hpp"
+#include "aeromight_boundaries/ActuatorSetpoints.hpp"
 #include "aeromight_boundaries/ControlHealth.hpp"
-#include "aeromight_boundaries/ControlSetpoints.hpp"
 #include "aeromight_boundaries/ControlState.hpp"
+#include "aeromight_boundaries/FlightControlSetpoints.hpp"
 #include "boundaries/SharedData.hpp"
 #include "error/error_handler.hpp"
 #include "interfaces/IClockSource.hpp"
@@ -17,33 +17,33 @@ namespace aeromight_control
 template <typename AttitudeController, typename RateController, typename ControlAllocator, interfaces::IClockSource ClockSource, typename Logger>
 class Control
 {
-   using ActuatorControl = boundaries::SharedData<aeromight_boundaries::ActuatorControl>;
-   using ControlHealth   = boundaries::SharedData<aeromight_boundaries::ControlHealth>;
-   using ControlSetpoint = boundaries::SharedData<aeromight_boundaries::ControlSetpoints>;
+   using ActuatorControl        = boundaries::SharedData<aeromight_boundaries::ActuatorControl>;
+   using ControlHealth          = boundaries::SharedData<aeromight_boundaries::ControlHealth>;
+   using FlightControlSetpoints = boundaries::SharedData<aeromight_boundaries::FlightControlSetpoints>;
 
 public:
-   explicit Control(AttitudeController&    attitude_controller,
-                    RateController&        rate_controller,
-                    ControlAllocator&      control_allocator,
-                    ActuatorControl&       actuator_control_storage,
-                    ControlHealth&         control_health_storage,
-                    const ControlSetpoint& control_setpoint_storage,
-                    const StateEstimation& state_estimation_data,
-                    Logger&                logger,
-                    const float            max_roll_rate_radps,
-                    const float            max_pitch_rate_radps,
-                    const float            max_yaw_rate_radps,
-                    const float            max_tilt_angle_rad,
-                    const float            actuator_min,
-                    const float            actuator_max,
-                    const float            lift_throttle,
-                    const float            thrust_model_factor)
+   explicit Control(AttitudeController&           attitude_controller,
+                    RateController&               rate_controller,
+                    ControlAllocator&             control_allocator,
+                    ActuatorControl&              actuator_control_storage,
+                    ControlHealth&                control_health_storage,
+                    const FlightControlSetpoints& flight_control_setpoint_storage,
+                    const StateEstimation&        state_estimation_data,
+                    Logger&                       logger,
+                    const float                   max_roll_rate_radps,
+                    const float                   max_pitch_rate_radps,
+                    const float                   max_yaw_rate_radps,
+                    const float                   max_tilt_angle_rad,
+                    const float                   actuator_min,
+                    const float                   actuator_max,
+                    const float                   lift_throttle,
+                    const float                   thrust_model_factor)
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
          m_control_allocator{control_allocator},
          m_actuator_control_storage{actuator_control_storage},
          m_control_health_storage{control_health_storage},
-         m_control_setpoint_storage{control_setpoint_storage},
+         m_flight_control_setpoint_storage{flight_control_setpoint_storage},
          m_state_estimation_data{state_estimation_data},
          m_logger{logger},
          m_max_roll_rate_radps{max_roll_rate_radps},
@@ -77,7 +77,7 @@ public:
    {
       get_time();
 
-      get_control_setpoints();
+      get_flight_control_setpoints();
 
       run_state_machine();
 
@@ -161,9 +161,9 @@ private:
       m_last_execution_time_ms = m_current_time_ms;
    }
 
-   void get_control_setpoints()
+   void get_flight_control_setpoints()
    {
-      m_last_control_setpoints = m_control_setpoint_storage.get_latest();
+      m_last_flight_control_setpoints = m_flight_control_setpoint_storage.get_latest();
    }
 
    void move_to_killed()
@@ -208,14 +208,14 @@ private:
 
    void estimate_collective_thrust()
    {
-      const float thrust_signal = m_actuator_min + (m_last_control_setpoints.data.throttle * (1.0f - m_actuator_min));
+      const float thrust_signal = m_actuator_min + (m_last_flight_control_setpoints.data.throttle * (1.0f - m_actuator_min));
       m_thrust_setpoint         = (m_thrust_model_factor * (thrust_signal * thrust_signal)) + ((1.0f - m_thrust_model_factor) * thrust_signal);
    }
 
    void run_attitude_controller()
    {
-      const math::Vector3 angle_setpoint_rad   = {m_last_control_setpoints.data.roll * m_max_tilt_angle_rad,
-                                                  m_last_control_setpoints.data.pitch * m_max_tilt_angle_rad,
+      const math::Vector3 angle_setpoint_rad   = {m_last_flight_control_setpoints.data.roll * m_max_tilt_angle_rad,
+                                                  m_last_flight_control_setpoints.data.pitch * m_max_tilt_angle_rad,
                                                   0.0f};
       const math::Vector3 angle_estimation_rad = {m_state_estimation_data.euler.roll(),
                                                   m_state_estimation_data.euler.pitch(),
@@ -224,7 +224,7 @@ private:
       m_desired_rate_radps.set(m_attitude_controller.update(angle_setpoint_rad, angle_estimation_rad));
 
       // yaw always rate-controlled
-      m_desired_rate_radps.yaw(m_last_control_setpoints.data.yaw * m_max_yaw_rate_radps);
+      m_desired_rate_radps.yaw(m_last_flight_control_setpoints.data.yaw * m_max_yaw_rate_radps);
    }
 
    math::Vector3 run_rate_controller(const bool run_integrator)
@@ -246,7 +246,7 @@ private:
 
       const math::Euler torque_cmd{run_rate_controller(run_integrator)};
 
-      m_actuator_control.setpoint = m_control_allocator.allocate(torque_cmd, m_thrust_setpoint, m_actuator_min, m_actuator_max);
+      m_actuator_control.setpoints = m_control_allocator.allocate(torque_cmd, m_thrust_setpoint, m_actuator_min, m_actuator_max);
 
       publish_actuator_setpoints();
 
@@ -262,10 +262,10 @@ private:
                          torque_cmd.roll(),
                          torque_cmd.pitch(),
                          torque_cmd.yaw(),
-                         m_actuator_control.setpoint.m1,
-                         m_actuator_control.setpoint.m2,
-                         m_actuator_control.setpoint.m3,
-                         m_actuator_control.setpoint.m4);
+                         m_actuator_control.setpoints.m1,
+                         m_actuator_control.setpoints.m2,
+                         m_actuator_control.setpoints.m3,
+                         m_actuator_control.setpoints.m4);
       }
    }
 
@@ -301,17 +301,17 @@ private:
 
    bool armed() const
    {
-      return m_last_control_setpoints.data.armed;
+      return m_last_flight_control_setpoints.data.armed;
    }
 
    bool kill() const
    {
-      return m_last_control_setpoints.data.kill;
+      return m_last_flight_control_setpoints.data.kill;
    }
 
    bool airborne() const
    {
-      return (m_last_control_setpoints.data.throttle > m_lift_throttle);
+      return (m_last_flight_control_setpoints.data.throttle > m_lift_throttle);
    }
 
    AttitudeController&                        m_attitude_controller;
@@ -319,7 +319,7 @@ private:
    ControlAllocator&                          m_control_allocator;
    ActuatorControl&                           m_actuator_control_storage;
    ControlHealth&                             m_control_health_storage;
-   const ControlSetpoint&                     m_control_setpoint_storage;
+   const FlightControlSetpoints&              m_flight_control_setpoint_storage;
    const StateEstimation&                     m_state_estimation_data;
    Logger&                                    m_logger;
    const float                                m_max_roll_rate_radps;
@@ -332,7 +332,7 @@ private:
    const float                                m_thrust_model_factor;
    aeromight_boundaries::ActuatorControl      m_actuator_control{};
    aeromight_boundaries::ControlHealth        m_local_control_health{};
-   ControlSetpoint::Sample                    m_last_control_setpoints{};
+   FlightControlSetpoints::Sample             m_last_flight_control_setpoints{};
    math::Euler                                m_desired_rate_radps{};
    std::array<bool, RateController::num_axis> m_control_saturation_positive{};
    std::array<bool, RateController::num_axis> m_control_saturation_negative{};

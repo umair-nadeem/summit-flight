@@ -170,13 +170,13 @@ protected:
    static constexpr uint32_t timeout_control_readiness_ms   = 4u;
    static constexpr uint32_t timeout_auto_land_ms           = 15u;
 
-   mocks::rtos::QueueReceiver<aeromight_boundaries::HealthSummary> health_summary_queue_mock{};
-   mocks::rtos::Notifier                                           control_start_notifer_mock{};
-   mocks::common::ClockSource                                      sys_clock{};
-   boundaries::SharedData<aeromight_boundaries::ControlSetpoints>  control_setpoints_storage{};
-   Setpoints                                                       flight_setpoints_storage{};
-   Actuals                                                         radio_link_actuals_storage{};
-   mocks::common::Logger                                           logger{"flight"};
+   mocks::rtos::QueueReceiver<aeromight_boundaries::HealthSummary>      health_summary_queue_mock{};
+   mocks::rtos::Notifier                                                control_start_notifer_mock{};
+   mocks::common::ClockSource                                           sys_clock{};
+   boundaries::SharedData<aeromight_boundaries::FlightControlSetpoints> flight_control_setpoints_storage{};
+   Setpoints                                                            flight_setpoints_storage{};
+   Actuals                                                              radio_link_actuals_storage{};
+   mocks::common::Logger                                                logger{"flight"};
 
    aeromight_boundaries::HealthSummary   health_summary{};
    aeromight_boundaries::FlightSetpoints setpoints{};
@@ -188,7 +188,7 @@ protected:
                                    decltype(sys_clock), mocks::common::Logger>
        flight_manager{health_summary_queue_mock,
                       control_start_notifer_mock,
-                      control_setpoints_storage,
+                      flight_control_setpoints_storage,
                       flight_setpoints_storage,
                       radio_link_actuals_storage,
                       logger,

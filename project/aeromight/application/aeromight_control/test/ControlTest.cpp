@@ -40,14 +40,14 @@ protected:
    static constexpr float max_tilt_angle_rad   = 30 * physics::constants::deg_to_rad;   // 30 degrees
    static constexpr float lift_throttle        = 0.05f;
 
-   AttitudeControllerMock                                         attitude_controller_mock{};
-   RateControllerMock                                             rate_controller_mock{};
-   mocks::common::ClockSource                                     sys_clock{};
-   mocks::common::Logger                                          logger{"controlTest"};
-   boundaries::SharedData<aeromight_boundaries::ControlHealth>    control_health_storage{};
-   boundaries::SharedData<aeromight_boundaries::ControlSetpoints> control_setpoints_storage{};
-   aeromight_control::StateEstimation                             state_estimation{};
-   uint32_t                                                       current_ms{0};
+   AttitudeControllerMock                                               attitude_controller_mock{};
+   RateControllerMock                                                   rate_controller_mock{};
+   mocks::common::ClockSource                                           sys_clock{};
+   mocks::common::Logger                                                logger{"controlTest"};
+   boundaries::SharedData<aeromight_boundaries::ControlHealth>          control_health_storage{};
+   boundaries::SharedData<aeromight_boundaries::FlightControlSetpoints> flight_control_setpoints_storage{};
+   aeromight_control::StateEstimation                                   state_estimation{};
+   uint32_t                                                             current_ms{0};
 
    aeromight_control::Control<decltype(attitude_controller_mock),
                               decltype(rate_controller_mock),
@@ -56,7 +56,7 @@ protected:
        control{attitude_controller_mock,
                rate_controller_mock,
                control_health_storage,
-               control_setpoints_storage,
+               flight_control_setpoints_storage,
                state_estimation,
                logger,
                max_roll_rate_radps,

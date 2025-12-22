@@ -12,7 +12,7 @@ enum class ControlMode : uint8_t
    auto_land
 };
 
-struct ControlSetpoints
+struct FlightControlSetpoints
 {
    ControlMode mode;
 

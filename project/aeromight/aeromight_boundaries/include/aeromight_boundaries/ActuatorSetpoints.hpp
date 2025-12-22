@@ -11,7 +11,7 @@ struct ActuatorParams
    static constexpr std::size_t num_actuators = 4u;
 };
 
-struct ActuatorSetpoint
+struct ActuatorSetpoints
 {
    float m1{};
    float m2{};
@@ -21,8 +21,8 @@ struct ActuatorSetpoint
 
 struct ActuatorControl
 {
-   ActuatorSetpoint setpoint{};
-   bool             enabled{false};
+   ActuatorSetpoints setpoints{};
+   bool              enabled{false};
 };
 
 }   // namespace aeromight_boundaries

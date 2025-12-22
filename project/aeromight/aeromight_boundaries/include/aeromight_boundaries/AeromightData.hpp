@@ -1,9 +1,9 @@
 #pragma once
 
-#include "ActuatorSetpoint.hpp"
+#include "ActuatorSetpoints.hpp"
 #include "ControlHealth.hpp"
-#include "ControlSetpoints.hpp"
 #include "EstimatorHealth.hpp"
+#include "FlightControlSetpoints.hpp"
 #include "FlightManagerData.hpp"
 #include "barometer_sensor/BarometerData.hpp"
 #include "barometer_sensor/BarometerHealth.hpp"
@@ -28,9 +28,9 @@ struct AeromightData
    boundaries::SharedData<EstimatorHealth> estimator_health_storage{};
 
    // Control
-   boundaries::SharedData<ActuatorControl>  actuator_control{};
-   boundaries::SharedData<ControlHealth>    control_health_storage{};
-   boundaries::SharedData<ControlSetpoints> control_setpoints{};
+   boundaries::SharedData<ActuatorControl>        actuator_control{};
+   boundaries::SharedData<ControlHealth>          control_health_storage{};
+   boundaries::SharedData<FlightControlSetpoints> flight_control_setpoints{};
 
    // Flight Manager
    boundaries::SharedData<FlightSetpoints> flight_setpoints{};

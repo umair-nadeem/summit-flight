@@ -3,7 +3,7 @@
 #include <array>
 #include <bitset>
 
-#include "aeromight_boundaries/ActuatorSetpoint.hpp"
+#include "aeromight_boundaries/ActuatorSetpoints.hpp"
 #include "math/Euler.hpp"
 
 namespace aeromight_control
@@ -12,10 +12,10 @@ namespace aeromight_control
 class ControlAllocator
 {
 public:
-   aeromight_boundaries::ActuatorSetpoint allocate(const math::Euler& torque_cmd,
-                                                   const float        thrust_setpoint,
-                                                   const float        actuator_min,
-                                                   const float        actuator_max)
+   aeromight_boundaries::ActuatorSetpoints allocate(const math::Euler& torque_cmd,
+                                                    const float        thrust_setpoint,
+                                                    const float        actuator_min,
+                                                    const float        actuator_max)
    {
       const float roll  = torque_cmd.roll();
       const float pitch = torque_cmd.pitch();
@@ -68,10 +68,10 @@ public:
          scale = std::min(scale, (lower_margin / min_delta));
       }
 
-      aeromight_boundaries::ActuatorSetpoint scaled_torque_deltas{torque_deltas[0] * scale,
-                                                                  torque_deltas[1] * scale,
-                                                                  torque_deltas[2] * scale,
-                                                                  torque_deltas[3] * scale};
+      aeromight_boundaries::ActuatorSetpoints scaled_torque_deltas{torque_deltas[0] * scale,
+                                                                   torque_deltas[1] * scale,
+                                                                   torque_deltas[2] * scale,
+                                                                   torque_deltas[3] * scale};
 
       m_control_saturation_positive = {false, false, false};
       m_control_saturation_negative = {false, false, false};
@@ -111,19 +111,19 @@ public:
          m_control_saturation_negative[2] = nose_left && tail_right;
       }
 
-      aeromight_boundaries::ActuatorSetpoint actuator_setpoint{};
-      actuator_setpoint.m1 = thrust_setpoint + scaled_torque_deltas.m1;
-      actuator_setpoint.m2 = thrust_setpoint + scaled_torque_deltas.m2;
-      actuator_setpoint.m3 = thrust_setpoint + scaled_torque_deltas.m3;
-      actuator_setpoint.m4 = thrust_setpoint + scaled_torque_deltas.m4;
+      aeromight_boundaries::ActuatorSetpoints actuator_setpoints{};
+      actuator_setpoints.m1 = thrust_setpoint + scaled_torque_deltas.m1;
+      actuator_setpoints.m2 = thrust_setpoint + scaled_torque_deltas.m2;
+      actuator_setpoints.m3 = thrust_setpoint + scaled_torque_deltas.m3;
+      actuator_setpoints.m4 = thrust_setpoint + scaled_torque_deltas.m4;
 
       // apply final clamping
-      actuator_setpoint.m1 = std::clamp(actuator_setpoint.m1, actuator_min, actuator_max);
-      actuator_setpoint.m2 = std::clamp(actuator_setpoint.m2, actuator_min, actuator_max);
-      actuator_setpoint.m3 = std::clamp(actuator_setpoint.m3, actuator_min, actuator_max);
-      actuator_setpoint.m4 = std::clamp(actuator_setpoint.m4, actuator_min, actuator_max);
+      actuator_setpoints.m1 = std::clamp(actuator_setpoints.m1, actuator_min, actuator_max);
+      actuator_setpoints.m2 = std::clamp(actuator_setpoints.m2, actuator_min, actuator_max);
+      actuator_setpoints.m3 = std::clamp(actuator_setpoints.m3, actuator_min, actuator_max);
+      actuator_setpoints.m4 = std::clamp(actuator_setpoints.m4, actuator_min, actuator_max);
 
-      return actuator_setpoint;
+      return actuator_setpoints;
    }
 
    const std::array<bool, 3u>& get_actuator_saturation_positive() const
