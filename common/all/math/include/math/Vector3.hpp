@@ -13,7 +13,7 @@ public:
    Vec3(const Vec3&)            = default;
    Vec3& operator=(const Vec3&) = default;
 
-   explicit Vec3(const std::array<T, 3>& other)
+   explicit Vec3(const std::array<T, 3u>& other)
        : Vector<T, 3u>{other}
    {
    }
@@ -80,7 +80,7 @@ public:
 
    Vec3 normalized() const
    {
-      return Vec3{Vector<T, 3>::normalized()};
+      return Vec3{Vector<T, 3u>::normalized()};
    }
 
    constexpr Vec3 cross(const Vec3& b) const noexcept

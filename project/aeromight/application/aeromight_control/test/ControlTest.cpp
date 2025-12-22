@@ -25,7 +25,8 @@ public:
 class ControlAllocatorMock
 {
 public:
-   MOCK_METHOD(aeromight_boundaries::ActuatorSetpoints, allocate, (const math::Euler&, const float, const float, const float), ());
+   MOCK_METHOD(aeromight_boundaries::ActuatorSetpoints, allocate, (const math::Vector4&), ());
+   MOCK_METHOD(float, estimate_collective_thrust, (float), ());
    MOCK_METHOD((const std::array<bool, 3u>&), get_actuator_saturation_positive, (), ());
    MOCK_METHOD((const std::array<bool, 3u>&), get_actuator_saturation_negative, (), ());
 };
@@ -49,10 +50,7 @@ protected:
    static constexpr float max_pitch_rate_radps = 3.5f;
    static constexpr float max_yaw_rate_radps   = 2.0f;
    static constexpr float max_tilt_angle_rad   = 30 * physics::constants::deg_to_rad;   // 30 degrees
-   static constexpr float actuator_min         = 0.05f;
-   static constexpr float actuator_max         = 1.0f;
    static constexpr float lift_throttle        = 0.05f;
-   static constexpr float thrust_model_factor  = 0.0f;
 
    AttitudeControllerMock                                               attitude_controller_mock{};
    RateControllerMock                                                   rate_controller_mock{};
@@ -82,10 +80,7 @@ protected:
                max_pitch_rate_radps,
                max_yaw_rate_radps,
                max_tilt_angle_rad,
-               actuator_min,
-               actuator_max,
-               lift_throttle,
-               thrust_model_factor};
+               lift_throttle};
 };
 
 TEST_F(ControlTest, do_nothing_until_activated)

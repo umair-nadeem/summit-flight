@@ -1,7 +1,11 @@
 #pragma once
 
+#include "math/Vector4.hpp"
+
 namespace aeromight_boundaries
 {
+
+using ActuatorSetpoints = math::Vector4;
 
 struct ActuatorParams
 {
@@ -11,18 +15,18 @@ struct ActuatorParams
    static constexpr std::size_t num_actuators = 4u;
 };
 
-struct ActuatorSetpoints
-{
-   float m1{};
-   float m2{};
-   float m3{};
-   float m4{};
-};
-
 struct ActuatorControl
 {
    ActuatorSetpoints setpoints{};
    bool              enabled{false};
+};
+
+enum class ControlAxis : uint8_t
+{
+   roll = 0,
+   pitch,
+   yaw,
+   thrust
 };
 
 }   // namespace aeromight_boundaries

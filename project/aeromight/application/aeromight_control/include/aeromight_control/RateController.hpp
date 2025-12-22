@@ -90,34 +90,17 @@ private:
    void update_integrator(const math::Vector3& error, const float dt_s)
    {
       auto integrator_error = error;
-      if (m_control_saturation_positive[0])
+      for (std::size_t i = 0; i < num_axis; i++)
       {
-         integrator_error[0] = std::min(integrator_error[0], 0.0f);
-      }
+         if (m_control_saturation_positive[i])
+         {
+            integrator_error[i] = std::min(integrator_error[i], 0.0f);
+         }
 
-      if (m_control_saturation_negative[0])
-      {
-         integrator_error[0] = std::max(integrator_error[0], 0.0f);
-      }
-
-      if (m_control_saturation_positive[1])
-      {
-         integrator_error[1] = std::min(integrator_error[1], 0.0f);
-      }
-
-      if (m_control_saturation_negative[1])
-      {
-         integrator_error[1] = std::max(integrator_error[1], 0.0f);
-      }
-
-      if (m_control_saturation_positive[2])
-      {
-         integrator_error[2] = std::min(integrator_error[2], 0.0f);
-      }
-
-      if (m_control_saturation_negative[2])
-      {
-         integrator_error[2] = std::max(integrator_error[2], 0.0f);
+         if (m_control_saturation_negative[i])
+         {
+            integrator_error[i] = std::max(integrator_error[i], 0.0f);
+         }
       }
 
       m_rate_integrator += m_gains_i.emul(integrator_error) * dt_s;

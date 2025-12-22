@@ -25,12 +25,12 @@ public:
       error::verify(actuator_max <= aeromight_boundaries::ActuatorParams::max);
    }
 
-   aeromight_boundaries::ActuatorSetpoints allocate(const math::Euler& torque_setpoint,
-                                                    const float        thrust_setpoint)
+   aeromight_boundaries::ActuatorSetpoints allocate(const math::Vector4& control_setpoints)
    {
-      const float roll  = torque_setpoint.roll();
-      const float pitch = torque_setpoint.pitch();
-      const float yaw   = torque_setpoint.yaw();
+      const float roll   = control_setpoints[static_cast<uint8_t>(aeromight_boundaries::ControlAxis::roll)];
+      const float pitch  = control_setpoints[static_cast<uint8_t>(aeromight_boundaries::ControlAxis::pitch)];
+      const float yaw    = control_setpoints[static_cast<uint8_t>(aeromight_boundaries::ControlAxis::yaw)];
+      const float thrust = control_setpoints[static_cast<uint8_t>(aeromight_boundaries::ControlAxis::thrust)];
 
       const std::array<float, aeromight_boundaries::ActuatorParams::num_actuators> torque_deltas{
           roll + pitch - yaw,    // front-left CW
@@ -40,24 +40,26 @@ public:
       };
 
       aeromight_boundaries::ActuatorSetpoints actuator_setpoints{};
-      actuator_setpoints.m1 = thrust_setpoint + torque_deltas[0];
-      actuator_setpoints.m2 = thrust_setpoint + torque_deltas[1];
-      actuator_setpoints.m3 = thrust_setpoint + torque_deltas[2];
-      actuator_setpoints.m4 = thrust_setpoint + torque_deltas[3];
+      actuator_setpoints[0] = thrust + torque_deltas[0];
+      actuator_setpoints[1] = thrust + torque_deltas[1];
+      actuator_setpoints[2] = thrust + torque_deltas[2];
+      actuator_setpoints[3] = thrust + torque_deltas[3];
 
       m_control_saturation_positive = {false, false, false};
       m_control_saturation_negative = {false, false, false};
 
+      m_last_control_setpoints = control_setpoints;
+
       return actuator_setpoints;
    }
 
-   void clip_actuator_setpoints(aeromight_boundaries::ActuatorSetpoints& setpionts)
+   void clip_actuator_setpoints(aeromight_boundaries::ActuatorSetpoints& setpionts) const
    {
       // apply final clamping
-      setpionts.m1 = std::clamp(setpionts.m1, m_actuator_min, m_actuator_max);
-      setpionts.m2 = std::clamp(setpionts.m2, m_actuator_min, m_actuator_max);
-      setpionts.m3 = std::clamp(setpionts.m3, m_actuator_min, m_actuator_max);
-      setpionts.m4 = std::clamp(setpionts.m4, m_actuator_min, m_actuator_max);
+      setpionts[0] = std::clamp(setpionts[0], m_actuator_min, m_actuator_max);
+      setpionts[1] = std::clamp(setpionts[1], m_actuator_min, m_actuator_max);
+      setpionts[2] = std::clamp(setpionts[2], m_actuator_min, m_actuator_max);
+      setpionts[3] = std::clamp(setpionts[3], m_actuator_min, m_actuator_max);
    }
 
    float estimate_collective_thrust(const float throttle) const
@@ -82,6 +84,7 @@ private:
    const float          m_thrust_model_factor;
    std::array<bool, 3u> m_control_saturation_positive{};
    std::array<bool, 3u> m_control_saturation_negative{};
+   math::Vector4        m_last_control_setpoints{};
 };
 
 }   // namespace aeromight_control

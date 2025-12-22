@@ -227,9 +227,12 @@ private:
 
       const math::Euler torque_cmd{run_rate_controller(run_integrator)};
 
-      const float thrust = m_control_allocator.estimate_collective_thrust(m_thrust_setpoint);
+      const math::Vector4 control_setpoints{torque_cmd.roll(),
+                                            torque_cmd.pitch(),
+                                            torque_cmd.yaw(),
+                                            m_control_allocator.estimate_collective_thrust(m_thrust_setpoint)};
 
-      m_actuator_control.setpoints = m_control_allocator.allocate(torque_cmd, thrust);
+      m_actuator_control.setpoints = m_control_allocator.allocate(control_setpoints);
 
       publish_actuator_setpoints();
 
@@ -242,14 +245,14 @@ private:
                          m_state_estimation_data.euler.roll(),
                          m_state_estimation_data.euler.pitch(),
                          m_state_estimation_data.euler.yaw(),
-                         thrust,
+                         control_setpoints[3],
                          torque_cmd.roll(),
                          torque_cmd.pitch(),
                          torque_cmd.yaw(),
-                         m_actuator_control.setpoints.m1,
-                         m_actuator_control.setpoints.m2,
-                         m_actuator_control.setpoints.m3,
-                         m_actuator_control.setpoints.m4);
+                         m_actuator_control.setpoints[0],
+                         m_actuator_control.setpoints[1],
+                         m_actuator_control.setpoints[2],
+                         m_actuator_control.setpoints[3]);
       }
    }
 
