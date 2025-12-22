@@ -21,12 +21,17 @@ struct ActuatorControl
    bool              enabled{false};
 };
 
-enum class ControlAxis : uint8_t
+namespace control_axis
+{
+
+enum ControlAxis : uint8_t
 {
    roll = 0,
    pitch,
    yaw,
    thrust
 };
+
+}
 
 }   // namespace aeromight_boundaries

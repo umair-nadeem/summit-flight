@@ -5,7 +5,6 @@
 
 #include "aeromight_boundaries/ActuatorSetpoints.hpp"
 #include "error/error_handler.hpp"
-#include "math/Euler.hpp"
 
 namespace aeromight_control
 {
@@ -27,23 +26,19 @@ public:
 
    aeromight_boundaries::ActuatorSetpoints allocate(const math::Vector4& control_setpoints)
    {
-      const float roll   = control_setpoints[static_cast<uint8_t>(aeromight_boundaries::ControlAxis::roll)];
-      const float pitch  = control_setpoints[static_cast<uint8_t>(aeromight_boundaries::ControlAxis::pitch)];
-      const float yaw    = control_setpoints[static_cast<uint8_t>(aeromight_boundaries::ControlAxis::yaw)];
-      const float thrust = control_setpoints[static_cast<uint8_t>(aeromight_boundaries::ControlAxis::thrust)];
+      const float roll   = control_setpoints[aeromight_boundaries::control_axis::roll];
+      const float pitch  = control_setpoints[aeromight_boundaries::control_axis::pitch];
+      const float yaw    = control_setpoints[aeromight_boundaries::control_axis::yaw];
+      const float thrust = control_setpoints[aeromight_boundaries::control_axis::thrust];
 
-      const std::array<float, aeromight_boundaries::ActuatorParams::num_actuators> torque_deltas{
+      const math::Vector4 torque_deltas{
           roll + pitch - yaw,    // front-left CW
           -roll + pitch + yaw,   // front-right CCW
           -roll - pitch - yaw,   // rear-right CW
           roll - pitch + yaw,    // rear-left CCW
       };
 
-      aeromight_boundaries::ActuatorSetpoints actuator_setpoints{};
-      actuator_setpoints[0] = thrust + torque_deltas[0];
-      actuator_setpoints[1] = thrust + torque_deltas[1];
-      actuator_setpoints[2] = thrust + torque_deltas[2];
-      actuator_setpoints[3] = thrust + torque_deltas[3];
+      aeromight_boundaries::ActuatorSetpoints actuator_setpoints = torque_deltas + thrust;
 
       m_control_saturation_positive = {false, false, false};
       m_control_saturation_negative = {false, false, false};

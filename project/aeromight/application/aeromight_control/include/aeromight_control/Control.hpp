@@ -204,15 +204,15 @@ private:
                                                   m_state_estimation_data.euler.pitch(),
                                                   m_state_estimation_data.euler.yaw()};
 
-      m_desired_rate_radps.set(m_attitude_controller.update(angle_setpoint_rad, angle_estimation_rad));
+      m_desired_rate_radps = m_attitude_controller.update(angle_setpoint_rad, angle_estimation_rad);
 
       // yaw always rate-controlled
-      m_desired_rate_radps.yaw(m_last_flight_control_setpoints.data.yaw * m_max_yaw_rate_radps);
+      m_desired_rate_radps[aeromight_boundaries::control_axis::yaw] = (m_last_flight_control_setpoints.data.yaw * m_max_yaw_rate_radps);
    }
 
    math::Vector3 run_rate_controller(const bool run_integrator)
    {
-      return m_rate_controller.update(m_desired_rate_radps.vector(), m_state_estimation_data.gyro_radps, m_time_delta_s, run_integrator);
+      return m_rate_controller.update(m_desired_rate_radps, m_state_estimation_data.gyro_radps, m_time_delta_s, run_integrator);
    }
 
    void run_control(const bool run_integrator)
@@ -225,11 +225,11 @@ private:
 
       run_attitude_controller();
 
-      const math::Euler torque_cmd{run_rate_controller(run_integrator)};
+      const math::Vector3 torque_cmd{run_rate_controller(run_integrator)};
 
-      const math::Vector4 control_setpoints{torque_cmd.roll(),
-                                            torque_cmd.pitch(),
-                                            torque_cmd.yaw(),
+      const math::Vector4 control_setpoints{torque_cmd[aeromight_boundaries::control_axis::roll],
+                                            torque_cmd[aeromight_boundaries::control_axis::pitch],
+                                            torque_cmd[aeromight_boundaries::control_axis::yaw],
                                             m_control_allocator.estimate_collective_thrust(m_thrust_setpoint)};
 
       m_actuator_control.setpoints = m_control_allocator.allocate(control_setpoints);
@@ -246,9 +246,9 @@ private:
                          m_state_estimation_data.euler.pitch(),
                          m_state_estimation_data.euler.yaw(),
                          control_setpoints[3],
-                         torque_cmd.roll(),
-                         torque_cmd.pitch(),
-                         torque_cmd.yaw(),
+                         torque_cmd[0],
+                         torque_cmd[1],
+                         torque_cmd[2],
                          m_actuator_control.setpoints[0],
                          m_actuator_control.setpoints[1],
                          m_actuator_control.setpoints[2],
@@ -317,7 +317,7 @@ private:
    aeromight_boundaries::ActuatorControl      m_actuator_control{};
    aeromight_boundaries::ControlHealth        m_local_control_health{};
    FlightControlSetpoints::Sample             m_last_flight_control_setpoints{};
-   math::Euler                                m_desired_rate_radps{};
+   math::Vector3                              m_desired_rate_radps{};
    std::array<bool, RateController::num_axis> m_control_saturation_positive{};
    std::array<bool, RateController::num_axis> m_control_saturation_negative{};
    float                                      m_thrust_setpoint{};
