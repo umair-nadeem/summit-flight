@@ -250,6 +250,7 @@ private:
 
       publish_actuator_setpoints();
 
+      // determine allocator saturation
       m_rate_controller.set_saturation_status(m_control_allocator.get_actuator_saturation_positive(), m_control_allocator.get_actuator_saturation_negative());
 
       if ((m_counter++ % 250) == 0)

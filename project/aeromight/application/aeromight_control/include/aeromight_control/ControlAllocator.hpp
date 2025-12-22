@@ -12,20 +12,20 @@ namespace aeromight_control
 class ControlAllocator
 {
 public:
-   aeromight_boundaries::ActuatorSetpoints allocate(const math::Euler& torque_cmd,
+   aeromight_boundaries::ActuatorSetpoints allocate(const math::Euler& torque_setpoint,
                                                     const float        thrust_setpoint,
                                                     const float        actuator_min,
                                                     const float        actuator_max)
    {
-      const float roll  = torque_cmd.roll();
-      const float pitch = torque_cmd.pitch();
-      const float yaw   = torque_cmd.yaw();
+      const float roll  = torque_setpoint.roll();
+      const float pitch = torque_setpoint.pitch();
+      const float yaw   = torque_setpoint.yaw();
 
       std::array<float, aeromight_boundaries::ActuatorParams::num_actuators> torque_deltas{
-          roll + pitch + yaw,    // front-left CCW
-          -roll + pitch - yaw,   // front-right CW
-          -roll - pitch + yaw,   // rear-right CCW
-          roll - pitch - yaw,    // rear-left CW
+          roll + pitch - yaw,    // front-left CW
+          -roll + pitch + yaw,   // front-right CCW
+          -roll - pitch - yaw,   // rear-right CW
+          roll - pitch + yaw,    // rear-left CCW
       };
 
       // torque delta bounds
@@ -96,10 +96,10 @@ public:
          const bool nose_down = min_delta_map.test(Motors::motor1) || min_delta_map.test(Motors::motor2);
          const bool tail_up   = max_delta_map.test(Motors::motor3) || max_delta_map.test(Motors::motor4);
 
-         const bool nose_right = max_delta_map.test(Motors::motor1) || max_delta_map.test(Motors::motor3);
-         const bool tail_left  = min_delta_map.test(Motors::motor2) || min_delta_map.test(Motors::motor4);
-         const bool nose_left  = min_delta_map.test(Motors::motor1) || min_delta_map.test(Motors::motor3);
-         const bool tail_right = max_delta_map.test(Motors::motor2) || max_delta_map.test(Motors::motor4);
+         const bool nose_right = max_delta_map.test(Motors::motor2) || max_delta_map.test(Motors::motor4);
+         const bool tail_left  = min_delta_map.test(Motors::motor1) || min_delta_map.test(Motors::motor3);
+         const bool nose_left  = min_delta_map.test(Motors::motor2) || min_delta_map.test(Motors::motor4);
+         const bool tail_right = max_delta_map.test(Motors::motor1) || max_delta_map.test(Motors::motor3);
 
          m_control_saturation_positive[0] = left_side_up && right_side_down;
          m_control_saturation_negative[0] = left_side_down && right_side_up;
