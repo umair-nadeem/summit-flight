@@ -120,7 +120,9 @@ extern "C"
                                                         max_pitch_rate_radps,
                                                         max_yaw_rate_radps};
 
-      aeromight_control::ControlAllocator control_allocator{};
+      aeromight_control::ControlAllocator control_allocator{actuator_min,
+                                                            actuator_max,
+                                                            thrust_model_factor};
 
       aeromight_control::Control<decltype(attitude_controller),
                                  decltype(rate_controller),
@@ -139,10 +141,7 @@ extern "C"
                   max_pitch_rate_radps,
                   max_yaw_rate_radps,
                   max_tilt_angle_rad,
-                  actuator_min,
-                  actuator_max,
-                  lift_throttle,
-                  thrust_model_factor};
+                  lift_throttle};
 
       aeromight_control::EstimationAndControl<decltype(estimation),
                                               decltype(control)>

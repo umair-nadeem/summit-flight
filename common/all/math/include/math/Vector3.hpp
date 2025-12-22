@@ -1,151 +1,97 @@
 #pragma once
 
-#include <cmath>
+#include "Vector.hpp"
 
 namespace math
 {
 
-struct Vector3
+template <typename T>
+class Vec3 final : public Vector<T, 3u>
 {
-   float x = 0.0f;
-   float y = 0.0f;
-   float z = 0.0f;
+public:
+   Vec3()                       = default;
+   Vec3(const Vec3&)            = default;
+   Vec3& operator=(const Vec3&) = default;
 
-   float epsilon = 0.0001f;   // for comparison
-
-   static constexpr bool nearly_equal(const float a, const float b, const float epsilon) noexcept
+   explicit Vec3(const std::array<T, 3>& other)
+       : Vector<T, 3u>{other}
    {
-      return std::abs(a - b) <= epsilon;
    }
 
-   bool operator==(const Vector3& other) const noexcept
+   Vec3(const T x, const T y, const T z)
+       : Vector<T, 3u>{}
    {
-      return (nearly_equal(x, other.x, epsilon) &&
-              nearly_equal(y, other.y, epsilon) &&
-              nearly_equal(z, other.z, epsilon));
+      auto& a = *(this);
+      a[0]    = x;
+      a[1]    = y;
+      a[2]    = z;
    }
 
-   bool operator!=(const Vector3& other) const noexcept
+   explicit Vec3(const Vector<T, 3u>& other)
+       : Vector<T, 3u>{other}
    {
-      return !(*this == other);
    }
 
-   Vector3 operator+(const Vector3& other) const
+   Vec3& operator=(const Vector<T, 3u>& other)
    {
-      Vector3 result{};
-      result.x = this->x + other.x;
-      result.y = this->y + other.y;
-      result.z = this->z + other.z;
-      return result;
+      Vector<T, 3u>::operator=(other);
+      return *(this);
    }
 
-   Vector3& operator+=(const Vector3& other)
+   Vec3 operator+(const Vec3& other) const
    {
-      this->x += other.x;
-      this->y += other.y;
-      this->z += other.z;
-      return *this;
+      return Vec3{Vector<T, 3u>::operator+(other)};
    }
 
-   Vector3 operator-(const Vector3& other) const
+   Vec3 operator+(const T scalar) const
    {
-      Vector3 result{};
-      result.x = this->x - other.x;
-      result.y = this->y - other.y;
-      result.z = this->z - other.z;
-      return result;
+      return Vec3{Vector<T, 3u>::operator+(scalar)};
    }
 
-   Vector3& operator-=(const Vector3& other)
+   Vec3 operator-(const Vec3& other) const
    {
-      this->x -= other.x;
-      this->y -= other.y;
-      this->z -= other.z;
-      return *this;
+      return Vec3{Vector<T, 3u>::operator-(other)};
    }
 
-   Vector3 operator*(const Vector3& other) const
+   Vec3 operator-(const T scalar) const
    {
-      Vector3 result{};
-      result.x = this->x * other.x;
-      result.y = this->y * other.y;
-      result.z = this->z * other.z;
-      return result;
+      return Vec3{Vector<T, 3u>::operator-(scalar)};
    }
 
-   Vector3 operator*(const float v) const
+   Vec3 emul(const Vec3& other) const
    {
-      Vector3 result{};
-      result.x = this->x * v;
-      result.y = this->y * v;
-      result.z = this->z * v;
-      return result;
+      return Vec3{Vector<T, 3u>::emul(other)};
    }
 
-   Vector3 operator%(const Vector3& other) const
+   Vec3 operator*(const T scalar) const
    {
-      return (*this).cross(other);
+      return Vec3{Vector<T, 3u>::operator*(scalar)};
    }
 
-   Vector3 operator/(const float v) const
+   Vec3 ediv(const Vec3& other) const
    {
-      Vector3 result{};
-      result.x = this->x / v;
-      result.y = this->y / v;
-      result.z = this->z / v;
-      return result;
+      return Vec3{Vector<T, 3u>::ediv(other)};
    }
 
-   void zero()
+   Vec3 operator/(const T scalar) const
    {
-      x = 0;
-      y = 0;
-      z = 0;
+      return Vec3{Vector<T, 3u>::operator/(scalar)};
    }
 
-   void normalize()
+   Vec3 normalized() const
    {
-      const float v = norm();
-      if (v > 1e-6f)
-      {
-         x /= v;
-         y /= v;
-         z /= v;
-      }
+      return Vec3{Vector<T, 3>::normalized()};
    }
 
-   Vector3 normalized() const
+   constexpr Vec3 cross(const Vec3& b) const noexcept
    {
-      return (*this) / norm();
-   }
-
-   void set_epsilon(const float eps)
-   {
-      epsilon = eps;
-   }
-
-   float norm() const
-   {
-      return sqrtf((x * x) + (y * y) + (z * z));
-   }
-
-   float norm_squared() const
-   {
-      return ((x * x) + (y * y) + (z * z));
-   }
-
-   float length() const
-   {
-      return norm();
-   }
-
-private:
-   Vector3 cross(const Vector3& other) const
-   {
-      return {(y * other.z) - (z * other.y),
-              (-x * other.z) + (z * other.x),
-              (x * other.y) - (y * other.x)};
+      const auto& a = *(this);
+      return {(a[1] * b[2]) - (a[2] * b[1]),
+              (-a[0] * b[2]) + (a[2] * b[0]),
+              (a[0] * b[1]) - (a[1] * b[0])};
    }
 };
+
+using Vector3 = Vec3<float>;
 
 }   // namespace math

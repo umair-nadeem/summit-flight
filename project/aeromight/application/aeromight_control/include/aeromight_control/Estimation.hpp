@@ -405,7 +405,7 @@ private:
    // converts sensor axes from Front-Left-Up to Front_Right-Down
    static constexpr math::Vector3 map_imu_sensor_axes_to_frd(const math::Vector3& enu_vector)
    {
-      return {-enu_vector.y, -enu_vector.x, -enu_vector.z};
+      return {-enu_vector[1], -enu_vector[0], -enu_vector[2]};
    }
 
    AttitudeEstimator&                    m_attitude_estimator;

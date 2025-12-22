@@ -8,7 +8,6 @@
 #include "aeromight_boundaries/ControlState.hpp"
 #include "aeromight_boundaries/FlightControlSetpoints.hpp"
 #include "boundaries/SharedData.hpp"
-#include "error/error_handler.hpp"
 #include "interfaces/IClockSource.hpp"
 
 namespace aeromight_control
@@ -34,10 +33,7 @@ public:
                     const float                   max_pitch_rate_radps,
                     const float                   max_yaw_rate_radps,
                     const float                   max_tilt_angle_rad,
-                    const float                   actuator_min,
-                    const float                   actuator_max,
-                    const float                   lift_throttle,
-                    const float                   thrust_model_factor)
+                    const float                   lift_throttle)
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
          m_control_allocator{control_allocator},
@@ -50,16 +46,9 @@ public:
          m_max_pitch_rate_radps{max_pitch_rate_radps},
          m_max_yaw_rate_radps{max_yaw_rate_radps},
          m_max_tilt_angle_rad{max_tilt_angle_rad},
-         m_actuator_min{actuator_min},
-         m_actuator_max{actuator_max},
-         m_lift_throttle{lift_throttle},
-         m_thrust_model_factor{thrust_model_factor}
+         m_lift_throttle{lift_throttle}
 
    {
-      error::verify(actuator_min < actuator_max);
-      error::verify(aeromight_boundaries::ActuatorParams::min <= actuator_min);
-      error::verify(actuator_max <= aeromight_boundaries::ActuatorParams::max);
-
       m_logger.enable();
    }
 
@@ -206,12 +195,6 @@ private:
       m_logger.print("airborne");
    }
 
-   void estimate_collective_thrust()
-   {
-      const float thrust_signal = m_actuator_min + (m_last_flight_control_setpoints.data.throttle * (1.0f - m_actuator_min));
-      m_thrust_setpoint         = (m_thrust_model_factor * (thrust_signal * thrust_signal)) + ((1.0f - m_thrust_model_factor) * thrust_signal);
-   }
-
    void run_attitude_controller()
    {
       const math::Vector3 angle_setpoint_rad   = {m_last_flight_control_setpoints.data.roll * m_max_tilt_angle_rad,
@@ -240,13 +223,13 @@ private:
          return;
       }
 
-      estimate_collective_thrust();
-
       run_attitude_controller();
 
       const math::Euler torque_cmd{run_rate_controller(run_integrator)};
 
-      m_actuator_control.setpoints = m_control_allocator.allocate(torque_cmd, m_thrust_setpoint, m_actuator_min, m_actuator_max);
+      const float thrust = m_control_allocator.estimate_collective_thrust(m_thrust_setpoint);
+
+      m_actuator_control.setpoints = m_control_allocator.allocate(torque_cmd, thrust);
 
       publish_actuator_setpoints();
 
@@ -259,7 +242,7 @@ private:
                          m_state_estimation_data.euler.roll(),
                          m_state_estimation_data.euler.pitch(),
                          m_state_estimation_data.euler.yaw(),
-                         m_thrust_setpoint,
+                         thrust,
                          torque_cmd.roll(),
                          torque_cmd.pitch(),
                          torque_cmd.yaw(),
@@ -327,10 +310,7 @@ private:
    const float                                m_max_pitch_rate_radps;
    const float                                m_max_yaw_rate_radps;
    const float                                m_max_tilt_angle_rad;
-   const float                                m_actuator_min;
-   const float                                m_actuator_max;
    const float                                m_lift_throttle;
-   const float                                m_thrust_model_factor;
    aeromight_boundaries::ActuatorControl      m_actuator_control{};
    aeromight_boundaries::ControlHealth        m_local_control_health{};
    FlightControlSetpoints::Sample             m_last_flight_control_setpoints{};

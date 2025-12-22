@@ -120,7 +120,7 @@ struct Quaternion
    Quaternion derivative1(const Vector3& other) const
    {
       const Quaternion& q = *this;
-      Quaternion        v(0, other.x, other.y, other.z);
+      Quaternion        v(0, other[0], other[1], other[2]);
       return q * v * 0.5f;
    }
 
@@ -128,7 +128,7 @@ struct Quaternion
    Quaternion derivative2(const Vector3& other) const
    {
       const Quaternion& q = *this;
-      Quaternion        v(0, other.x, other.y, other.z);
+      Quaternion        v(0, other[0], other[1], other[2]);
       return v * q * 0.5f;
    }
 
@@ -155,11 +155,6 @@ struct Quaternion
          y = 0.0f;
          z = 0.0f;
       }
-   }
-
-   void set_epsilon(const float eps)
-   {
-      epsilon = eps;
    }
 
    float norm() const

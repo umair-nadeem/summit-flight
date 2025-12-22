@@ -148,12 +148,12 @@ protected:
       const float bias_x = -1.01f;
       const float bias_y = 0.0f;
       const float bias_z = 0.70f;
-      EXPECT_NEAR(imu_data.accel_mps2.value().x, -9.80665f - bias_x, 0.01f);
-      EXPECT_NEAR(imu_data.accel_mps2.value().y, 4.9033f - bias_y, 0.01f);
-      EXPECT_NEAR(imu_data.accel_mps2.value().z, 9.80665f - bias_z, 0.01f);
-      EXPECT_NEAR(imu_data.gyro_radps.value().x, -0.873f, 0.01f);
-      EXPECT_NEAR(imu_data.gyro_radps.value().y, 1.746f, 0.01f);
-      EXPECT_NEAR(imu_data.gyro_radps.value().z, 3.492f, 0.01f);
+      EXPECT_NEAR(imu_data.accel_mps2.value()[0], -9.80665f - bias_x, 0.01f);
+      EXPECT_NEAR(imu_data.accel_mps2.value()[1], 4.9033f - bias_y, 0.01f);
+      EXPECT_NEAR(imu_data.accel_mps2.value()[2], 9.80665f - bias_z, 0.01f);
+      EXPECT_NEAR(imu_data.gyro_radps.value()[0], -0.873f, 0.01f);
+      EXPECT_NEAR(imu_data.gyro_radps.value()[1], 1.746f, 0.01f);
+      EXPECT_NEAR(imu_data.gyro_radps.value()[2], 3.492f, 0.01f);
       EXPECT_NEAR(imu_data.temperature_c.value(), 40.0f, 0.01f);
    }
 

@@ -192,10 +192,10 @@ TEST_F(SelfTestSMTest, sane_sensor_values_for_passing_self_test)
    const math::Vector3 accel_bias = std::get<0>(bias);
    const math::Vector3 gyro_bias  = std::get<1>(bias);
 
-   EXPECT_NEAR(accel_bias.x, -1.01f, 0.01f);
-   EXPECT_NEAR(accel_bias.y, 0.01f, 0.01f);
-   EXPECT_NEAR(accel_bias.z, 0.70f, 0.01f);
-   EXPECT_NEAR(gyro_bias.x, 0.01f, 0.01f);
-   EXPECT_NEAR(gyro_bias.y, 0.01f, 0.01f);
-   EXPECT_NEAR(gyro_bias.z, 0.01f, 0.01f);
+   EXPECT_NEAR(accel_bias[0], -1.01f, 0.01f);
+   EXPECT_NEAR(accel_bias[1], 0.01f, 0.01f);
+   EXPECT_NEAR(accel_bias[2], 0.70f, 0.01f);
+   EXPECT_NEAR(gyro_bias[0], 0.01f, 0.01f);
+   EXPECT_NEAR(gyro_bias[1], 0.01f, 0.01f);
+   EXPECT_NEAR(gyro_bias[2], 0.01f, 0.01f);
 }

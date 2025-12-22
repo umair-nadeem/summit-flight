@@ -25,17 +25,17 @@ struct Euler
 
    void roll(const float x)
    {
-      m_vector3.x = x;
+      m_vector3[0] = x;
    }
 
    void pitch(const float y)
    {
-      m_vector3.y = y;
+      m_vector3[1] = y;
    }
 
    void yaw(const float z)
    {
-      m_vector3.z = z;
+      m_vector3[2] = z;
    }
 
    void set(const Vector3& v)
@@ -48,9 +48,9 @@ struct Euler
       m_vector3.zero();
    }
 
-   constexpr float roll() const noexcept { return m_vector3.x; }
-   constexpr float pitch() const noexcept { return m_vector3.y; }
-   constexpr float yaw() const noexcept { return m_vector3.z; }
+   constexpr float roll() const noexcept { return m_vector3[0]; }
+   constexpr float pitch() const noexcept { return m_vector3[1]; }
+   constexpr float yaw() const noexcept { return m_vector3[2]; }
 
    constexpr Vector3 vector() const noexcept { return m_vector3; }
 

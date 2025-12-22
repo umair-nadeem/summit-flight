@@ -20,7 +20,7 @@ void AttitudeEstimator::update(const math::Vector3& accel_mps2, const math::Vect
 
    // Angular rate of correction
    Vector3     corr;
-   const float spinRate = gyro_radps.length();
+   const float spinRate = gyro_radps.norm();
 
    m_q.normalize();
 
@@ -38,7 +38,7 @@ void AttitudeEstimator::update(const math::Vector3& accel_mps2, const math::Vect
        (accel_norm_sq < upper_accel_limit * upper_accel_limit))
    {
       const Vector3 accel_dir = accel_mps2.normalized();
-      corr += (k % accel_dir) * m_accelerometer_weight;
+      corr += (k.cross(accel_dir)) * m_accelerometer_weight;
    }
 
    // Gyro bias estimation
@@ -46,9 +46,9 @@ void AttitudeEstimator::update(const math::Vector3& accel_mps2, const math::Vect
    {
       m_gyro_bias += corr * (m_gyro_bias_weight * dt_s);
 
-      m_gyro_bias.x = std::clamp(m_gyro_bias.x, -max_gyro_bias_radps, max_gyro_bias_radps);
-      m_gyro_bias.y = std::clamp(m_gyro_bias.y, -max_gyro_bias_radps, max_gyro_bias_radps);
-      m_gyro_bias.z = std::clamp(m_gyro_bias.z, -max_gyro_bias_radps, max_gyro_bias_radps);
+      m_gyro_bias[0] = std::clamp(m_gyro_bias[0], -max_gyro_bias_radps, max_gyro_bias_radps);
+      m_gyro_bias[1] = std::clamp(m_gyro_bias[1], -max_gyro_bias_radps, max_gyro_bias_radps);
+      m_gyro_bias[2] = std::clamp(m_gyro_bias[2], -max_gyro_bias_radps, max_gyro_bias_radps);
    }
 
    m_rates = gyro_radps + m_gyro_bias;

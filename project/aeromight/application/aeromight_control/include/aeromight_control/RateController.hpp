@@ -49,17 +49,17 @@ public:
          return {};
       }
 
-      const math::Vector3 setpoints_radps{std::clamp(rate_setpoint_radps.x, -m_max_roll_rate_radps, m_max_roll_rate_radps),
-                                          std::clamp(rate_setpoint_radps.y, -m_max_pitch_rate_radps, m_max_pitch_rate_radps),
-                                          std::clamp(rate_setpoint_radps.z, -m_max_yaw_rate_radps, m_max_yaw_rate_radps)};
+      const math::Vector3 setpoints_radps{std::clamp(rate_setpoint_radps[0], -m_max_roll_rate_radps, m_max_roll_rate_radps),
+                                          std::clamp(rate_setpoint_radps[1], -m_max_pitch_rate_radps, m_max_pitch_rate_radps),
+                                          std::clamp(rate_setpoint_radps[2], -m_max_yaw_rate_radps, m_max_yaw_rate_radps)};
 
       const math::Vector3 rate_error = setpoints_radps - rate_gyro_measured_radps;
 
-      math::Vector3 torque_cmd = (m_gains_p * rate_error) + m_rate_integrator - (m_gains_d * (rate_gyro_measured_radps - m_previous_gyro_rate_measured) / dt_s);
+      math::Vector3 torque_cmd = (m_gains_p.emul(rate_error)) + m_rate_integrator - (m_gains_d.emul(rate_gyro_measured_radps - m_previous_gyro_rate_measured) / dt_s);
 
-      torque_cmd.x = std::clamp(torque_cmd.x, -m_torque_output_limit, m_torque_output_limit);
-      torque_cmd.y = std::clamp(torque_cmd.y, -m_torque_output_limit, m_torque_output_limit);
-      torque_cmd.z = std::clamp(torque_cmd.z, -m_torque_output_limit, m_torque_output_limit);
+      torque_cmd[0] = std::clamp(torque_cmd[0], -m_torque_output_limit, m_torque_output_limit);
+      torque_cmd[1] = std::clamp(torque_cmd[1], -m_torque_output_limit, m_torque_output_limit);
+      torque_cmd[2] = std::clamp(torque_cmd[2], -m_torque_output_limit, m_torque_output_limit);
 
       if (run_integrator)
       {
@@ -87,43 +87,43 @@ public:
    }
 
 private:
-   void update_integrator(const math::Vector3 error, const float dt_s)
+   void update_integrator(const math::Vector3& error, const float dt_s)
    {
       auto integrator_error = error;
       if (m_control_saturation_positive[0])
       {
-         integrator_error.x = std::min(integrator_error.x, 0.0f);
+         integrator_error[0] = std::min(integrator_error[0], 0.0f);
       }
 
       if (m_control_saturation_negative[0])
       {
-         integrator_error.x = std::max(integrator_error.x, 0.0f);
+         integrator_error[0] = std::max(integrator_error[0], 0.0f);
       }
 
       if (m_control_saturation_positive[1])
       {
-         integrator_error.y = std::min(integrator_error.y, 0.0f);
+         integrator_error[1] = std::min(integrator_error[1], 0.0f);
       }
 
       if (m_control_saturation_negative[1])
       {
-         integrator_error.y = std::max(integrator_error.y, 0.0f);
+         integrator_error[1] = std::max(integrator_error[1], 0.0f);
       }
 
       if (m_control_saturation_positive[2])
       {
-         integrator_error.z = std::min(integrator_error.z, 0.0f);
+         integrator_error[2] = std::min(integrator_error[2], 0.0f);
       }
 
       if (m_control_saturation_negative[2])
       {
-         integrator_error.z = std::max(integrator_error.z, 0.0f);
+         integrator_error[2] = std::max(integrator_error[2], 0.0f);
       }
 
-      m_rate_integrator += m_gains_i * integrator_error * dt_s;
-      m_rate_integrator.x = std::clamp(m_rate_integrator.x, -m_integrator_limit.x, m_integrator_limit.x);
-      m_rate_integrator.y = std::clamp(m_rate_integrator.y, -m_integrator_limit.y, m_integrator_limit.y);
-      m_rate_integrator.z = std::clamp(m_rate_integrator.z, -m_integrator_limit.z, m_integrator_limit.z);
+      m_rate_integrator += m_gains_i.emul(integrator_error) * dt_s;
+      m_rate_integrator[0] = std::clamp(m_rate_integrator[0], -m_integrator_limit[0], m_integrator_limit[0]);
+      m_rate_integrator[1] = std::clamp(m_rate_integrator[1], -m_integrator_limit[1], m_integrator_limit[1]);
+      m_rate_integrator[2] = std::clamp(m_rate_integrator[2], -m_integrator_limit[2], m_integrator_limit[2]);
    }
 
    const math::Vector3&       m_gains_p;

@@ -10,7 +10,7 @@ constexpr float transform_accel_to_world_z(const math::Vector3& accel_body, cons
    const float r32 = 2.0f * ((q.y * q.z) + (q.w * q.x));
    const float r33 = 1.0f - (2.0f * ((q.x * q.x) + (q.y * q.y)));
 
-   return ((r31 * accel_body.x) + (r32 * accel_body.y) + (r33 * accel_body.z));
+   return ((r31 * accel_body[0]) + (r32 * accel_body[1]) + (r33 * accel_body[2]));
 }
 
 }   // namespace
@@ -42,7 +42,7 @@ void AltitudeEkf::predict(const math::Vector3&    accel_body_mps2,
    math::Vector3 accel_body = accel_body_mps2;
 
    // remove bias
-   accel_body.z -= m_state.a_z_bias;
+   accel_body[2] -= m_state.a_z_bias;
    float accel_world_z = transform_accel_to_world_z(accel_body, attitude) + physics::constants::g_to_mps2;
 
    // apply tilt-compensation gate to accel_z
