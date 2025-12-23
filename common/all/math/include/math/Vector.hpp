@@ -20,6 +20,15 @@ struct Vector
    {
    }
 
+   explicit Vector(const T scalar)
+       : m_data{scalar}
+   {
+      for (std::size_t i = 0; i < N; i++)
+      {
+         m_data[i] = scalar;
+      }
+   }
+
    Vector& operator=(const std::array<T, N>& other) noexcept
    {
       for (std::size_t i = 0; i < N; i++)

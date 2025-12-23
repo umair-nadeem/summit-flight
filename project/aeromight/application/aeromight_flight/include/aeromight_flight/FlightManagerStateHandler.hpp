@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include "FlightManagerState.hpp"
 #include "aeromight_boundaries/FlightControlSetpoints.hpp"
 #include "aeromight_boundaries/FlightManagerData.hpp"
@@ -86,8 +88,9 @@ public:
 
    void arm_control()
    {
-      m_local_flight_control_setpoints.armed = true;
-      m_local_flight_control_setpoints.kill  = false;
+      m_local_flight_control_setpoints.armed    = true;
+      m_local_flight_control_setpoints.kill     = false;
+      m_local_flight_control_setpoints.throttle = std::clamp(m_last_flight_setpoints_storage.data.input.throttle, 0.0f, 1.0f);
       m_flight_control_setpoints_storage.update_latest(m_local_flight_control_setpoints, m_current_time_ms);
    }
 
@@ -107,7 +110,7 @@ public:
 
    void publish_manual_setpoint()
    {
-      m_local_flight_control_setpoints.throttle = m_last_flight_setpoints_storage.data.input.throttle;
+      m_local_flight_control_setpoints.throttle = std::clamp(m_last_flight_setpoints_storage.data.input.throttle, 0.0f, 1.0f);
       m_local_flight_control_setpoints.roll     = m_last_flight_setpoints_storage.data.input.roll;
       m_local_flight_control_setpoints.pitch    = m_last_flight_setpoints_storage.data.input.pitch;
       m_local_flight_control_setpoints.yaw      = m_last_flight_setpoints_storage.data.input.yaw;

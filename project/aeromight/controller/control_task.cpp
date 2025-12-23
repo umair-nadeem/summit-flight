@@ -53,10 +53,12 @@ extern "C"
       constexpr float    max_valid_imu_sample_dt_s                      = 0.02f;
       constexpr float    max_valid_barometer_sample_dt_s                = 10.0f;
       // control parameters
+      constexpr uint32_t max_age_flight_control_data_ms                 = controller::task::flight_manager_task_period_in_ms * 20u;
+      constexpr float    time_delta_limit_s                             = 0.008f;
       constexpr float    actuator_min                                   = 0.05f;
       constexpr float    actuator_max                                   = 1.0f;
+      constexpr float    arming_throttle                                = 0.05f;
       constexpr float    lift_throttle                                  = 0.1f;
-      constexpr float    thrust_model_factor                            = 0.0f;
       constexpr float    attitude_controller_roll_kp                    = 4.0f;
       constexpr float    attitude_controller_pitch_kp                   = 4.0f;
       constexpr float    attitude_controller_yaw_kp                     = 0.0f;
@@ -77,6 +79,7 @@ extern "C"
       constexpr float    max_pitch_rate_radps                           = 3.5f;
       constexpr float    max_yaw_rate_radps                             = 2.0f;
       constexpr float    max_tilt_angle_rad                             = 30 * physics::constants::deg_to_rad;   // 30 degrees
+      constexpr float    yaw_saturation_limit_factor                    = 0.15f;
 
       LogClient logger_estimation{logging::logging_queue_sender, "estimation"};
       LogClient logger_control{logging::logging_queue_sender, "control"};
@@ -122,7 +125,7 @@ extern "C"
 
       aeromight_control::ControlAllocator control_allocator{actuator_min,
                                                             actuator_max,
-                                                            thrust_model_factor};
+                                                            yaw_saturation_limit_factor};
 
       aeromight_control::Control<decltype(attitude_controller),
                                  decltype(rate_controller),
@@ -137,10 +140,13 @@ extern "C"
                   aeromight_boundaries::aeromight_data.flight_control_setpoints,
                   data->state_estimation,
                   logger_control,
+                  max_age_flight_control_data_ms,
+                  time_delta_limit_s,
                   max_roll_rate_radps,
                   max_pitch_rate_radps,
                   max_yaw_rate_radps,
                   max_tilt_angle_rad,
+                  arming_throttle,
                   lift_throttle};
 
       aeromight_control::EstimationAndControl<decltype(estimation),

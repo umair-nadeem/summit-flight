@@ -29,10 +29,13 @@ public:
                     const FlightControlSetpoints& flight_control_setpoint_storage,
                     const StateEstimation&        state_estimation_data,
                     Logger&                       logger,
+                    const uint32_t                max_age_flight_control_data_ms,
+                    const float                   time_delta_limit_s,
                     const float                   max_roll_rate_radps,
                     const float                   max_pitch_rate_radps,
                     const float                   max_yaw_rate_radps,
                     const float                   max_tilt_angle_rad,
+                    const float                   arming_throttle,
                     const float                   lift_throttle)
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
@@ -42,10 +45,13 @@ public:
          m_flight_control_setpoint_storage{flight_control_setpoint_storage},
          m_state_estimation_data{state_estimation_data},
          m_logger{logger},
+         m_max_age_flight_control_data_ms{max_age_flight_control_data_ms},
+         m_time_delta_limit_s{time_delta_limit_s},
          m_max_roll_rate_radps{max_roll_rate_radps},
          m_max_pitch_rate_radps{max_pitch_rate_radps},
          m_max_yaw_rate_radps{max_yaw_rate_radps},
          m_max_tilt_angle_rad{max_tilt_angle_rad},
+         m_arming_throttle{arming_throttle},
          m_lift_throttle{lift_throttle}
 
    {
@@ -90,12 +96,15 @@ private:
          case aeromight_boundaries::ControlState::disarmed:
             if (armed())
             {
-               move_to_armed();
+               if (!flight_control_data_is_stale() && throttle_less_than_arming_threshold())
+               {
+                  move_to_armed();
+               }
             }
             break;
 
          case aeromight_boundaries::ControlState::armed_on_ground:
-            if (kill())
+            if (flight_control_data_is_stale() || kill())
             {
                move_to_killed();
                break;
@@ -116,15 +125,15 @@ private:
             break;
 
          case aeromight_boundaries::ControlState::airborne:
-            if (kill())
+            if (flight_control_data_is_stale() || kill())
             {
                move_to_killed();
                break;
             }
 
-            if (!armed())
+            if (!airborne() && !armed())
             {
-               move_to_armed_on_ground();
+               move_to_disarmed();
             }
 
             run_control(true);
@@ -177,20 +186,13 @@ private:
    {
       reset();
       start_actuator();
-      m_local_control_health.state = aeromight_boundaries::ControlState::armed_on_ground;
-      m_logger.print("armed on ground");
-   }
-
-   void move_to_armed_on_ground()
-   {
-      reset();
+      m_actuator_control.setpoints.zero();
       m_local_control_health.state = aeromight_boundaries::ControlState::armed_on_ground;
       m_logger.print("armed on ground");
    }
 
    void move_to_airborne()
    {
-      reset();
       m_local_control_health.state = aeromight_boundaries::ControlState::airborne;
       m_logger.print("airborne");
    }
@@ -207,7 +209,7 @@ private:
       m_desired_rate_radps = m_attitude_controller.update(angle_setpoint_rad, angle_estimation_rad);
 
       // yaw always rate-controlled
-      m_desired_rate_radps[aeromight_boundaries::control_axis::yaw] = (m_last_flight_control_setpoints.data.yaw * m_max_yaw_rate_radps);
+      m_desired_rate_radps[aeromight_boundaries::ControlAxis::yaw] = (m_last_flight_control_setpoints.data.yaw * m_max_yaw_rate_radps);
    }
 
    math::Vector3 run_rate_controller(const bool run_integrator)
@@ -223,32 +225,39 @@ private:
          return;
       }
 
+      m_time_delta_s = std::clamp(m_time_delta_s, 0.0f, m_time_delta_limit_s);
+
       run_attitude_controller();
 
       const math::Vector3 torque_cmd{run_rate_controller(run_integrator)};
 
-      const math::Vector4 control_setpoints{torque_cmd[aeromight_boundaries::control_axis::roll],
-                                            torque_cmd[aeromight_boundaries::control_axis::pitch],
-                                            torque_cmd[aeromight_boundaries::control_axis::yaw],
+      const math::Vector4 control_setpoints{torque_cmd[aeromight_boundaries::ControlAxis::roll],
+                                            torque_cmd[aeromight_boundaries::ControlAxis::pitch],
+                                            torque_cmd[aeromight_boundaries::ControlAxis::yaw],
                                             m_control_allocator.estimate_collective_thrust(m_last_flight_control_setpoints.data.throttle)};
 
-      m_actuator_control.setpoints = m_control_allocator.allocate(control_setpoints);
+      m_control_allocator.set_control_setpoints(control_setpoints);
+
+      m_actuator_control.setpoints = m_control_allocator.allocate();
+      m_control_allocator.clip_actuator_setpoints(m_actuator_control.setpoints);
 
       publish_actuator_setpoints();
 
       // determine allocator saturation
+      m_control_allocator.estimate_saturation();
       m_rate_controller.set_saturation_status(m_control_allocator.get_actuator_saturation_positive(), m_control_allocator.get_actuator_saturation_negative());
 
+      static uint32_t m_counter{0};
       if ((m_counter++ % 250) == 0)
       {
-         m_logger.printf("r=%.2f, p=%.2f, y=%.2f, t=%.2f, r=%.2f, p=%.2f, y=%.2f, 1=%.2f, 2=%.2f, 3=%.2f, 4=%.2f",
+         m_logger.printf("r=%.2f, p=%.2f, y=%.2f, r=%.2f, p=%.2f, y=%.2f, t=%.2f, 1=%.2f, 2=%.2f, 3=%.2f, 4=%.2f",
                          m_state_estimation_data.euler.roll(),
                          m_state_estimation_data.euler.pitch(),
                          m_state_estimation_data.euler.yaw(),
-                         control_setpoints[3],
                          torque_cmd[0],
                          torque_cmd[1],
                          torque_cmd[2],
+                         control_setpoints[3],
                          m_actuator_control.setpoints[0],
                          m_actuator_control.setpoints[1],
                          m_actuator_control.setpoints[2],
@@ -280,50 +289,63 @@ private:
    {
       m_rate_controller.reset();
       m_desired_rate_radps.zero();
-      m_actuator_control = {};
-      m_control_saturation_positive.fill(false);
-      m_control_saturation_negative.fill(false);
    }
 
-   bool armed() const
+   bool flight_control_data_is_stale() noexcept
+   {
+      const uint32_t flight_control_data_age_ms = m_current_time_ms - m_last_flight_control_setpoints.timestamp_ms;
+      if (flight_control_data_age_ms > m_max_age_flight_control_data_ms)
+      {
+         m_local_control_health.error.set(static_cast<uint8_t>(aeromight_boundaries::ControlHealth::Error::state_flight_control_data));
+         return true;
+      }
+
+      return false;
+   }
+
+   bool armed() const noexcept
    {
       return m_last_flight_control_setpoints.data.armed;
    }
 
-   bool kill() const
+   bool kill() const noexcept
    {
       return m_last_flight_control_setpoints.data.kill;
    }
 
-   bool airborne() const
+   bool throttle_less_than_arming_threshold() const noexcept
+   {
+      return (m_last_flight_control_setpoints.data.throttle < m_arming_throttle);
+   }
+
+   bool airborne() const noexcept
    {
       return (m_last_flight_control_setpoints.data.throttle > m_lift_throttle);
    }
 
-   AttitudeController&                        m_attitude_controller;
-   RateController&                            m_rate_controller;
-   ControlAllocator&                          m_control_allocator;
-   ActuatorControl&                           m_actuator_control_storage;
-   ControlHealth&                             m_control_health_storage;
-   const FlightControlSetpoints&              m_flight_control_setpoint_storage;
-   const StateEstimation&                     m_state_estimation_data;
-   Logger&                                    m_logger;
-   const float                                m_max_roll_rate_radps;
-   const float                                m_max_pitch_rate_radps;
-   const float                                m_max_yaw_rate_radps;
-   const float                                m_max_tilt_angle_rad;
-   const float                                m_lift_throttle;
-   aeromight_boundaries::ActuatorControl      m_actuator_control{};
-   aeromight_boundaries::ControlHealth        m_local_control_health{};
-   FlightControlSetpoints::Sample             m_last_flight_control_setpoints{};
-   math::Vector3                              m_desired_rate_radps{};
-   std::array<bool, RateController::num_axis> m_control_saturation_positive{};
-   std::array<bool, RateController::num_axis> m_control_saturation_negative{};
-   float                                      m_time_delta_s{0.0f};
-   uint32_t                                   m_current_time_ms{0};
-   uint32_t                                   m_last_execution_time_ms{0};
-
-   uint32_t m_counter{};
+   AttitudeController&                   m_attitude_controller;
+   RateController&                       m_rate_controller;
+   ControlAllocator&                     m_control_allocator;
+   ActuatorControl&                      m_actuator_control_storage;
+   ControlHealth&                        m_control_health_storage;
+   const FlightControlSetpoints&         m_flight_control_setpoint_storage;
+   const StateEstimation&                m_state_estimation_data;
+   Logger&                               m_logger;
+   uint32_t                              m_max_age_flight_control_data_ms;
+   const float                           m_time_delta_limit_s;
+   const float                           m_max_roll_rate_radps;
+   const float                           m_max_pitch_rate_radps;
+   const float                           m_max_yaw_rate_radps;
+   const float                           m_max_tilt_angle_rad;
+   const float                           m_arming_throttle;
+   const float                           m_lift_throttle;
+   aeromight_boundaries::ActuatorControl m_actuator_control{};
+   aeromight_boundaries::ControlHealth   m_local_control_health{};
+   FlightControlSetpoints::Sample        m_last_flight_control_setpoints{};
+   math::Vector3                         m_desired_rate_radps{};
+   float                                 m_time_delta_s{0.0f};
+   uint32_t                              m_current_time_ms{0};
+   uint32_t                              m_last_execution_time_ms{0};
 };
 
 }   // namespace aeromight_control

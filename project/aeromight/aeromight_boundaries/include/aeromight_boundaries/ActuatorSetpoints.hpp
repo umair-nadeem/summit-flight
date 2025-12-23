@@ -17,21 +17,16 @@ struct ActuatorParams
 
 struct ActuatorControl
 {
-   ActuatorSetpoints setpoints{};
+   ActuatorSetpoints setpoints{0.0f};
    bool              enabled{false};
 };
 
-namespace control_axis
+struct ControlAxis
 {
-
-enum ControlAxis : uint8_t
-{
-   roll = 0,
-   pitch,
-   yaw,
-   thrust
+   static constexpr uint8_t roll   = 0;
+   static constexpr uint8_t pitch  = 1u;
+   static constexpr uint8_t yaw    = 2u;
+   static constexpr uint8_t thrust = 3u;
 };
-
-}
 
 }   // namespace aeromight_boundaries

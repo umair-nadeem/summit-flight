@@ -9,17 +9,26 @@ template <typename T>
 class Vec4 final : public Vector<T, 4u>
 {
 public:
+   static constexpr std::size_t size = 4u;
+
+   using BaseVector = Vector<T, size>;
+
    Vec4()                       = default;
    Vec4(const Vec4&)            = default;
    Vec4& operator=(const Vec4&) = default;
 
-   explicit Vec4(const std::array<T, 4u>& other)
-       : Vector<T, 4u>{other}
+   explicit Vec4(const std::array<T, size>& other)
+       : BaseVector{other}
+   {
+   }
+
+   explicit Vec4(const T scalar)
+       : BaseVector{scalar}
    {
    }
 
    explicit Vec4(const T w, const T x, const T y, const T z)
-       : Vector<T, 4u>{}
+       : BaseVector{}
    {
       auto& a = *(this);
       a[0]    = w;
@@ -28,60 +37,60 @@ public:
       a[3]    = z;
    }
 
-   explicit Vec4(const Vector<T, 4u>& other)
-       : Vector<T, 4u>{other}
+   explicit Vec4(const BaseVector& other)
+       : BaseVector{other}
    {
    }
 
-   Vec4& operator=(const Vector<T, 4u>& other)
+   Vec4& operator=(const BaseVector& other)
    {
-      Vector<T, 4u>::operator=(other);
+      BaseVector::operator=(other);
       return *(this);
    }
 
    Vec4 operator+(const Vec4& other) const noexcept
    {
-      return Vec4{Vector<T, 4u>::operator+(other)};
+      return Vec4{BaseVector::operator+(other)};
    }
 
    Vec4 operator+(const T scalar) const noexcept
    {
-      return Vec4{Vector<T, 4u>::operator+(scalar)};
+      return Vec4{BaseVector::operator+(scalar)};
    }
 
    Vec4 operator-(const Vec4& other) const noexcept
    {
-      return Vec4{Vector<T, 4u>::operator-(other)};
+      return Vec4{BaseVector::operator-(other)};
    }
 
    Vec4 operator-(const T scalar) const noexcept
    {
-      return Vec4{Vector<T, 4u>::operator-(scalar)};
+      return Vec4{BaseVector::operator-(scalar)};
    }
 
    Vec4 emul(const Vec4& other) const noexcept
    {
-      return Vec4{Vector<T, 4u>::emul(other)};
+      return Vec4{BaseVector::emul(other)};
    }
 
    Vec4 operator*(const T scalar) const noexcept
    {
-      return Vec4{Vector<T, 4u>::operator*(scalar)};
+      return Vec4{BaseVector::operator*(scalar)};
    }
 
    Vec4 ediv(const Vec4& other) const noexcept
    {
-      return Vec4{Vector<T, 4u>::ediv(other)};
+      return Vec4{BaseVector::ediv(other)};
    }
 
    Vec4 operator/(const T scalar) const noexcept
    {
-      return Vec4{Vector<T, 4u>::operator/(scalar)};
+      return Vec4{BaseVector::operator/(scalar)};
    }
 
    Vec4 normalized() const
    {
-      return Vec4{Vector<T, 4u>::normalized()};
+      return Vec4{BaseVector::normalized()};
    }
 };
 

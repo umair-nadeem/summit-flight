@@ -12,6 +12,7 @@ struct ControlHealth
    enum class Error : uint8_t
    {
       invalid_time_delta = 0,
+      state_flight_control_data,
       max,
    };
 

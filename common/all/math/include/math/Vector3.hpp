@@ -9,17 +9,26 @@ template <typename T>
 class Vec3 final : public Vector<T, 3u>
 {
 public:
+   static constexpr std::size_t size = 3u;
+
+   using BaseVector = Vector<T, size>;
+
    Vec3()                       = default;
    Vec3(const Vec3&)            = default;
    Vec3& operator=(const Vec3&) = default;
 
-   explicit Vec3(const std::array<T, 3u>& other)
-       : Vector<T, 3u>{other}
+   explicit Vec3(const std::array<T, size>& other)
+       : BaseVector{other}
+   {
+   }
+
+   explicit Vec3(const T scalar)
+       : BaseVector{scalar}
    {
    }
 
    explicit Vec3(const T x, const T y, const T z)
-       : Vector<T, 3u>{}
+       : BaseVector{}
    {
       auto& a = *(this);
       a[0]    = x;
@@ -27,60 +36,60 @@ public:
       a[2]    = z;
    }
 
-   explicit Vec3(const Vector<T, 3u>& other)
-       : Vector<T, 3u>{other}
+   explicit Vec3(const BaseVector& other)
+       : BaseVector{other}
    {
    }
 
-   Vec3& operator=(const Vector<T, 3u>& other)
+   Vec3& operator=(const BaseVector& other)
    {
-      Vector<T, 3u>::operator=(other);
+      BaseVector::operator=(other);
       return *(this);
    }
 
    Vec3 operator+(const Vec3& other) const noexcept
    {
-      return Vec3{Vector<T, 3u>::operator+(other)};
+      return Vec3{BaseVector::operator+(other)};
    }
 
    Vec3 operator+(const T scalar) const noexcept
    {
-      return Vec3{Vector<T, 3u>::operator+(scalar)};
+      return Vec3{BaseVector::operator+(scalar)};
    }
 
    Vec3 operator-(const Vec3& other) const noexcept
    {
-      return Vec3{Vector<T, 3u>::operator-(other)};
+      return Vec3{BaseVector::operator-(other)};
    }
 
    Vec3 operator-(const T scalar) const noexcept
    {
-      return Vec3{Vector<T, 3u>::operator-(scalar)};
+      return Vec3{BaseVector::operator-(scalar)};
    }
 
    Vec3 emul(const Vec3& other) const noexcept
    {
-      return Vec3{Vector<T, 3u>::emul(other)};
+      return Vec3{BaseVector::emul(other)};
    }
 
    Vec3 operator*(const T scalar) const noexcept
    {
-      return Vec3{Vector<T, 3u>::operator*(scalar)};
+      return Vec3{BaseVector::operator*(scalar)};
    }
 
    Vec3 ediv(const Vec3& other) const noexcept
    {
-      return Vec3{Vector<T, 3u>::ediv(other)};
+      return Vec3{BaseVector::ediv(other)};
    }
 
    Vec3 operator/(const T scalar) const noexcept
    {
-      return Vec3{Vector<T, 3u>::operator/(scalar)};
+      return Vec3{BaseVector::operator/(scalar)};
    }
 
    Vec3 normalized() const
    {
-      return Vec3{Vector<T, 3u>::normalized()};
+      return Vec3{BaseVector::normalized()};
    }
 
    constexpr Vec3 cross(const Vec3& b) const noexcept
