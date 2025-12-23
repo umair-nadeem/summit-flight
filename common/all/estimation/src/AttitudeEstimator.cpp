@@ -28,9 +28,9 @@ void AttitudeEstimator::update(const math::Vector3& accel_mps2, const math::Vect
    // Project 'k' unit vector of earth frame to body frame
    // Optimized version with dropped zeros
    Vector3 k{
-       2.0f * (m_q.x * m_q.z - m_q.w * m_q.y),
-       2.0f * (m_q.y * m_q.z + m_q.w * m_q.x),
-       (m_q.w * m_q.w - m_q.x * m_q.x - m_q.y * m_q.y + m_q.z * m_q.z)};
+       2.0f * (m_q[1] * m_q[3] - m_q[0] * m_q[2]),
+       2.0f * (m_q[2] * m_q[3] + m_q[0] * m_q[1]),
+       (m_q[0] * m_q[0] - m_q[1] * m_q[1] - m_q[2] * m_q[2] + m_q[3] * m_q[3])};
 
    const float accel_norm_sq = accel_mps2.norm_squared();
 

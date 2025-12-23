@@ -109,12 +109,12 @@ extern "C"
                      max_valid_imu_sample_dt_s,
                      max_valid_barometer_sample_dt_s};
 
-      aeromight_control::AttitudeController attitude_controller{{attitude_controller_roll_kp, attitude_controller_pitch_kp, attitude_controller_yaw_kp}};
+      aeromight_control::AttitudeController attitude_controller{math::Vector3{attitude_controller_roll_kp, attitude_controller_pitch_kp, attitude_controller_yaw_kp}};
 
-      aeromight_control::RateController rate_controller{{rate_controller_roll_kp, rate_controller_pitch_kp, rate_controller_yaw_kp},
-                                                        {rate_controller_roll_ki, rate_controller_pitch_ki, rate_controller_yaw_ki},
-                                                        {rate_controller_roll_kd, rate_controller_pitch_kd, rate_controller_yaw_kd},
-                                                        {rate_controller_roll_integrator_limit, rate_controller_pitch_integrator_limit, rate_controller_yaw_integrator_limit},
+      aeromight_control::RateController rate_controller{math::Vector3{rate_controller_roll_kp, rate_controller_pitch_kp, rate_controller_yaw_kp},
+                                                        math::Vector3{rate_controller_roll_ki, rate_controller_pitch_ki, rate_controller_yaw_ki},
+                                                        math::Vector3{rate_controller_roll_kd, rate_controller_pitch_kd, rate_controller_yaw_kd},
+                                                        math::Vector3{rate_controller_roll_integrator_limit, rate_controller_pitch_integrator_limit, rate_controller_yaw_integrator_limit},
                                                         rate_controller_output_limit,
                                                         max_roll_rate_radps,
                                                         max_pitch_rate_radps,

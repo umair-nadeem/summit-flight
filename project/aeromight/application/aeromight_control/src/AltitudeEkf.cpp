@@ -1,14 +1,16 @@
 #include "aeromight_control/AltitudeEkf.hpp"
 
+#include "math/utility.hpp"
+
 namespace
 {
 
 constexpr float transform_accel_to_world_z(const math::Vector3& accel_body, const math::Quaternion& q)
 {
    // third row of rotation matrix R (body -> world)
-   const float r31 = 2.0f * ((q.x * q.z) - (q.w * q.y));
-   const float r32 = 2.0f * ((q.y * q.z) + (q.w * q.x));
-   const float r33 = 1.0f - (2.0f * ((q.x * q.x) + (q.y * q.y)));
+   const float r31 = 2.0f * ((q[1] * q[3]) - (q[0] * q[2]));
+   const float r32 = 2.0f * ((q[2] * q[3]) + (q[0] * q[1]));
+   const float r33 = 1.0f - (2.0f * ((q[1] * q[1]) + (q[2] * q[2])));
 
    return ((r31 * accel_body[0]) + (r32 * accel_body[1]) + (r33 * accel_body[2]));
 }
@@ -46,7 +48,7 @@ void AltitudeEkf::predict(const math::Vector3&    accel_body_mps2,
    float accel_world_z = transform_accel_to_world_z(accel_body, attitude) + physics::constants::g_to_mps2;
 
    // apply tilt-compensation gate to accel_z
-   const math::Euler euler = attitude.to_euler();
+   const math::Euler euler = math::quaternion_to_euler(attitude);
    if ((fabsf(euler.roll()) > m_tilt_gating_attitude_angle_rad) || (fabsf(euler.pitch()) > m_tilt_gating_attitude_angle_rad))
    {
       accel_world_z = (fabsf(1.0f - m_tilt_gating_accel_weight) * m_last_accel_world_z) + (m_tilt_gating_accel_weight * accel_world_z);
@@ -61,7 +63,7 @@ void AltitudeEkf::predict(const math::Vector3&    accel_body_mps2,
 
    // F_cont = [[0,1,0],[0,0,-r33],[0,0,0]]
    // discretize: F_d = I + dt_s * F_cont
-   const float r33 = 1.0f - (2.0f * ((attitude.x * attitude.x) + (attitude.y * attitude.y)));
+   const float r33 = 1.0f - (2.0f * ((attitude[1] * attitude[1]) + (attitude[2] * attitude[2])));
    m_f_d.set_identity();
    m_f_d.at(0, 1u)  = dt_s;
    m_f_d.at(1u, 2u) = -dt_s * r33;

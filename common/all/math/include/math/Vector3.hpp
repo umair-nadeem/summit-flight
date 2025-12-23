@@ -18,7 +18,7 @@ public:
    {
    }
 
-   Vec3(const T x, const T y, const T z)
+   explicit Vec3(const T x, const T y, const T z)
        : Vector<T, 3u>{}
    {
       auto& a = *(this);
@@ -38,42 +38,42 @@ public:
       return *(this);
    }
 
-   Vec3 operator+(const Vec3& other) const
+   Vec3 operator+(const Vec3& other) const noexcept
    {
       return Vec3{Vector<T, 3u>::operator+(other)};
    }
 
-   Vec3 operator+(const T scalar) const
+   Vec3 operator+(const T scalar) const noexcept
    {
       return Vec3{Vector<T, 3u>::operator+(scalar)};
    }
 
-   Vec3 operator-(const Vec3& other) const
+   Vec3 operator-(const Vec3& other) const noexcept
    {
       return Vec3{Vector<T, 3u>::operator-(other)};
    }
 
-   Vec3 operator-(const T scalar) const
+   Vec3 operator-(const T scalar) const noexcept
    {
       return Vec3{Vector<T, 3u>::operator-(scalar)};
    }
 
-   Vec3 emul(const Vec3& other) const
+   Vec3 emul(const Vec3& other) const noexcept
    {
       return Vec3{Vector<T, 3u>::emul(other)};
    }
 
-   Vec3 operator*(const T scalar) const
+   Vec3 operator*(const T scalar) const noexcept
    {
       return Vec3{Vector<T, 3u>::operator*(scalar)};
    }
 
-   Vec3 ediv(const Vec3& other) const
+   Vec3 ediv(const Vec3& other) const noexcept
    {
       return Vec3{Vector<T, 3u>::ediv(other)};
    }
 
-   Vec3 operator/(const T scalar) const
+   Vec3 operator/(const T scalar) const noexcept
    {
       return Vec3{Vector<T, 3u>::operator/(scalar)};
    }
@@ -86,9 +86,9 @@ public:
    constexpr Vec3 cross(const Vec3& b) const noexcept
    {
       const auto& a = *(this);
-      return {(a[1] * b[2]) - (a[2] * b[1]),
-              (-a[0] * b[2]) + (a[2] * b[0]),
-              (a[0] * b[1]) - (a[1] * b[0])};
+      return Vec3{(a[1] * b[2]) - (a[2] * b[1]),
+                  (-a[0] * b[2]) + (a[2] * b[0]),
+                  (a[0] * b[1]) - (a[1] * b[0])};
    }
 };
 

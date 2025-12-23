@@ -8,6 +8,7 @@
 #include "error/error_handler.hpp"
 #include "imu_sensor/ImuData.hpp"
 #include "interfaces/IClockSource.hpp"
+#include "math/utility.hpp"
 #include "utilities/Barometric.hpp"
 
 namespace aeromight_control
@@ -252,8 +253,8 @@ private:
       const math::Vector3 gyro_flu  = m_last_imu_sample.data.gyro_radps.value();
 
       // convert sensor axes from FLU body frame to FRD
-      const math::Vector3 accel_mps2 = map_imu_sensor_axes_to_frd(accel_flu);
-      const math::Vector3 gyro_radps = map_imu_sensor_axes_to_frd(gyro_flu);
+      const math::Vector3 accel_mps2{map_imu_sensor_axes_to_frd(accel_flu)};
+      const math::Vector3 gyro_radps{map_imu_sensor_axes_to_frd(gyro_flu)};
 
       // update attitude state estimation
       m_attitude_estimator.update(accel_mps2, gyro_radps, m_imu_sample_dt_s);
@@ -261,7 +262,7 @@ private:
       m_local_estimation_data.attitude   = m_attitude_estimator.get_quaternion();
       m_local_estimation_data.gyro_radps = m_attitude_estimator.get_unbiased_gyro_data(gyro_radps);
       m_local_estimation_data.gyro_bias  = m_attitude_estimator.get_gyro_bias();
-      m_local_estimation_data.euler      = m_local_estimation_data.attitude.to_euler();
+      m_local_estimation_data.euler      = math::quaternion_to_euler(m_local_estimation_data.attitude);
 
       // predict altitude with ekf2
       m_altitude_ekf.predict(accel_mps2, m_local_estimation_data.attitude, m_imu_sample_dt_s);
@@ -403,9 +404,9 @@ private:
    }
 
    // converts sensor axes from Front-Left-Up to Front_Right-Down
-   static constexpr math::Vector3 map_imu_sensor_axes_to_frd(const math::Vector3& enu_vector)
+   static constexpr auto map_imu_sensor_axes_to_frd(const math::Vector3& vector3_flu)
    {
-      return {-enu_vector[1], -enu_vector[0], -enu_vector[2]};
+      return math::Vector3{-vector3_flu[1], -vector3_flu[0], -vector3_flu[2]};
    }
 
    AttitudeEstimator&                    m_attitude_estimator;

@@ -197,12 +197,12 @@ private:
 
    void run_attitude_controller()
    {
-      const math::Vector3 angle_setpoint_rad   = {m_last_flight_control_setpoints.data.roll * m_max_tilt_angle_rad,
-                                                  m_last_flight_control_setpoints.data.pitch * m_max_tilt_angle_rad,
-                                                  0.0f};
-      const math::Vector3 angle_estimation_rad = {m_state_estimation_data.euler.roll(),
-                                                  m_state_estimation_data.euler.pitch(),
-                                                  m_state_estimation_data.euler.yaw()};
+      const math::Vector3 angle_setpoint_rad{m_last_flight_control_setpoints.data.roll * m_max_tilt_angle_rad,
+                                             m_last_flight_control_setpoints.data.pitch * m_max_tilt_angle_rad,
+                                             0.0f};
+      const math::Vector3 angle_estimation_rad{m_state_estimation_data.euler.roll(),
+                                               m_state_estimation_data.euler.pitch(),
+                                               m_state_estimation_data.euler.yaw()};
 
       m_desired_rate_radps = m_attitude_controller.update(angle_setpoint_rad, angle_estimation_rad);
 
@@ -230,7 +230,7 @@ private:
       const math::Vector4 control_setpoints{torque_cmd[aeromight_boundaries::control_axis::roll],
                                             torque_cmd[aeromight_boundaries::control_axis::pitch],
                                             torque_cmd[aeromight_boundaries::control_axis::yaw],
-                                            m_control_allocator.estimate_collective_thrust(m_thrust_setpoint)};
+                                            m_control_allocator.estimate_collective_thrust(m_last_flight_control_setpoints.data.throttle)};
 
       m_actuator_control.setpoints = m_control_allocator.allocate(control_setpoints);
 
@@ -278,9 +278,8 @@ private:
 
    void reset()
    {
-      m_desired_rate_radps.zero();
       m_rate_controller.reset();
-      m_thrust_setpoint  = 0.0f;
+      m_desired_rate_radps.zero();
       m_actuator_control = {};
       m_control_saturation_positive.fill(false);
       m_control_saturation_negative.fill(false);
@@ -320,7 +319,6 @@ private:
    math::Vector3                              m_desired_rate_radps{};
    std::array<bool, RateController::num_axis> m_control_saturation_positive{};
    std::array<bool, RateController::num_axis> m_control_saturation_negative{};
-   float                                      m_thrust_setpoint{};
    float                                      m_time_delta_s{0.0f};
    uint32_t                                   m_current_time_ms{0};
    uint32_t                                   m_last_execution_time_ms{0};

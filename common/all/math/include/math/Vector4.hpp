@@ -18,7 +18,7 @@ public:
    {
    }
 
-   Vec4(const T w, const T x, const T y, const T z)
+   explicit Vec4(const T w, const T x, const T y, const T z)
        : Vector<T, 4u>{}
    {
       auto& a = *(this);
@@ -39,42 +39,42 @@ public:
       return *(this);
    }
 
-   Vec4 operator+(const Vec4& other) const
+   Vec4 operator+(const Vec4& other) const noexcept
    {
       return Vec4{Vector<T, 4u>::operator+(other)};
    }
 
-   Vec4 operator+(const T scalar) const
+   Vec4 operator+(const T scalar) const noexcept
    {
       return Vec4{Vector<T, 4u>::operator+(scalar)};
    }
 
-   Vec4 operator-(const Vec4& other) const
+   Vec4 operator-(const Vec4& other) const noexcept
    {
       return Vec4{Vector<T, 4u>::operator-(other)};
    }
 
-   Vec4 operator-(const T scalar) const
+   Vec4 operator-(const T scalar) const noexcept
    {
       return Vec4{Vector<T, 4u>::operator-(scalar)};
    }
 
-   Vec4 emul(const Vec4& other) const
+   Vec4 emul(const Vec4& other) const noexcept
    {
       return Vec4{Vector<T, 4u>::emul(other)};
    }
 
-   Vec4 operator*(const T scalar) const
+   Vec4 operator*(const T scalar) const noexcept
    {
       return Vec4{Vector<T, 4u>::operator*(scalar)};
    }
 
-   Vec4 ediv(const Vec4& other) const
+   Vec4 ediv(const Vec4& other) const noexcept
    {
       return Vec4{Vector<T, 4u>::ediv(other)};
    }
 
-   Vec4 operator/(const T scalar) const
+   Vec4 operator/(const T scalar) const noexcept
    {
       return Vec4{Vector<T, 4u>::operator/(scalar)};
    }

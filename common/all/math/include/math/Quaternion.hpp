@@ -3,193 +3,118 @@
 #include <cmath>
 
 #include "Euler.hpp"
-#include "Vector3.hpp"
 #include "physics/constants.hpp"
 
 namespace math
 {
 
-struct Quaternion
+struct Quaternion final : public Vector<float, 4u>
 {
-   float w;                   // scalar (real)
-   float x;                   // vector component i
-   float y;                   // vector component j
-   float z;                   // vector component k
-
-   float epsilon = 0.0001f;   // for comparison
-
    Quaternion()
-       : w{1.0f},
-         x{0.0f},
-         y{0.0f},
-         z{0.0f}
+       : Vector<float, 4u>{}
+   {
+      auto& a = *(this);
+      a[0]    = 1.0f;
+      a[1]    = 0.0f;
+      a[2]    = 0.0f;
+      a[3]    = 0.0f;
+   }
+
+   explicit Quaternion(const float w, const float x, const float y, const float z)
+       : Vector<float, 4u>{}
+   {
+      auto& a = *(this);
+      a[0]    = w;
+      a[1]    = x;
+      a[2]    = y;
+      a[3]    = z;
+   }
+
+   explicit Quaternion(const Vector<float, 4u>& other)
+       : Vector<float, 4u>{other}
    {
    }
 
-   Quaternion(const float _w, const float _x, const float _y, const float _z)
-       : w{_w},
-         x{_x},
-         y{_y},
-         z{_z}
+   Quaternion operator+(const Quaternion& other) const noexcept
    {
+      return Quaternion{Vector<float, 4u>::operator+(other)};
    }
 
-   static constexpr bool nearly_equal(const float a, const float b, const float epsilon) noexcept
+   Quaternion operator+(const float scalar) const noexcept
    {
-      return std::abs(a - b) <= epsilon;
+      return Quaternion{Vector<float, 4u>::operator+(scalar)};
    }
 
-   bool operator==(const Quaternion& other) const noexcept
+   Quaternion operator-(const Quaternion& other) const noexcept
    {
-      return (nearly_equal(w, other.w, epsilon) &&
-              nearly_equal(x, other.x, epsilon) &&
-              nearly_equal(y, other.y, epsilon) &&
-              nearly_equal(z, other.z, epsilon));
+      return Quaternion{Vector<float, 4u>::operator-(other)};
    }
 
-   bool operator!=(const Quaternion& other) const noexcept
+   Quaternion operator-(const float scalar) const noexcept
    {
-      return !(*this == other);
+      return Quaternion{Vector<float, 4u>::operator-(scalar)};
    }
 
-   Quaternion operator+(const Quaternion& other) const
+   Quaternion quat_mul(const Quaternion& other) const noexcept
    {
-      Quaternion result{};
-      result.w = this->w + other.w;
-      result.x = this->x + other.x;
-      result.y = this->y + other.y;
-      result.z = this->z + other.z;
-      return result;
-   }
-
-   Quaternion& operator+=(const Quaternion& other)
-   {
-      this->w += other.w;
-      this->x += other.x;
-      this->y += other.y;
-      this->z += other.z;
-      return *this;
-   }
-
-   Quaternion operator-(const Quaternion& other) const
-   {
-      Quaternion result{};
-      result.w = this->w - other.w;
-      result.x = this->x - other.x;
-      result.y = this->y - other.y;
-      result.z = this->z - other.z;
-      return result;
-   }
-
-   Quaternion& operator-=(const Quaternion& other)
-   {
-      this->w -= other.w;
-      this->x -= other.x;
-      this->y -= other.y;
-      this->z -= other.z;
-      return *this;
-   }
-
-   Quaternion operator*(const Quaternion& other) const
-   {
+      const auto& a = *(this);
       return Quaternion{
-          (w * other.w) - (x * other.x) - (y * other.y) - (z * other.z),
-          (x * other.w) + (w * other.x) - (z * other.y) + (y * other.z),
-          (y * other.w) + (z * other.x) + (w * other.y) - (x * other.z),
-          (z * other.w) - (y * other.x) + (x * other.y) + (w * other.z)};
+          (a[0] * other[0]) - (a[1] * other[1]) - (a[2] * other[2]) - (a[3] * other[3]),
+          (a[1] * other[0]) + (a[0] * other[1]) - (a[3] * other[2]) + (a[2] * other[3]),
+          (a[2] * other[0]) + (a[3] * other[1]) + (a[0] * other[2]) - (a[1] * other[3]),
+          (a[3] * other[0]) - (a[2] * other[1]) + (a[1] * other[2]) + (a[0] * other[3])};
    }
 
-   Quaternion& operator*=(const Quaternion& other)
+   Quaternion operator*(const float scalar) const noexcept
    {
-      Quaternion& self = *this;
-      self             = self * other;
-      return self;
-   }
-
-   Quaternion operator*(const float v) const
-   {
-      Quaternion result{};
-      result.w = this->w * v;
-      result.x = this->x * v;
-      result.y = this->y * v;
-      result.z = this->z * v;
-      return result;
+      return Quaternion{Vector<float, 4u>::operator*(scalar)};
    }
 
    // derivative when rotated with angular velocity expressed in frame 1 (typically body frame)
-   Quaternion derivative1(const Vector3& other) const
+   Quaternion derivative1(const Vector3& other) const noexcept
    {
       const Quaternion& q = *this;
       Quaternion        v(0, other[0], other[1], other[2]);
-      return q * v * 0.5f;
+      return q.quat_mul(v) * 0.5f;
    }
 
    // derivative when rotated with angular velocity expressed in frame 2 (typically reference frame)
-   Quaternion derivative2(const Vector3& other) const
+   Quaternion derivative2(const Vector3& other) const noexcept
    {
       const Quaternion& q = *this;
       Quaternion        v(0, other[0], other[1], other[2]);
-      return v * q * 0.5f;
+      return v.quat_mul(q) * 0.5f;
    }
 
-   bool is_all_finite() const
+   constexpr bool is_all_finite() const noexcept
    {
-      return (std::isfinite(w) && std::isfinite(x) && std::isfinite(y) && std::isfinite(z));
+      const auto& a = *(this);
+      return (std::isfinite(a[0]) && std::isfinite(a[1]) && std::isfinite(a[2]) && std::isfinite(a[3]));
+   }
+
+   Quaternion normalized() const
+   {
+      Quaternion q{*this};
+      q.normalize();
+      return q;
    }
 
    void normalize()
    {
-      const float v = norm();
-      if (v > 1e-6f)
+      const float n = norm();
+      auto&       a = *(this);
+      if (n > 1e-6f)
       {
-         w /= v;
-         x /= v;
-         y /= v;
-         z /= v;
+         a /= n;
       }
       else
       {
          // Degenerate case - reset to identity
-         w = 1.0f;
-         x = 0.0f;
-         y = 0.0f;
-         z = 0.0f;
+         a[0] = 1.0f;
+         a[1] = 0.0f;
+         a[2] = 0.0f;
+         a[3] = 0.0f;
       }
-   }
-
-   float norm() const
-   {
-      return sqrtf((w * w) + (x * x) + (y * y) + (z * z));
-   }
-
-   float norm_squared() const
-   {
-      return ((w * w) + (x * x) + (y * y) + (z * z));
-   }
-
-   float length() const
-   {
-      return norm();
-   }
-
-   Euler to_euler() const
-   {
-      // Roll (rotation around X axis)
-      const float sinr_cosp = 2.0f * (w * x + y * z);
-      const float cosr_cosp = 1.0f - 2.0f * (x * x + y * y);
-
-      // Pitch (rotation around Y axis)
-      const float sinp = 2.0f * (w * y - z * x);
-
-      // Yaw (rotation around Z axis)
-      const float siny_cosp = 2.0f * (w * z + x * y);
-      const float cosy_cosp = 1.0f - 2.0f * (y * y + z * z);
-
-      const float roll  = std::atan2(sinr_cosp, cosr_cosp);
-      const float pitch = (std::abs(sinp) >= 1.0f) ? std::copysign(physics::constants::pi_by_2, sinp) : std::asin(sinp);
-      const float yaw   = std::atan2(siny_cosp, cosy_cosp);
-
-      return Euler{roll, pitch, yaw};
    }
 };
 
