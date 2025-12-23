@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include "Euler.hpp"
+#include "Vector3.hpp"
 #include "physics/constants.hpp"
 
 namespace math

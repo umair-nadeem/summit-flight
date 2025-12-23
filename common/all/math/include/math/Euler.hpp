@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Vector3.hpp"
+#include <array>
 
 namespace math
 {
@@ -14,48 +14,36 @@ struct Euler
    explicit Euler(const float x,
                   const float y,
                   const float z)
-       : m_vector3{x, y, z}
-   {
-   }
-
-   explicit Euler(const Vector3& v)
-       : m_vector3{v}
+       : m_data{x, y, z}
    {
    }
 
    void roll(const float x)
    {
-      m_vector3[0] = x;
+      m_data[0] = x;
    }
 
    void pitch(const float y)
    {
-      m_vector3[1] = y;
+      m_data[1] = y;
    }
 
    void yaw(const float z)
    {
-      m_vector3[2] = z;
-   }
-
-   void set(const Vector3& v)
-   {
-      m_vector3 = v;
+      m_data[2] = z;
    }
 
    void zero()
    {
-      m_vector3.zero();
+      m_data.fill(0.0f);
    }
 
-   constexpr float roll() const noexcept { return m_vector3[0]; }
-   constexpr float pitch() const noexcept { return m_vector3[1]; }
-   constexpr float yaw() const noexcept { return m_vector3[2]; }
-
-   constexpr Vector3 vector() const noexcept { return m_vector3; }
+   constexpr float roll() const noexcept { return m_data[0]; }
+   constexpr float pitch() const noexcept { return m_data[1]; }
+   constexpr float yaw() const noexcept { return m_data[2]; }
 
 private:
-   Vector3 m_vector3{};
+   std::array<float, 3u> m_data{};
 };
 
 }   // namespace math
