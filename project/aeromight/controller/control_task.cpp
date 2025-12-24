@@ -54,7 +54,7 @@ extern "C"
       constexpr float    max_valid_barometer_sample_dt_s                = 10.0f;
       // control parameters
       constexpr float    time_delta_limit_s                             = 0.008f;
-      constexpr float    actuator_min                                   = 0.05f;
+      constexpr float    actuator_min                                   = 0.0f;
       constexpr float    actuator_max                                   = 1.0f;
       constexpr float    lift_throttle                                  = 0.1f;
       constexpr float    attitude_controller_roll_kp                    = 4.0f;
@@ -110,12 +110,19 @@ extern "C"
                      max_valid_imu_sample_dt_s,
                      max_valid_barometer_sample_dt_s};
 
-      aeromight_control::AttitudeController attitude_controller{math::Vector3{attitude_controller_roll_kp, attitude_controller_pitch_kp, attitude_controller_yaw_kp}};
+      const math::Vector3 attitude_gains_p{attitude_controller_roll_kp, attitude_controller_pitch_kp, attitude_controller_yaw_kp};
 
-      aeromight_control::RateController rate_controller{math::Vector3{rate_controller_roll_kp, rate_controller_pitch_kp, rate_controller_yaw_kp},
-                                                        math::Vector3{rate_controller_roll_ki, rate_controller_pitch_ki, rate_controller_yaw_ki},
-                                                        math::Vector3{rate_controller_roll_kd, rate_controller_pitch_kd, rate_controller_yaw_kd},
-                                                        math::Vector3{rate_controller_roll_integrator_limit, rate_controller_pitch_integrator_limit, rate_controller_yaw_integrator_limit},
+      aeromight_control::AttitudeController attitude_controller{attitude_gains_p};
+
+      const math::Vector3 rate_gains_p{rate_controller_roll_kp, rate_controller_pitch_kp, rate_controller_yaw_kp};
+      const math::Vector3 rate_gains_i{rate_controller_roll_ki, rate_controller_pitch_ki, rate_controller_yaw_ki};
+      const math::Vector3 rate_gains_d{rate_controller_roll_kd, rate_controller_pitch_kd, rate_controller_yaw_kd};
+      const math::Vector3 rate_integrator_limits{rate_controller_roll_integrator_limit, rate_controller_pitch_integrator_limit, rate_controller_yaw_integrator_limit};
+
+      aeromight_control::RateController rate_controller{rate_gains_p,
+                                                        rate_gains_i,
+                                                        rate_gains_d,
+                                                        rate_integrator_limits,
                                                         rate_controller_output_limit,
                                                         max_roll_rate_radps,
                                                         max_pitch_rate_radps,

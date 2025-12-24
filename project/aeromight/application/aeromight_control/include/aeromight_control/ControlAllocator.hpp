@@ -129,7 +129,7 @@ public:
          return;
       }
 
-      // find max torque magnitude
+      // find axis with max torque magnitude
       float   max_mag       = 0.0f;
       uint8_t dominant_axis = ControlAxis::roll;
       for (uint8_t axis = ControlAxis::roll; axis <= ControlAxis::yaw; axis++)

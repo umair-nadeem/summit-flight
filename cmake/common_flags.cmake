@@ -28,6 +28,7 @@ function(add_common_flags library)
         -Wfloat-equal
         -Wformat=2
         -Wlogical-op
+        -Wmaybe-uninitialized
         -Wmismatched-tags
         -Wmissing-include-dirs
         -Wnoexcept

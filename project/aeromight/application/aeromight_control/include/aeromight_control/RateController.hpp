@@ -109,10 +109,10 @@ private:
       m_rate_integrator[2] = std::clamp(m_rate_integrator[2], -m_integrator_limit[2], m_integrator_limit[2]);
    }
 
-   const math::Vector3&       m_gains_p;
-   const math::Vector3&       m_gains_i;
-   const math::Vector3&       m_gains_d;
-   const math::Vector3&       m_integrator_limit;
+   const math::Vector3        m_gains_p;
+   const math::Vector3        m_gains_i;
+   const math::Vector3        m_gains_d;
+   const math::Vector3        m_integrator_limit;
    const float                m_torque_output_limit;
    const float                m_max_roll_rate_radps;
    const float                m_max_pitch_rate_radps;

@@ -186,6 +186,7 @@ private:
 
    void move_to_airborne()
    {
+      reset();
       m_local_control_health.state = aeromight_boundaries::ControlState::airborne;
       m_logger.print("airborne");
    }
