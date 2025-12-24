@@ -160,6 +160,10 @@ extern "C"
       {
          if (flags.value().test(static_cast<uint8_t>(aeromight_boundaries::ControlTaskEvents::start)))
          {
+            // start pwm
+            data->control_task_pwm_timer.start();
+            data->control_task_pwm_timer.enable_all_outputs();
+
             estimation_and_control.start();
             rtos::run_periodic_task(estimation_and_control);
          }
@@ -169,6 +173,56 @@ extern "C"
       while (true)
       {
          error::stop_operation();
+      }
+   }
+
+}   // extern "C"
+
+extern "C"
+{
+   constexpr uint32_t pwm_min_us    = 1000;                                                 // 1.0 ms
+   constexpr uint32_t pwm_max_us    = 2000;                                                 // 2.0 ms
+   constexpr uint32_t pwm_period_us = controller::task::control_task_period_in_ms * 1000;   // ARR + 1
+
+   static inline uint32_t actuator_to_ccr(float x)
+   {
+      x = std::clamp(x, 0.0f, 1.0f);
+      return pwm_min_us + static_cast<uint32_t>(x * static_cast<float>(pwm_max_us - pwm_min_us));
+   }
+
+   // PWM generator
+   void TIM1_UP_TIM10_IRQHandler(void)
+   {
+      using namespace hw::timer;
+
+      auto& data = controller::control_task_data;
+
+      // Check update interrupt
+      if (data.control_task_pwm_timer.is_update_flag_active())
+      {
+         data.control_task_pwm_timer.clear_update_flag();
+
+         auto& actuator_control_storage = aeromight_boundaries::aeromight_data.actuator_control;
+
+         // Get latest actuator command (lock-free)
+         const auto  sample = actuator_control_storage.get_latest();
+         const auto& act    = sample.data;
+
+         if (!act.enabled)
+         {
+            // Motors disabled → force minimum
+            data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel1, pwm_min_us);
+            data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel2, pwm_min_us);
+            data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel3, pwm_min_us);
+            data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel4, pwm_min_us);
+            return;
+         }
+
+         // Enabled → write scaled PWM
+         data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel1, actuator_to_ccr(act.setpoints[0]));
+         data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel2, actuator_to_ccr(act.setpoints[1]));
+         data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel3, actuator_to_ccr(act.setpoints[2]));
+         data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel4, actuator_to_ccr(act.setpoints[3]));
       }
    }
 

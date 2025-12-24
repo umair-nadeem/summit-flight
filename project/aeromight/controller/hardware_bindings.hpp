@@ -37,6 +37,9 @@ struct GlobalData
 
    struct Timer
    {
+      // TIM1
+      hw::timer::TimerConfig tim1_config{.timer_handle = TIM1};
+
       // TIM2
       hw::timer::TimerConfig tim2_config{.timer_handle = TIM2};
 
