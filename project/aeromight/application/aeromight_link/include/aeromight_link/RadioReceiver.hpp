@@ -90,8 +90,8 @@ private:
       // update flight stick input
       m_radio_control_setpoints.input.roll     = apply_deadband(normalize_channel(rc_data.channels[rc_channel_roll]), m_rc_channel_deadband);
       m_radio_control_setpoints.input.pitch    = apply_deadband(normalize_channel(rc_data.channels[rc_channel_pitch]), m_rc_channel_deadband);
-      m_radio_control_setpoints.input.throttle = apply_deadband(normalize_throttle(rc_data.channels[rc_channel_throttle]), m_rc_channel_deadband);
       m_radio_control_setpoints.input.yaw      = apply_deadband(normalize_channel(rc_data.channels[rc_channel_yaw]), m_rc_channel_deadband);
+      m_radio_control_setpoints.input.throttle = normalize_throttle(rc_data.channels[rc_channel_throttle]);
 
       // update armed state
       m_radio_control_setpoints.state              = get_arm_state(normalize_channel(rc_data.channels[rc_channel_arm_state]));

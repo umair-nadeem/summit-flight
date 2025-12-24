@@ -160,11 +160,6 @@ public:
       setpionts[3] = std::clamp(setpionts[3], m_actuator_min_actual, m_actuator_max_actual);
    }
 
-   constexpr float estimate_collective_thrust(const float throttle) const noexcept
-   {
-      return (m_actuator_min_actual + (throttle * (1.0f - m_actuator_min_actual)));
-   }
-
    constexpr const SaturationFlags& get_actuator_saturation_positive() const noexcept
    {
       return m_control_saturation_positive;

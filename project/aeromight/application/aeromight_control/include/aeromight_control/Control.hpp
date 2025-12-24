@@ -228,7 +228,7 @@ private:
       const math::Vector4 control_setpoints{torque_cmd[aeromight_boundaries::ControlAxis::roll],
                                             torque_cmd[aeromight_boundaries::ControlAxis::pitch],
                                             torque_cmd[aeromight_boundaries::ControlAxis::yaw],
-                                            m_control_allocator.estimate_collective_thrust(m_last_flight_control_setpoints.data.throttle)};
+                                            m_last_flight_control_setpoints.data.throttle};
 
       m_control_allocator.set_control_setpoints(control_setpoints);
 
