@@ -53,11 +53,9 @@ extern "C"
       constexpr float    max_valid_imu_sample_dt_s                      = 0.02f;
       constexpr float    max_valid_barometer_sample_dt_s                = 10.0f;
       // control parameters
-      constexpr uint32_t max_age_flight_control_data_ms                 = controller::task::flight_manager_task_period_in_ms * 20u;
       constexpr float    time_delta_limit_s                             = 0.008f;
       constexpr float    actuator_min                                   = 0.05f;
       constexpr float    actuator_max                                   = 1.0f;
-      constexpr float    arming_throttle                                = 0.05f;
       constexpr float    lift_throttle                                  = 0.1f;
       constexpr float    attitude_controller_roll_kp                    = 4.0f;
       constexpr float    attitude_controller_pitch_kp                   = 4.0f;
@@ -140,13 +138,11 @@ extern "C"
                   aeromight_boundaries::aeromight_data.flight_control_setpoints,
                   data->state_estimation,
                   logger_control,
-                  max_age_flight_control_data_ms,
                   time_delta_limit_s,
                   max_roll_rate_radps,
                   max_pitch_rate_radps,
                   max_yaw_rate_radps,
                   max_tilt_angle_rad,
-                  arming_throttle,
                   lift_throttle};
 
       aeromight_control::EstimationAndControl<decltype(estimation),
@@ -180,9 +176,9 @@ extern "C"
 
 extern "C"
 {
-   constexpr uint32_t pwm_min_us    = 1000;                                                 // 1.0 ms
-   constexpr uint32_t pwm_max_us    = 2000;                                                 // 2.0 ms
-   constexpr uint32_t pwm_period_us = controller::task::control_task_period_in_ms * 1000;   // ARR + 1
+   constexpr uint32_t pwm_min_us                       = 1000u;                                                 // 1.0 ms
+   constexpr uint32_t pwm_max_us                       = 2000u;                                                 // 2.0 ms
+   constexpr uint32_t max_age_actuator_control_data_ms = controller::task::control_task_period_in_ms * 1250u;   // 5 seconds
 
    static inline uint32_t actuator_to_ccr(float x)
    {
@@ -202,13 +198,15 @@ extern "C"
       {
          data.control_task_pwm_timer.clear_update_flag();
 
-         auto& actuator_control_storage = aeromight_boundaries::aeromight_data.actuator_control;
+         const auto& actuator_control_storage = aeromight_boundaries::aeromight_data.actuator_control;
 
          // Get latest actuator command (lock-free)
-         const auto  sample = actuator_control_storage.get_latest();
-         const auto& act    = sample.data;
+         const auto     sample        = actuator_control_storage.get_latest();
+         const uint32_t sample_age_ms = (sys_time::ClockSource::now_ms() - sample.timestamp_ms);
+         const bool     stale_sample  = (sample_age_ms > max_age_actuator_control_data_ms);
+         const auto&    act           = sample.data;
 
-         if (!act.enabled)
+         if ((stale_sample) || (!act.enabled))
          {
             // Motors disabled → force minimum
             data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel1, pwm_min_us);

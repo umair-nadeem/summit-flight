@@ -40,7 +40,6 @@ struct Vector
 
    constexpr const T& operator[](const std::size_t i) const
    {
-      error::verify(i < N);
       return m_data[i];
    }
 
@@ -56,7 +55,7 @@ struct Vector
       {
          if constexpr (std::is_floating_point_v<T>)
          {
-            if (std::abs(m_data[i] - other.m_data[i]) > static_cast<T>(0.0001))
+            if (std::abs(m_data[i] - other.m_data[i]) > static_cast<T>(0.0001f))
             {
                return false;
             }

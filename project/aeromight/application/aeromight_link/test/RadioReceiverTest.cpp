@@ -31,7 +31,7 @@ protected:
    mocks::rtos::QueueReceiver<boundaries::BufferWithOwnershipIndex<std::byte>> queue_receiver_mock{};
    mocks::rtos::QueueSender<std::size_t>                                       queue_sender_mock{};
    mocks::common::ClockSource                                                  sys_clock{};
-   boundaries::SharedData<aeromight_boundaries::FlightSetpoints>               flight_setpoints_storage{};
+   boundaries::SharedData<aeromight_boundaries::RadioControlSetpoints>         radio_control_setpoints_storage{};
    boundaries::SharedData<aeromight_boundaries::RadioLinkStats>                radio_link_actuals_storage{};
    mocks::common::Logger                                                       logger_mock{"radioReceiver"};
 
@@ -42,7 +42,7 @@ protected:
                                  decltype(logger_mock)>
        radio_receiver{queue_receiver_mock,
                       queue_sender_mock,
-                      flight_setpoints_storage,
+                      radio_control_setpoints_storage,
                       radio_link_actuals_storage,
                       logger_mock,
                       rc_channel_deadband,
@@ -119,16 +119,16 @@ TEST_F(RadioReceiverTest, check_rc_channels)
    sys_clock.m_sec = 1u;
    radio_receiver.execute();
 
-   const auto flight_setpoints = flight_setpoints_storage.get_latest();
+   const auto radio_control_setpoints = radio_control_setpoints_storage.get_latest();
 
-   EXPECT_NEAR(flight_setpoints.data.input.roll, -0.9795f, 0.01f);
-   EXPECT_NEAR(flight_setpoints.data.input.pitch, 0.75459f, 0.01f);
-   EXPECT_NEAR(flight_setpoints.data.input.throttle, 0.00549f, 0.01f);
-   EXPECT_NEAR(flight_setpoints.data.input.yaw, 0.0f, 0.01f);
-   EXPECT_EQ(flight_setpoints.timestamp_ms, sys_clock.m_sec);
-   EXPECT_EQ(flight_setpoints.data.state, aeromight_boundaries::FlightArmedState::disarm);
-   EXPECT_EQ(flight_setpoints.data.mode, aeromight_boundaries::FlightMode::altitude_hold);
-   EXPECT_EQ(flight_setpoints.data.kill_switch_active, false);
+   EXPECT_NEAR(radio_control_setpoints.data.input.roll, -0.9795f, 0.01f);
+   EXPECT_NEAR(radio_control_setpoints.data.input.pitch, 0.75459f, 0.01f);
+   EXPECT_NEAR(radio_control_setpoints.data.input.throttle, 0.00549f, 0.01f);
+   EXPECT_NEAR(radio_control_setpoints.data.input.yaw, 0.0f, 0.01f);
+   EXPECT_EQ(radio_control_setpoints.timestamp_ms, sys_clock.m_sec);
+   EXPECT_EQ(radio_control_setpoints.data.state, aeromight_boundaries::FlightArmedState::disarm);
+   EXPECT_EQ(radio_control_setpoints.data.mode, aeromight_boundaries::FlightMode::altitude_hold);
+   EXPECT_EQ(radio_control_setpoints.data.kill_switch_active, false);
 
    EXPECT_EQ(mocks::common::Crsf::buffer_to_parse.data(), reinterpret_cast<const uint8_t*>(message.buffer.data()));
 }

@@ -12,7 +12,7 @@
 
 class FlightManagerTest : public ::testing::Test
 {
-   using Setpoints = boundaries::SharedData<aeromight_boundaries::FlightSetpoints>;
+   using Setpoints = boundaries::SharedData<aeromight_boundaries::RadioControlSetpoints>;
    using Actuals   = boundaries::SharedData<aeromight_boundaries::RadioLinkStats>;
 
 protected:
@@ -53,7 +53,7 @@ protected:
    void give_arm_command()
    {
       setpoints.state = aeromight_boundaries::FlightArmedState::arm;
-      flight_setpoints_storage.update_latest(setpoints, current_ms);
+      radio_control_setpoints_storage.update_latest(setpoints, current_ms);
       provide_ticks(1u);
       EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::arming);
    }
@@ -61,14 +61,14 @@ protected:
    void give_disarm_command()
    {
       setpoints.state = aeromight_boundaries::FlightArmedState::disarm;
-      flight_setpoints_storage.update_latest(setpoints, current_ms);
+      radio_control_setpoints_storage.update_latest(setpoints, current_ms);
       provide_ticks(1u);
    }
 
    void give_kill_command()
    {
       setpoints.kill_switch_active = true;
-      flight_setpoints_storage.update_latest(setpoints, current_ms);
+      radio_control_setpoints_storage.update_latest(setpoints, current_ms);
       provide_ticks(1u);
       EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::killed);
    }
@@ -76,14 +76,14 @@ protected:
    void give_manual_mode_command()
    {
       setpoints.mode = aeromight_boundaries::FlightMode::stabilized_manual;
-      flight_setpoints_storage.update_latest(setpoints, current_ms);
+      radio_control_setpoints_storage.update_latest(setpoints, current_ms);
       provide_ticks(1u);
    }
 
    void give_hover_mode_command()
    {
       setpoints.mode = aeromight_boundaries::FlightMode::altitude_hold;
-      flight_setpoints_storage.update_latest(setpoints, current_ms);
+      radio_control_setpoints_storage.update_latest(setpoints, current_ms);
       provide_ticks(1u);
    }
 
@@ -91,7 +91,7 @@ protected:
    {
       set_good_radio_input();
       health_summary.flight_health = aeromight_boundaries::FlightHealthStatus::critical;   // bad health
-      flight_setpoints_storage.update_latest(setpoints, current_ms);
+      radio_control_setpoints_storage.update_latest(setpoints, current_ms);
       radio_link_actuals_storage.update_latest(actuals, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);
@@ -102,7 +102,7 @@ protected:
    {
       set_good_health_summary();
       actuals.link_status_ok = false;
-      flight_setpoints_storage.update_latest(setpoints, current_ms);
+      radio_control_setpoints_storage.update_latest(setpoints, current_ms);
       radio_link_actuals_storage.update_latest(actuals, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);
@@ -111,7 +111,7 @@ protected:
 
    void move_to_wait_sensors_state()
    {
-      flight_setpoints_storage.update_latest(setpoints, current_ms + 1u);
+      radio_control_setpoints_storage.update_latest(setpoints, current_ms + 1u);
       radio_link_actuals_storage.update_latest(actuals, current_ms + 1u);
       health_summary.timestamp_ms = current_ms + 1u;
       provide_health_summary(health_summary);
@@ -151,7 +151,7 @@ protected:
 
       for (uint32_t i = 0; i < (min_state_debounce_duration_ms / period_in_ms); i++)
       {
-         flight_setpoints_storage.update_latest(setpoints, current_ms);
+         radio_control_setpoints_storage.update_latest(setpoints, current_ms);
          radio_link_actuals_storage.update_latest(actuals, current_ms);
          health_summary.timestamp_ms = current_ms;
          provide_health_summary(health_summary);
@@ -174,14 +174,14 @@ protected:
    mocks::rtos::Notifier                                                control_start_notifer_mock{};
    mocks::common::ClockSource                                           sys_clock{};
    boundaries::SharedData<aeromight_boundaries::FlightControlSetpoints> flight_control_setpoints_storage{};
-   Setpoints                                                            flight_setpoints_storage{};
+   Setpoints                                                            radio_control_setpoints_storage{};
    Actuals                                                              radio_link_actuals_storage{};
    mocks::common::Logger                                                logger{"flight"};
 
-   aeromight_boundaries::HealthSummary   health_summary{};
-   aeromight_boundaries::FlightSetpoints setpoints{};
-   aeromight_boundaries::RadioLinkStats  actuals{};
-   uint32_t                              current_ms{0};
+   aeromight_boundaries::HealthSummary         health_summary{};
+   aeromight_boundaries::RadioControlSetpoints setpoints{};
+   aeromight_boundaries::RadioLinkStats        actuals{};
+   uint32_t                                    current_ms{0};
 
    aeromight_flight::FlightManager<decltype(health_summary_queue_mock),
                                    decltype(control_start_notifer_mock),
@@ -189,7 +189,7 @@ protected:
        flight_manager{health_summary_queue_mock,
                       control_start_notifer_mock,
                       flight_control_setpoints_storage,
-                      flight_setpoints_storage,
+                      radio_control_setpoints_storage,
                       radio_link_actuals_storage,
                       logger,
                       stick_input_deadband_abs,
@@ -321,7 +321,7 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_stale_health)
    const uint32_t ticks_needed = (max_age_stale_data_ms - current_ms);
    for (uint32_t i = 0; i < ticks_needed; i++)
    {
-      flight_setpoints_storage.update_latest(setpoints, current_ms);
+      radio_control_setpoints_storage.update_latest(setpoints, current_ms);
       radio_link_actuals_storage.update_latest(actuals, current_ms);
       provide_ticks(1u);
    }
@@ -350,7 +350,7 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_health)
 
       // imu not operational
       health_summary.imu_health = aeromight_boundaries::SubsystemHealth::fault;
-      flight_setpoints_storage.update_latest(setpoints, current_ms);
+      radio_control_setpoints_storage.update_latest(setpoints, current_ms);
       radio_link_actuals_storage.update_latest(actuals, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);
@@ -368,7 +368,7 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_health)
 
       // imu not operational
       health_summary.estimation_health = aeromight_boundaries::SubsystemHealth::fault;
-      flight_setpoints_storage.update_latest(setpoints, current_ms);
+      radio_control_setpoints_storage.update_latest(setpoints, current_ms);
       radio_link_actuals_storage.update_latest(actuals, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);
@@ -386,7 +386,7 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_health)
 
       // imu not operational
       health_summary.control_health = aeromight_boundaries::SubsystemHealth::fault;
-      flight_setpoints_storage.update_latest(setpoints, current_ms);
+      radio_control_setpoints_storage.update_latest(setpoints, current_ms);
       radio_link_actuals_storage.update_latest(actuals, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);
@@ -404,7 +404,7 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_health)
 
       // imu not operational
       health_summary.flight_health = aeromight_boundaries::FlightHealthStatus::critical;
-      flight_setpoints_storage.update_latest(setpoints, current_ms);
+      radio_control_setpoints_storage.update_latest(setpoints, current_ms);
       radio_link_actuals_storage.update_latest(actuals, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);
@@ -429,13 +429,13 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_stale_radio_input)
 
    // start arming
    setpoints.state = aeromight_boundaries::FlightArmedState::arm;
-   flight_setpoints_storage.update_latest(setpoints, current_ms);
+   radio_control_setpoints_storage.update_latest(setpoints, current_ms);
    provide_ticks(1u);
    EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::arming);
 
    // good but stale radio input
    set_good_radio_input();
-   flight_setpoints_storage.update_latest(setpoints, 0);
+   radio_control_setpoints_storage.update_latest(setpoints, 0);
    radio_link_actuals_storage.update_latest(actuals, 0);
 
    // good and up to date health summary
@@ -472,7 +472,7 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_radio_input)
 
       // link status not ok
       actuals.link_status_ok = false;
-      flight_setpoints_storage.update_latest(setpoints, current_ms);
+      radio_control_setpoints_storage.update_latest(setpoints, current_ms);
       radio_link_actuals_storage.update_latest(actuals, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);
@@ -490,7 +490,7 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_radio_input)
 
       // low link rssi
       actuals.link_rssi_dbm = min_good_signal_rssi_dbm - 1.0f;
-      flight_setpoints_storage.update_latest(setpoints, current_ms);
+      radio_control_setpoints_storage.update_latest(setpoints, current_ms);
       radio_link_actuals_storage.update_latest(actuals, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);

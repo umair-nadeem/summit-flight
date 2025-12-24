@@ -32,9 +32,9 @@ struct AeromightData
    boundaries::SharedData<ControlHealth>          control_health_storage{};
    boundaries::SharedData<FlightControlSetpoints> flight_control_setpoints{};
 
-   // Flight Manager
-   boundaries::SharedData<FlightSetpoints> flight_setpoints{};
-   boundaries::SharedData<RadioLinkStats>  radio_link_actuals{};
+   // Radio Control / Flight Manager
+   boundaries::SharedData<RadioControlSetpoints> radio_control_setpoints{};
+   boundaries::SharedData<RadioLinkStats>        radio_link_actuals{};
 };
 
 extern AeromightData aeromight_data;

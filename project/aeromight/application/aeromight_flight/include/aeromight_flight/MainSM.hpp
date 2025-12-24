@@ -209,6 +209,11 @@ struct FlightManagerStateMachine
          return state.kill();
       };
 
+      constexpr auto throttle_below_limit = [](StateHandler& state)
+      {
+         return state.throttle_below_limit();
+      };
+
       constexpr auto manual_mode = [](StateHandler& state)
       {
          return state.manual_mode();
@@ -265,8 +270,8 @@ struct FlightManagerStateMachine
 
           s_arming            + e_tick                                              / (read_health_summary, read_radio_input, get_time)           = s_arming_checkpoint,
           s_arming_checkpoint         [kill]                                        / (kill_actuator, set_killed_state)                           = s_killed,
-          s_arming_checkpoint         [disarm || !is_health_good || !is_radio_link_good]                   / set_disarmed_state                   = s_disarmed,
-          s_arming_checkpoint         [is_state_change_persistent && is_health_good && is_radio_link_good] / (arm_control, set_armed_state)       = s_armed,
+          s_arming_checkpoint         [disarm || !is_health_good || !is_radio_link_good] / set_disarmed_state                                     = s_disarmed,
+          s_arming_checkpoint         [is_state_change_persistent && is_health_good && is_radio_link_good && throttle_below_limit] / (arm_control, set_armed_state) = s_armed,
           s_arming_checkpoint                                                                                                                     = s_arming,
 
           s_armed             + e_tick                                              / (read_health_summary, read_radio_input, get_time)           = s_armed_checkpoint,

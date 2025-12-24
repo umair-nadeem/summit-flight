@@ -27,6 +27,7 @@ extern "C"
 
       constexpr float    stick_input_deadband_abs       = 0.1f;
       constexpr float    min_good_signal_rssi_dbm       = -110.0f;
+      constexpr float    arming_throttle                = 0.05f;
       constexpr uint32_t max_age_stale_data_ms          = 1000u;
       constexpr uint32_t min_state_debounce_duration_ms = 200u;
       constexpr uint32_t timeout_sensors_readiness_ms   = 10'000u;
@@ -42,11 +43,12 @@ extern "C"
           flight_manager{data->health_summary_queue_receiver,
                          data->control_task_start_notifier,
                          aeromight_boundaries::aeromight_data.flight_control_setpoints,
-                         aeromight_boundaries::aeromight_data.flight_setpoints,
+                         aeromight_boundaries::aeromight_data.radio_control_setpoints,
                          aeromight_boundaries::aeromight_data.radio_link_actuals,
                          logger_flight_manager_task,
                          stick_input_deadband_abs,
                          min_good_signal_rssi_dbm,
+                         arming_throttle,
                          controller::task::flight_manager_task_period_in_ms,
                          max_age_stale_data_ms,
                          min_state_debounce_duration_ms,

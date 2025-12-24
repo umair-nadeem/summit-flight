@@ -27,7 +27,7 @@ struct FlightStickInput
    float yaw{};        // -1.0 (CCW) to +1.0 (CW)
 };
 
-struct FlightSetpoints
+struct RadioControlSetpoints
 {
    FlightArmedState state{FlightArmedState::disarm};
    FlightMode       mode{FlightMode::none};
