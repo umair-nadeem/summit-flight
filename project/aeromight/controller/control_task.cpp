@@ -56,7 +56,7 @@ extern "C"
       constexpr float    time_delta_limit_s                             = 0.008f;
       constexpr float    actuator_min                                   = 0.0f;
       constexpr float    actuator_max                                   = 1.0f;
-      constexpr float    lift_throttle                                  = 0.1f;
+      constexpr float    lift_throttle                                  = 0.05f;
       constexpr float    attitude_controller_roll_kp                    = 4.0f;
       constexpr float    attitude_controller_pitch_kp                   = 4.0f;
       constexpr float    attitude_controller_yaw_kp                     = 0.0f;
