@@ -178,7 +178,6 @@ private:
    void move_to_armed()
    {
       reset();
-      start_actuator();
       m_actuator_control.setpoints.zero();
       m_local_control_health.state = aeromight_boundaries::ControlState::armed_on_ground;
       m_logger.print("armed on ground");
@@ -187,6 +186,7 @@ private:
    void move_to_airborne()
    {
       reset();
+      start_actuator();
       m_local_control_health.state = aeromight_boundaries::ControlState::airborne;
       m_logger.print("airborne");
    }
@@ -211,7 +211,7 @@ private:
       return m_rate_controller.update(m_desired_rate_radps, m_state_estimation_data.gyro_radps, m_time_delta_s, run_integrator);
    }
 
-   void run_control(const bool run_integrator)
+   void run_control(const bool airborne)
    {
       if (m_time_delta_s <= 0.0f)   // can't run rate controller
       {
@@ -223,7 +223,7 @@ private:
 
       run_attitude_controller();
 
-      const math::Vector3 torque_cmd{run_rate_controller(run_integrator)};
+      const math::Vector3 torque_cmd{run_rate_controller(airborne)};
 
       const math::Vector4 control_setpoints{torque_cmd[aeromight_boundaries::ControlAxis::roll],
                                             torque_cmd[aeromight_boundaries::ControlAxis::pitch],
