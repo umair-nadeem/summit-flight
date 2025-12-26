@@ -69,6 +69,17 @@ public:
       }
    }
 
+   void execute()
+   {
+      get_time();
+
+      run_state_machine();
+
+      publish_data();
+
+      publish_health();
+   }
+
    State get_state() const
    {
       return m_local_estimator_health.state;
@@ -77,13 +88,6 @@ public:
    float get_reference_pressure() const
    {
       return m_reference_pressure;
-   }
-
-   void execute()
-   {
-      get_time();
-
-      run_state_machine();
    }
 
 private:
@@ -118,13 +122,11 @@ private:
                   m_local_estimator_health.error.set(static_cast<uint8_t>(Error::reference_pressure_implausible));
                   move_to_fault();
                }
-               publish_health();
             }
             else if (pressure_samples_read_timeout())
             {
                m_local_estimator_health.error.set(static_cast<uint8_t>(Error::reference_pressure_estimate_timeout));
                move_to_fault();
-               publish_health();
             }
             break;
 
@@ -141,8 +143,6 @@ private:
             {
                m_local_estimator_health.error.set(static_cast<uint8_t>(Error::stale_baro_sensor_data));
             }
-
-            publish_health();
             break;
 
          case State::fault:
@@ -209,34 +209,22 @@ private:
          }
 
          m_local_estimator_health.recovery_attempts++;
-         publish_health();
          m_logger.printf("fault recovery attempt: %u", m_local_estimator_health.recovery_attempts);
       }
    }
 
    void run_estimation()
    {
-      bool data_to_be_published = false;
-
       // read imu data
       if (read_from_imu())
       {
          run_attitude_estimation();
-
-         data_to_be_published = true;
       }
 
       // read barometer data
       if (read_from_barometer())
       {
          run_altitude_estimation();
-
-         data_to_be_published = true;
-      }
-
-      if (data_to_be_published)
-      {
-         publish_data();
       }
    }
 
