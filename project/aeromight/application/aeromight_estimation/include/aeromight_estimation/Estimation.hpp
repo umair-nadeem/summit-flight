@@ -1,7 +1,7 @@
 #pragma once
 
-#include "StateEstimation.hpp"
 #include "aeromight_boundaries/EstimatorHealth.hpp"
+#include "aeromight_boundaries/StateEstimation.hpp"
 #include "barometer_sensor/BarometerData.hpp"
 #include "bmp390/params.hpp"
 #include "boundaries/SharedData.hpp"
@@ -11,7 +11,7 @@
 #include "math/utility.hpp"
 #include "utilities/Barometric.hpp"
 
-namespace aeromight_control
+namespace aeromight_estimation
 {
 
 template <typename AttitudeEstimator, typename AltitudeEkf, interfaces::IClockSource ClockSource, typename Logger>
@@ -20,6 +20,7 @@ class Estimation
    using ImuData         = ::boundaries::SharedData<imu_sensor::ImuData>;
    using BarometerData   = ::boundaries::SharedData<barometer_sensor::BarometerData>;
    using EstimatorHealth = ::boundaries::SharedData<aeromight_boundaries::EstimatorHealth>;
+   using StateEstimation = aeromight_boundaries::StateEstimation;
    using State           = aeromight_boundaries::EstimatorState;
    using Error           = aeromight_boundaries::EstimatorHealth::Error;
 
@@ -437,4 +438,4 @@ private:
    std::size_t                           m_data_log_counter{0};
 };
 
-}   // namespace aeromight_control
+}   // namespace aeromight_estimation

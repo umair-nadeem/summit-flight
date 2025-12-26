@@ -1,10 +1,10 @@
 #pragma once
 
-#include "aeromight_control/EkfState.hpp"
+#include "aeromight_estimation/EkfState.hpp"
 #include "math/Matrix.hpp"
 #include "math/Quaternion.hpp"
 
-namespace aeromight_control
+namespace aeromight_estimation
 {
 
 class AltitudeEkf
@@ -45,4 +45,4 @@ private:
    bool                                                            m_is_initialized{false};
 };
 
-}   // namespace aeromight_control
+}   // namespace aeromight_estimation

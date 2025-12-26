@@ -1,9 +1,9 @@
-#include "aeromight_control/Estimation.hpp"
+#include "aeromight_estimation/Estimation.hpp"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "aeromight_control/EkfState.hpp"
+#include "aeromight_estimation/EkfState.hpp"
 #include "mocks/common/ClockSource.hpp"
 #include "mocks/common/Logger.hpp"
 
@@ -23,7 +23,7 @@ public:
    MOCK_METHOD(void, predict, (const math::Vector3&, const math::Quaternion&, const float), ());
    MOCK_METHOD(void, update, (const float), ());
    MOCK_METHOD(void, reset, ());
-   MOCK_METHOD(aeromight_control::EkfState, get_ekf_state, (), (const));
+   MOCK_METHOD(aeromight_estimation::EkfState, get_ekf_state, (), (const));
 };
 
 class EstimationTest : public testing::Test
@@ -87,16 +87,16 @@ protected:
    testing::NiceMock<EkfMock>                                      ekf_mock{};
    mocks::common::ClockSource                                      sys_clock{};
    ::boundaries::SharedData<aeromight_boundaries::EstimatorHealth> estimator_health_storage{};
-   aeromight_control::StateEstimation                              state_estimation_storage{};
+   aeromight_boundaries::StateEstimation                           state_estimation_storage{};
    ::boundaries::SharedData<imu_sensor::ImuData>                   imu_data{};
    ::boundaries::SharedData<barometer_sensor::BarometerData>       baro_data{};
    mocks::common::Logger                                           logger{"estmation"};
    uint32_t                                                        current_ms{0};
 
-   aeromight_control::Estimation<decltype(ahrs_filter_mock),
-                                 decltype(ekf_mock),
-                                 decltype(sys_clock),
-                                 decltype(logger)>
+   aeromight_estimation::Estimation<decltype(ahrs_filter_mock),
+                                    decltype(ekf_mock),
+                                    decltype(sys_clock),
+                                    decltype(logger)>
        estimation{ahrs_filter_mock,
                   ekf_mock,
                   estimator_health_storage,
@@ -313,8 +313,8 @@ TEST_F(EstimationTest, run_altitude_estimation)
    sys_clock.m_sec = current_ms++;
    estimation.execute();
 
-   const float                       altitude = utilities::Barometric::convert_pressure_to_altitude(bmp390::params::max_plauisble_range_pressure_pa);
-   const aeromight_control::EkfState ekf_state{10.0f, 15.0f, 20.0f};
+   const float                          altitude = utilities::Barometric::convert_pressure_to_altitude(bmp390::params::max_plauisble_range_pressure_pa);
+   const aeromight_estimation::EkfState ekf_state{10.0f, 15.0f, 20.0f};
 
    EXPECT_CALL(ekf_mock, update(altitude));
    EXPECT_CALL(ekf_mock, get_ekf_state()).WillOnce(testing::Return(ekf_state));
@@ -469,8 +469,8 @@ TEST_F(EstimationTest, successful_recovery_after_reference_pressure_acquisition)
    }
 
    // recover successfully with data
-   const float                       altitude = utilities::Barometric::convert_pressure_to_altitude(bmp390::params::max_plauisble_range_pressure_pa);
-   const aeromight_control::EkfState ekf_state{10.0f, 15.0f, 20.0f};
+   const float                          altitude = utilities::Barometric::convert_pressure_to_altitude(bmp390::params::max_plauisble_range_pressure_pa);
+   const aeromight_estimation::EkfState ekf_state{10.0f, 15.0f, 20.0f};
 
    EXPECT_CALL(ekf_mock, update(altitude));
    EXPECT_CALL(ekf_mock, get_ekf_state()).WillOnce(testing::Return(ekf_state));

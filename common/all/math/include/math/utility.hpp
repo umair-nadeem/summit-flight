@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #include "Euler.hpp"
 #include "Quaternion.hpp"
 
@@ -19,9 +21,9 @@ inline Euler quaternion_to_euler(const Quaternion& q)
    const float siny_cosp = 2.0f * (q[0] * q[3] + q[1] * q[2]);
    const float cosy_cosp = 1.0f - 2.0f * (q[2] * q[2] + q[3] * q[3]);
 
-   const float roll  = std::atan2f(sinr_cosp, cosr_cosp);
-   const float pitch = (std::fabsf(sinp) >= 1.0f) ? std::copysignf(physics::constants::pi_by_2, sinp) : std::asinf(sinp);
-   const float yaw   = std::atan2f(siny_cosp, cosy_cosp);
+   const float roll  = std::atan2(sinr_cosp, cosr_cosp);
+   const float pitch = (std::fabs(sinp) >= 1.0f) ? std::copysignf(physics::constants::pi_by_2, sinp) : std::asin(sinp);
+   const float yaw   = std::atan2(siny_cosp, cosy_cosp);
 
    return Euler{roll, pitch, yaw};
 }

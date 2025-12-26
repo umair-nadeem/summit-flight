@@ -5,7 +5,7 @@
 #include "math/Euler.hpp"
 #include "math/Quaternion.hpp"
 
-namespace aeromight_control
+namespace aeromight_boundaries
 {
 
 struct StateEstimation
@@ -23,4 +23,4 @@ struct StateEstimation
    float vertical_velocity;
 };
 
-}   // namespace aeromight_control
+}   // namespace aeromight_boundaries

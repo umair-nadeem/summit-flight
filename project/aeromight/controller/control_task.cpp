@@ -1,12 +1,12 @@
 #include "ControlTaskData.hpp"
 #include "aeromight_boundaries/AeromightData.hpp"
-#include "aeromight_control/AltitudeEkf.hpp"
 #include "aeromight_control/AttitudeController.hpp"
 #include "aeromight_control/Control.hpp"
 #include "aeromight_control/ControlAllocator.hpp"
-#include "aeromight_control/Estimation.hpp"
 #include "aeromight_control/EstimationAndControl.hpp"
 #include "aeromight_control/RateController.hpp"
+#include "aeromight_estimation/AltitudeEkf.hpp"
+#include "aeromight_estimation/Estimation.hpp"
 #include "error/error_handler.hpp"
 #include "estimation/AttitudeEstimator.hpp"
 #include "logging/LogClient.hpp"
@@ -84,17 +84,17 @@ extern "C"
 
       estimation::AttitudeEstimator ahrs_filter{accelerometer_weight, gyro_bias_weight};
 
-      aeromight_control::AltitudeEkf altitude_ekf{process_noise_z,
-                                                  process_noise_vz,
-                                                  process_noise_accel_bias,
-                                                  measurement_noise_baro,
-                                                  tilt_gating_attitude_angle_rad,
-                                                  tilt_gating_accel_weight};
+      aeromight_estimation::AltitudeEkf altitude_ekf{process_noise_z,
+                                                     process_noise_vz,
+                                                     process_noise_accel_bias,
+                                                     measurement_noise_baro,
+                                                     tilt_gating_attitude_angle_rad,
+                                                     tilt_gating_accel_weight};
 
-      aeromight_control::Estimation<decltype(ahrs_filter),
-                                    decltype(altitude_ekf),
-                                    sys_time::ClockSource,
-                                    LogClient>
+      aeromight_estimation::Estimation<decltype(ahrs_filter),
+                                       decltype(altitude_ekf),
+                                       sys_time::ClockSource,
+                                       LogClient>
           estimation{ahrs_filter,
                      altitude_ekf,
                      aeromight_boundaries::aeromight_data.estimator_health_storage,

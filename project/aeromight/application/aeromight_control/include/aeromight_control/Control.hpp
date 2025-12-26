@@ -2,11 +2,11 @@
 
 #include <algorithm>
 
-#include "StateEstimation.hpp"
 #include "aeromight_boundaries/ActuatorSetpoints.hpp"
 #include "aeromight_boundaries/ControlHealth.hpp"
 #include "aeromight_boundaries/ControlState.hpp"
 #include "aeromight_boundaries/FlightControlSetpoints.hpp"
+#include "aeromight_boundaries/StateEstimation.hpp"
 #include "boundaries/SharedData.hpp"
 #include "interfaces/IClockSource.hpp"
 
@@ -19,22 +19,23 @@ class Control
    using ActuatorControl        = boundaries::SharedData<aeromight_boundaries::ActuatorControl>;
    using ControlHealth          = boundaries::SharedData<aeromight_boundaries::ControlHealth>;
    using FlightControlSetpoints = boundaries::SharedData<aeromight_boundaries::FlightControlSetpoints>;
+   using StateEstimation        = aeromight_boundaries::StateEstimation;
 
 public:
-   explicit Control(AttitudeController&           attitude_controller,
-                    RateController&               rate_controller,
-                    ControlAllocator&             control_allocator,
-                    ActuatorControl&              actuator_control_storage,
-                    ControlHealth&                control_health_storage,
-                    const FlightControlSetpoints& flight_control_setpoint_storage,
-                    const StateEstimation&        state_estimation_data,
-                    Logger&                       logger,
-                    const float                   time_delta_limit_s,
-                    const float                   max_roll_rate_radps,
-                    const float                   max_pitch_rate_radps,
-                    const float                   max_yaw_rate_radps,
-                    const float                   max_tilt_angle_rad,
-                    const float                   lift_throttle)
+   explicit Control(AttitudeController&                          attitude_controller,
+                    RateController&                              rate_controller,
+                    ControlAllocator&                            control_allocator,
+                    ActuatorControl&                             actuator_control_storage,
+                    ControlHealth&                               control_health_storage,
+                    const FlightControlSetpoints&                flight_control_setpoint_storage,
+                    const aeromight_boundaries::StateEstimation& state_estimation_data,
+                    Logger&                                      logger,
+                    const float                                  time_delta_limit_s,
+                    const float                                  max_roll_rate_radps,
+                    const float                                  max_pitch_rate_radps,
+                    const float                                  max_yaw_rate_radps,
+                    const float                                  max_tilt_angle_rad,
+                    const float                                  lift_throttle)
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
          m_control_allocator{control_allocator},

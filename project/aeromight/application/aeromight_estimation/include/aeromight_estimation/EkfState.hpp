@@ -1,6 +1,6 @@
 #pragma once
 
-namespace aeromight_control
+namespace aeromight_estimation
 {
 
 struct EkfState
@@ -10,4 +10,4 @@ struct EkfState
    float a_z_bias{};   // accelerometer z-axis bias
 };
 
-}   // namespace aeromight_control
+}   // namespace aeromight_estimation

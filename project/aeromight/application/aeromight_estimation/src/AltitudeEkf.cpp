@@ -1,4 +1,4 @@
-#include "aeromight_control/AltitudeEkf.hpp"
+#include "aeromight_estimation/AltitudeEkf.hpp"
 
 #include "math/utility.hpp"
 
@@ -17,7 +17,7 @@ constexpr float transform_accel_to_world_z(const math::Vector3& accel_body, cons
 
 }   // namespace
 
-namespace aeromight_control
+namespace aeromight_estimation
 {
 
 AltitudeEkf::AltitudeEkf(const float process_noise_z,
@@ -173,4 +173,4 @@ EkfState AltitudeEkf::get_ekf_state() const
    return m_state;
 }
 
-}   // namespace aeromight_control
+}   // namespace aeromight_estimation
