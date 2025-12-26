@@ -38,10 +38,12 @@ extern "C"
 
       aeromight_flight::FlightManager<decltype(data->health_summary_queue_receiver),
                                       decltype(data->control_task_start_notifier),
+                                      decltype(data->armed_status_led),
                                       sys_time::ClockSource,
                                       LogClient>
           flight_manager{data->health_summary_queue_receiver,
                          data->control_task_start_notifier,
+                         data->armed_status_led,
                          aeromight_boundaries::aeromight_data.flight_control_setpoints,
                          aeromight_boundaries::aeromight_data.radio_control_setpoints,
                          aeromight_boundaries::aeromight_data.radio_link_actuals,

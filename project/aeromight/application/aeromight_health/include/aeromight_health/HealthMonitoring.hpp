@@ -53,8 +53,32 @@ public:
 
    void run_once()
    {
+      // get current time
       m_current_time_ms = ClockSource::now_ms();
 
+      run_state_machine();
+
+      publish_health_summary();
+   }
+
+   aeromight_boundaries::HealthSummary get_health_summary() const
+   {
+      return m_health_summary;
+   }
+
+   HealthMonitoringState get_state() const
+   {
+      return m_state;
+   }
+
+   uint32_t get_period_ms() const
+   {
+      return m_period_in_ms;
+   }
+
+private:
+   void run_state_machine()
+   {
       switch (m_state)
       {
          case HealthMonitoringState::startup:
@@ -110,8 +134,6 @@ public:
                m_state                            = HealthMonitoringState::wait_for_estimation_control_readiness;
                m_state_entry_time_ms              = m_current_time_ms;
             }
-
-            publish_health_summary();
             break;
          }
 
@@ -160,8 +182,6 @@ public:
                m_state                        = HealthMonitoringState::general_monitoring;
                m_state_entry_time_ms          = m_current_time_ms;
             }
-
-            publish_health_summary();
             break;
          }
 
@@ -169,7 +189,6 @@ public:
          {
             get_latest_health_snapshots();
             evaluate_health_status();
-            publish_health_summary();
             break;
          }
 
@@ -178,22 +197,6 @@ public:
       }
    }
 
-   aeromight_boundaries::HealthSummary get_health_summary() const
-   {
-      return m_health_summary;
-   }
-
-   HealthMonitoringState get_state() const
-   {
-      return m_state;
-   }
-
-   uint32_t get_period_ms() const
-   {
-      return m_period_in_ms;
-   }
-
-private:
    void get_latest_health_snapshots()
    {
       m_imu_health_snapshot        = m_imu_sensor_health.get_latest();

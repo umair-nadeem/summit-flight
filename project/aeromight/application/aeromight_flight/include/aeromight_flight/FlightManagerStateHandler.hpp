@@ -9,6 +9,7 @@
 #include "boundaries/SharedData.hpp"
 #include "error/error_handler.hpp"
 #include "interfaces/IClockSource.hpp"
+#include "interfaces/pcb_component/ILed.hpp"
 #include "interfaces/rtos/INotifier.hpp"
 #include "interfaces/rtos/IQueueReceiver.hpp"
 
@@ -17,6 +18,7 @@ namespace aeromight_flight
 
 template <interfaces::rtos::IQueueReceiver<aeromight_boundaries::HealthSummary> QueueReceiver,
           interfaces::rtos::INotifier                                           EstimationNotifier,
+          interfaces::pcb_component::ILed                                       Led,
           interfaces::IClockSource                                              ClockSource,
           typename Logger>
 class FlightManagerStateHandler
@@ -28,6 +30,7 @@ class FlightManagerStateHandler
 public:
    explicit FlightManagerStateHandler(QueueReceiver&               health_summary_queue_receiver,
                                       EstimationNotifier&          control_start_notifier,
+                                      Led&                         led,
                                       FlightControlSetpoints&      flight_control_setpoints_storage,
                                       const RadioControlSetpoints& radio_control_setpoints_storage,
                                       const RadioActuals&          radio_link_actuals_storage,
@@ -42,6 +45,7 @@ public:
                                       const uint32_t               timeout_auto_land_ms)
        : m_health_summary_queue_receiver{health_summary_queue_receiver},
          m_control_start_notifier(control_start_notifier),
+         m_led{led},
          m_flight_control_setpoints_storage(flight_control_setpoints_storage),
          m_radio_control_setpoints_storage(radio_control_setpoints_storage),
          m_radio_link_actuals_storage(radio_link_actuals_storage),
@@ -57,14 +61,14 @@ public:
    {
    }
 
-   void set_reference_time()
-   {
-      m_reference_time_ms = ClockSource::now_ms();
-   }
-
    void get_time()
    {
       m_current_time_ms = ClockSource::now_ms();
+   }
+
+   void set_reference_time()
+   {
+      m_reference_time_ms = ClockSource::now_ms();
    }
 
    void read_health_summary()
@@ -169,6 +173,7 @@ public:
             break;
 
          case FlightManagerState::disarming:
+            turn_off_status_led();
             m_logger.print("entered state->disarming");
             break;
 
@@ -177,10 +182,12 @@ public:
             break;
 
          case FlightManagerState::arming:
+            turn_off_status_led();
             m_logger.print("entered state->arming");
             break;
 
          case FlightManagerState::armed:
+            turn_on_status_led();
             m_logger.print("entered state->armed");
             break;
 
@@ -197,10 +204,12 @@ public:
             break;
 
          case FlightManagerState::killed:
+            turn_off_status_led();
             m_logger.print("entered state->killed");
             break;
 
          case FlightManagerState::fault:
+            turn_off_status_led();
             m_logger.print("entered state->fault");
             break;
 
@@ -208,6 +217,11 @@ public:
             error::stop_operation();
             break;
       }
+   }
+
+   void show_disarm_led()
+   {
+      toggle_status_led();
    }
 
    FlightManagerState get_state() const
@@ -367,6 +381,37 @@ public:
    }
 
 private:
+   // cppcheck-suppress functionStatic
+   void turn_on_status_led()
+   {
+      m_led.turn_on();
+   }
+
+   // cppcheck-suppress functionStatic
+   void turn_off_status_led()
+   {
+      m_led.turn_off();
+   }
+
+   void toggle_status_led()
+   {
+      if ((m_current_time_ms - m_status_led_timer) >= led_state_duration)
+      {
+         if (m_status_led_on)
+         {
+            m_led.turn_off();
+            m_status_led_on    = false;
+            m_status_led_timer = m_current_time_ms;
+         }
+         else
+         {
+            m_led.turn_on();
+            m_status_led_on    = true;
+            m_status_led_timer = m_current_time_ms;
+         }
+      }
+   }
+
    bool is_imu_operational() const
    {
       return (m_last_health_summary.imu_health == aeromight_boundaries::SubsystemHealth::operational);
@@ -382,8 +427,11 @@ private:
       return (m_last_health_summary.control_health == aeromight_boundaries::SubsystemHealth::operational);
    }
 
+   static constexpr uint32_t led_state_duration = 750u;
+
    QueueReceiver&                               m_health_summary_queue_receiver;
    EstimationNotifier&                          m_control_start_notifier;
+   Led&                                         m_led;
    FlightControlSetpoints&                      m_flight_control_setpoints_storage;
    const RadioControlSetpoints&                 m_radio_control_setpoints_storage;
    const RadioActuals&                          m_radio_link_actuals_storage;
@@ -403,6 +451,8 @@ private:
    FlightManagerState                           m_state{FlightManagerState::init};
    uint32_t                                     m_current_time_ms{0};
    uint32_t                                     m_reference_time_ms{0};
+   uint32_t                                     m_status_led_timer{0};
+   bool                                         m_status_led_on{false};
 };
 
 }   // namespace aeromight_flight
