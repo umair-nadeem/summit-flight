@@ -59,6 +59,7 @@ public:
    {
       if (m_local_control_health.state == aeromight_boundaries::ControlState::inactive)
       {
+         m_last_execution_time_ms = ClockSource::now_ms();
          get_time();
          move_to_disarmed();
          publish_health();
@@ -117,7 +118,8 @@ private:
                move_to_airborne();
             }
 
-            run_control(false);
+            run_controllers(false);
+            m_actuator_control.setpoints.zero();
             break;
 
          case aeromight_boundaries::ControlState::airborne:
@@ -132,7 +134,8 @@ private:
                move_to_disarmed();
             }
 
-            run_control(true);
+            run_controllers(true);
+            run_control_allocator();
             break;
 
          case aeromight_boundaries::ControlState::emergency_kill:
@@ -212,23 +215,37 @@ private:
       return m_rate_controller.update(m_desired_rate_radps, m_state_estimation_data.gyro_radps, m_time_delta_s, run_integrator);
    }
 
-   void run_control(const bool airborne)
+   void run_controllers(const bool airborne)
    {
-      if (m_time_delta_s <= 0.0f)   // can't run rate controller
-      {
-         m_local_control_health.error.set(static_cast<uint8_t>(aeromight_boundaries::ControlHealth::Error::invalid_time_delta));
-         return;
-      }
-
       m_time_delta_s = std::clamp(m_time_delta_s, 0.0f, m_time_delta_limit_s);
 
       run_attitude_controller();
 
-      const math::Vector3 torque_cmd{run_rate_controller(airborne)};
+      m_desired_torque = run_rate_controller(airborne);
 
-      const math::Vector4 control_setpoints{torque_cmd[aeromight_boundaries::ControlAxis::roll],
-                                            torque_cmd[aeromight_boundaries::ControlAxis::pitch],
-                                            torque_cmd[aeromight_boundaries::ControlAxis::yaw],
+      static uint32_t m_counter{0};
+      if ((m_counter++ % 250) == 0)
+      {
+         m_logger.printf("r=%.2f, p=%.2f, y=%.2f, r=%.2f, p=%.2f, y=%.2f, t=%.2f, 1=%.2f, 2=%.2f, 3=%.2f, 4=%.2f",
+                         m_state_estimation_data.euler.roll(),
+                         m_state_estimation_data.euler.pitch(),
+                         m_state_estimation_data.euler.yaw(),
+                         m_desired_torque[0],
+                         m_desired_torque[1],
+                         m_desired_torque[2],
+                         m_last_flight_control_setpoints.data.throttle,
+                         m_actuator_control.setpoints[0],
+                         m_actuator_control.setpoints[1],
+                         m_actuator_control.setpoints[2],
+                         m_actuator_control.setpoints[3]);
+      }
+   }
+
+   void run_control_allocator()
+   {
+      const math::Vector4 control_setpoints{m_desired_torque[aeromight_boundaries::ControlAxis::roll],
+                                            m_desired_torque[aeromight_boundaries::ControlAxis::pitch],
+                                            m_desired_torque[aeromight_boundaries::ControlAxis::yaw],
                                             m_last_flight_control_setpoints.data.throttle};
 
       m_control_allocator.set_control_setpoints(control_setpoints);
@@ -239,23 +256,6 @@ private:
       // determine allocator saturation
       m_control_allocator.estimate_saturation();
       m_rate_controller.set_saturation_status(m_control_allocator.get_actuator_saturation_positive(), m_control_allocator.get_actuator_saturation_negative());
-
-      static uint32_t m_counter{0};
-      if ((m_counter++ % 250) == 0)
-      {
-         m_logger.printf("r=%.2f, p=%.2f, y=%.2f, r=%.2f, p=%.2f, y=%.2f, t=%.2f, 1=%.2f, 2=%.2f, 3=%.2f, 4=%.2f",
-                         m_state_estimation_data.euler.roll(),
-                         m_state_estimation_data.euler.pitch(),
-                         m_state_estimation_data.euler.yaw(),
-                         torque_cmd[0],
-                         torque_cmd[1],
-                         torque_cmd[2],
-                         control_setpoints[3],
-                         m_actuator_control.setpoints[0],
-                         m_actuator_control.setpoints[1],
-                         m_actuator_control.setpoints[2],
-                         m_actuator_control.setpoints[3]);
-      }
    }
 
    void start_actuator()
@@ -317,6 +317,7 @@ private:
    aeromight_boundaries::ControlHealth   m_local_control_health{};
    FlightControlSetpoints::Sample        m_last_flight_control_setpoints{};
    math::Vector3                         m_desired_rate_radps{};
+   math::Vector3                         m_desired_torque{};
    float                                 m_time_delta_s{0.0f};
    uint32_t                              m_current_time_ms{0};
    uint32_t                              m_last_execution_time_ms{0};

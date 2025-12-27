@@ -311,7 +311,7 @@ private:
    {
       const bool control_stale = (((m_current_time_ms - m_control_health_snapshot.timestamp_ms) > m_max_age_control_health_ms));
 
-      if (m_control_health_snapshot.data.error.to_ulong() != 0)
+      if (m_control_health_snapshot.data.state == aeromight_boundaries::ControlState::inactive)
       {
          return aeromight_boundaries::SubsystemHealth::fault;
       }
