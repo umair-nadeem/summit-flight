@@ -268,6 +268,11 @@ void setup_i2c()
    barometer_task_data.i2c_driver.prepare_for_communication();
 }
 
+void setup_adc()
+{
+   radio_link_task_data.voltage_sensing_adc.prepare_for_communication();
+}
+
 void start_sys_clock()
 {
    sys_time::ClockSource::init();
@@ -291,6 +296,7 @@ extern "C"
          controller::setup_uart();
          controller::setup_spi();
          controller::setup_i2c();
+         controller::setup_adc();
 
          // start sys clock
          controller::start_sys_clock();

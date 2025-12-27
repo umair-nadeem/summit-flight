@@ -1,6 +1,7 @@
 #pragma once
 
 #include "hw/HwPin.hpp"
+#include "hw/adc/AdcConfig.hpp"
 #include "hw/i2c/I2cConfig.hpp"
 #include "hw/spi/SpiWithDmaConfig.hpp"
 #include "hw/timer/TimerConfig.hpp"
@@ -35,6 +36,12 @@ struct GlobalData
           .i2c_handle   = I2C1,
           .frequency_hz = 100'000u};
    } i2c;
+
+   struct Adc
+   {
+      hw::adc::AdcConfig adc1_config{
+          .adc_handle = ADC1};
+   } adc;
 
    struct Timer
    {

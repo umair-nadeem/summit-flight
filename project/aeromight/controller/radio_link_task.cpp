@@ -1,4 +1,6 @@
 #include "RadioLinkTaskData.hpp"
+#include "aeromight_battery/Battery.hpp"
+#include "aeromight_battery/VoltageHysterisis.hpp"
 #include "aeromight_boundaries/AeromightData.hpp"
 #include "aeromight_link/RadioLink.hpp"
 #include "aeromight_link/RadioReceiver.hpp"
@@ -27,17 +29,39 @@ extern "C"
 
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
-      constexpr float    rc_channel_deadband                      = 0.1f;
-      constexpr uint8_t  good_uplink_quality_threshold            = 50u;
-      constexpr uint32_t battery_status_transmission_period_in_ms = 5000u;
+      constexpr float   rc_channel_deadband           = 0.1f;
+      constexpr uint8_t good_uplink_quality_threshold = 50u;
+
+      // battery
+      constexpr float    voltage_divider_r1_ohm                      = 100'000.0f;
+      constexpr float    voltage_divider_r2_ohm                      = 22'000.0f;
+      constexpr float    vref_v                                      = 3.3f;
+      constexpr uint16_t adc_resolution                              = 4095u;
+      constexpr float    battery_voltage_calibration_constant        = 0.988f;
+      constexpr uint32_t battery_voltage_sensing_period_in_ms        = 500u;
+      constexpr uint32_t battery_telemetry_transmission_period_in_ms = 2000u;
 
       LogClient logger_radio_link{logging::logging_queue_sender, "radioLink"};
 
-      aeromight_link::RadioTransmitter<decltype(data->radio_link_uart.transmitter),
+      aeromight_battery::VoltageSenseConfig battery_voltage_sense{voltage_divider_r1_ohm, voltage_divider_r2_ohm, vref_v, adc_resolution};
+
+      aeromight_battery::PercentageConvertor16V8 percentage_convertor{};
+
+      aeromight_battery::Battery<decltype(data->voltage_sensing_adc),
+                                 decltype(percentage_convertor)>
+          battery{data->voltage_sensing_adc,
+                  percentage_convertor,
+                  battery_voltage_sense,
+                  battery_voltage_calibration_constant};
+
+      aeromight_link::RadioTransmitter<decltype(battery),
+                                       decltype(data->radio_link_uart.transmitter),
                                        crsf::Crsf,
                                        sys_time::ClockSource>
-          radio_transmitter{data->radio_link_uart.transmitter,
-                            battery_status_transmission_period_in_ms};
+          radio_transmitter{battery,
+                            data->radio_link_uart.transmitter,
+                            battery_voltage_sensing_period_in_ms,
+                            battery_telemetry_transmission_period_in_ms};
 
       aeromight_link::RadioReceiver<decltype(data->radio_link_uart.radio_input_receiver),
                                     decltype(data->radio_link_uart.radio_queue_buffer_index_sender),

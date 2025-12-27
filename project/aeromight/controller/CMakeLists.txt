@@ -31,6 +31,7 @@ target_link_libraries(aeromight_lib INTERFACE
 
    aeromight_boundaries
    aeromight_barometer
+   aeromight_battery
    aeromight_control
    aeromight_estimation
    aeromight_flight

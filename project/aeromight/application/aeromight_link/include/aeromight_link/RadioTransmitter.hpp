@@ -10,31 +10,38 @@
 namespace aeromight_link
 {
 
-template <interfaces::hw::IUartTransmitter UartTransmitter, typename Crsf, interfaces::IClockSource ClockSource>
+template <typename Battery, interfaces::hw::IUartTransmitter UartTransmitter, typename Crsf, interfaces::IClockSource ClockSource>
 class RadioTransmitter
 {
 public:
-   explicit RadioTransmitter(UartTransmitter& uart_transmitter,
+   explicit RadioTransmitter(Battery&         battery,
+                             UartTransmitter& uart_transmitter,
+                             const uint32_t   battery_voltage_sensing_period_in_ms,
                              const uint32_t   battery_status_transmission_period_in_ms)
-       : m_uart_transmitter{uart_transmitter},
+       : m_battery{battery},
+         m_uart_transmitter{uart_transmitter},
+         m_battery_voltage_sensing_period_in_ms{battery_voltage_sensing_period_in_ms},
          m_battery_status_transmission_period_in_ms{battery_status_transmission_period_in_ms}
 
    {
-      get_battery_status();
    }
 
    void execute()
    {
       const uint32_t clock_ms = ClockSource::now_ms();
-      if (clock_ms - m_last_battery_transmission_time > m_battery_status_transmission_period_in_ms)
+
+      if ((clock_ms - m_last_battery_voltage_sense_time) >= m_battery_voltage_sensing_period_in_ms)
       {
-         std::span<std::byte> tx_buffer = m_uart_transmitter.get_buffer();
+         m_battery.execute();
+         get_battery_status();
 
-         // serialize
-         const uint32_t bytes_written = Crsf::serialize_battery_telemetry(m_crsf_battery,
-                                                                          std::span{reinterpret_cast<uint8_t*>(tx_buffer.data()), tx_buffer.size()});
+         // update sense timestamp
+         m_last_battery_voltage_sense_time = clock_ms;
+      }
 
-         m_uart_transmitter.send_blocking(bytes_written);
+      if ((clock_ms - m_last_battery_transmission_time) >= m_battery_status_transmission_period_in_ms)
+      {
+         send_battery_telemetry();
 
          // update transmission timestamp
          m_last_battery_transmission_time = clock_ms;
@@ -44,15 +51,31 @@ public:
 private:
    void get_battery_status()
    {
-      m_crsf_battery.voltage_v         = 5u;
-      m_crsf_battery.current_a         = 10u;
-      m_crsf_battery.capacity_used_mah = 1024u;
-      m_crsf_battery.remaining_pct     = 50u;
+      const int32_t voltage_mv = m_battery.get_voltage_mv();
+
+      m_crsf_battery.voltage_10uv      = static_cast<int16_t>(voltage_mv / 100);   // 10 uV units
+      m_crsf_battery.remaining_pct     = m_battery.get_remaining_percentage();
+      m_crsf_battery.current_10ua      = 0;                                        // n/a
+      m_crsf_battery.capacity_used_mah = 0;                                        // n/a
    }
 
+   void send_battery_telemetry()
+   {
+      std::span<std::byte> tx_buffer = m_uart_transmitter.get_buffer();
+
+      // serialize
+      const uint32_t bytes_written = Crsf::serialize_battery_telemetry(m_crsf_battery,
+                                                                       std::span{reinterpret_cast<uint8_t*>(tx_buffer.data()), tx_buffer.size()});
+
+      m_uart_transmitter.send_blocking(bytes_written);
+   }
+
+   Battery&          m_battery;
    UartTransmitter&  m_uart_transmitter;
+   const uint32_t    m_battery_voltage_sensing_period_in_ms;
    const uint32_t    m_battery_status_transmission_period_in_ms;
    crsf::CrsfBattery m_crsf_battery{};
+   uint32_t          m_last_battery_voltage_sense_time{0};
    uint32_t          m_last_battery_transmission_time{0};
 };
 

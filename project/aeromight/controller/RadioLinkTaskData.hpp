@@ -2,6 +2,8 @@
 
 #include "boundaries/BufferWithOwnershipIndex.hpp"
 #include "crsf/params.hpp"
+#include "hardware_bindings.hpp"
+#include "hw/adc/Adc.hpp"
 #include "hw/uart/Transmitter.hpp"
 #include "hw/uart/UartConfig.hpp"
 #include "rtos/QueueReceiver.hpp"
@@ -52,6 +54,9 @@ struct RadioLinkTaskData
       rtos::QueueReceiver<std::size_t> radio_queue_buffer_index_receiver_from_isr{};
 
    } radio_link_uart{};
+
+   // battery voltage sensing adc
+   hw::adc::Adc voltage_sensing_adc{global_data.adc.adc1_config};
 };
 
 extern RadioLinkTaskData radio_link_task_data;
