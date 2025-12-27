@@ -8,11 +8,14 @@
 namespace crsf
 {
 
+#pragma pack(push, 1)
 struct CrsfRcChannels
 {
    std::array<uint16_t, rc_channel_count> channels{};
 };
+#pragma pack(pop)
 
+#pragma pack(push, 1)
 struct CrsfLinkStatistics
 {
    uint8_t uplink_rssi_1;           // Uplink RSSI Antenna 1 (dBm * -1)
@@ -27,7 +30,9 @@ struct CrsfLinkStatistics
    uint8_t downlink_link_quality;   // Downlink Package success rate / Link quality (%)
    int8_t  downlink_snr;            // Downlink SNR (dB)
 };
+#pragma pack(pop)
 
+#pragma pack(push, 1)
 struct CrsfLinkStatisticsTx
 {
    uint8_t uplink_rssi_db;         // RSSI (dBm * -1)
@@ -37,6 +42,7 @@ struct CrsfLinkStatisticsTx
    uint8_t downlink_rf_power_db;   // rf power in dBm
    uint8_t uplink_fps;             // rf frames per second (fps / 10)
 };
+#pragma pack(pop)
 
 struct CrsfPacket
 {

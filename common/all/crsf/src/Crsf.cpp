@@ -171,9 +171,8 @@ uint32_t Crsf::serialize_battery_telemetry(const CrsfBattery& packet, std::span<
                                                        num_bytes_frame_type +
                                                        num_bytes_frame_crc +
                                                        static_cast<uint8_t>(crsf::PayloadSize::battery);
-   static constexpr std::size_t frame_len                        = total_bytes_required - 2u;
-   static constexpr std::size_t crc_len                          = num_bytes_frame_type + static_cast<uint8_t>(crsf::PayloadSize::battery);
-   static constexpr uint8_t     voltage_and_current_scale_factor = 10u;
+   static constexpr std::size_t frame_len = total_bytes_required - 2u;
+   static constexpr std::size_t crc_len   = num_bytes_frame_type + static_cast<uint8_t>(crsf::PayloadSize::battery);
 
    error::verify(out.size() >= total_bytes_required);
 
@@ -183,12 +182,12 @@ uint32_t Crsf::serialize_battery_telemetry(const CrsfBattery& packet, std::span<
    out[bytes_written++]   = static_cast<uint8_t>(FrameType::battery_sensor);
 
    // voltage
-   const int16_t voltage = packet.voltage_v * voltage_and_current_scale_factor;
+   const int16_t voltage = packet.voltage_10uv;
    out[bytes_written++]  = static_cast<uint8_t>(voltage >> 8u) & 0xff;
    out[bytes_written++]  = static_cast<uint8_t>(voltage) & 0xff;
 
    // current
-   const int16_t current = packet.current_a * voltage_and_current_scale_factor;
+   const int16_t current = packet.current_10ua;
    out[bytes_written++]  = static_cast<uint8_t>(current >> 8u) & 0xff;
    out[bytes_written++]  = static_cast<uint8_t>(current) & 0xff;
 
