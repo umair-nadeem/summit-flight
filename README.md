@@ -15,4 +15,4 @@ Current supported MCU is STM32F411
 
 ## Status
 
-The project is under development
+The project is under development, with estimation, control, communication, and system infrastructure implemented.
