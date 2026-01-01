@@ -1,8 +1,6 @@
 # summit-flight 
 
-Flight controller written in C++20 for STM32 MCUs.
-
-It focuses on hands-on embedded software development, following principles of developing safe and predictable software (read CODING_GUIDELINES).
+Drone Flight controller written in C++20 for STM32 MCU.
 
 ## Platform
 
