@@ -1,10 +1,10 @@
 # summit-flight 
 
-Drone Flight controller written in C++20 for STM32 MCU.
+Drone flight controller built on safety-critical principles regarding architecture and design, targeted for STM32 MCU.
 
 ## Platform
 
-The current supported MCU is STM32F411
+Current supported MCU is STM32F411
 
 ## Technologies
 
