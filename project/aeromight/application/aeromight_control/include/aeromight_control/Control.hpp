@@ -161,6 +161,9 @@ private:
    void get_flight_control_setpoints()
    {
       m_last_flight_control_setpoints = m_flight_control_setpoint_storage.get_latest();
+
+      // Pilot Command Mapping: perform pitch sign inversion (flight stick pullback -> pitch up)
+      m_last_flight_control_setpoints.data.pitch *= -1.0f;
    }
 
    void move_to_killed()
