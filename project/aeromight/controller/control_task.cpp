@@ -213,21 +213,14 @@ extern "C"
          const bool     stale_sample  = (sample_age_ms > max_age_actuator_control_data_ms);
          const auto&    act           = sample.data;
 
-         if ((stale_sample) || (!act.enabled))
-         {
-            // Motors disabled → force minimum
-            data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel1, pwm_min_us);
-            data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel2, pwm_min_us);
-            data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel3, pwm_min_us);
-            data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel4, pwm_min_us);
-            return;
-         }
+         const bool enable_outputs = (!stale_sample) && (act.enabled);
 
-         // Enabled → write scaled PWM
-         data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel1, actuator_to_ccr(act.setpoints[0]));
-         data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel2, actuator_to_ccr(act.setpoints[1]));
-         data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel3, actuator_to_ccr(act.setpoints[2]));
-         data.control_task_pwm_timer.set_compare_value_for_channel(Timer::OutputChannel::channel4, actuator_to_ccr(act.setpoints[3]));
+         for (uint8_t i = 0; i < 4u; i++)
+         {
+            const uint32_t pwm = enable_outputs ? actuator_to_ccr(act.setpoints[i]) : pwm_min_us;
+
+            data.control_task_pwm_timer.set_compare_value_for_channel(data.motor_to_channel_map[i], pwm);
+         }
       }
    }
 

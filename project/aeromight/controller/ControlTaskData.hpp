@@ -18,8 +18,11 @@ namespace controller
 
 struct ControlTaskData
 {
+   using Channel = hw::timer::Timer::OutputChannel;
+
    // TIM1
-   hw::timer::Timer control_task_pwm_timer{global_data.timer.tim1_config};
+   hw::timer::Timer            control_task_pwm_timer{global_data.timer.tim1_config};
+   static constexpr std::array motor_to_channel_map{Channel::channel3, Channel::channel1, Channel::channel2, Channel::channel4};
 
    aeromight_boundaries::StateEstimation state_estimation{};
 
