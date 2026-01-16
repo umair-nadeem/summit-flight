@@ -129,7 +129,7 @@ private:
                break;
             }
 
-            if (!armed())
+            if (!armed() || !airborne())
             {
                move_to_disarmed();
             }
