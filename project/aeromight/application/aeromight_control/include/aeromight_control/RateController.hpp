@@ -33,6 +33,7 @@ public:
 
    math::Vector3 update(const math::Vector3& rate_setpoint_radps,
                         const math::Vector3& rate_gyro_measured_radps,
+                        const math::Vector3& angular_acceleration_radps2,
                         const float          dt_s,
                         const bool           run_integrator)
    {
@@ -40,13 +41,7 @@ public:
       if (!initialized)
       {
          reset();
-         initialized                   = true;
-         m_previous_gyro_rate_measured = rate_gyro_measured_radps;
-         return {};
-      }
-
-      if (dt_s <= 0.0f)
-      {
+         initialized = true;
          return {};
       }
 
@@ -57,7 +52,7 @@ public:
       const math::Vector3 rate_error = setpoints_radps - rate_gyro_measured_radps;
       const math::Vector3 p          = m_gains_p.emul(rate_error);
       const math::Vector3 i          = m_rate_integrator;
-      const math::Vector3 d          = m_gains_d.emul(rate_gyro_measured_radps - m_previous_gyro_rate_measured) / dt_s;
+      const math::Vector3 d          = m_gains_d.emul(angular_acceleration_radps2);
 
       math::Vector3 torque_cmd = p + i - d;
 
@@ -74,7 +69,6 @@ public:
          m_rate_integrator.zero();
       }
 
-      m_previous_gyro_rate_measured = rate_gyro_measured_radps;
       return torque_cmd;
    }
 
@@ -87,7 +81,6 @@ public:
    void reset()
    {
       m_rate_integrator.zero();
-      m_previous_gyro_rate_measured.zero();
    }
 
 private:
@@ -122,7 +115,6 @@ private:
    const float                m_max_pitch_rate_radps;
    const float                m_max_yaw_rate_radps;
    math::Vector3              m_rate_integrator{};
-   math::Vector3              m_previous_gyro_rate_measured{};
    bool                       initialized{false};
    std::array<bool, num_axis> m_control_saturation_positive{};
    std::array<bool, num_axis> m_control_saturation_negative{};

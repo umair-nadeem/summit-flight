@@ -10,6 +10,7 @@
 #include "error/error_handler.hpp"
 #include "estimation/AttitudeEstimator.hpp"
 #include "logging/LogClient.hpp"
+#include "math/ButterworthFilter.hpp"
 #include "math/FirstOrderLpf.hpp"
 #include "physics/constants.hpp"
 #include "rtos/QueueSender.hpp"
@@ -54,7 +55,8 @@ extern "C"
       constexpr float    max_valid_imu_sample_dt_s                      = 0.02f;
       constexpr float    max_valid_barometer_sample_dt_s                = 10.0f;
       // control parameters
-      constexpr float    gyro_lpf_cutoff_frequency_hz                   = 80.0f;
+      constexpr float    first_order_lpf_cutoff_frequency_hz            = 80.0f;
+      constexpr float    butterworth_filter_cutoff_frequency_hz         = 25.0f;
       constexpr float    time_delta_lower_limit_s                       = 0.002f;
       constexpr float    time_delta_upper_limit_s                       = 0.008f;
       constexpr float    actuator_min                                   = 0.0f;
@@ -123,6 +125,10 @@ extern "C"
       const math::Vector3 rate_gains_d{rate_controller_roll_kd, rate_controller_pitch_kd, rate_controller_yaw_kd};
       const math::Vector3 rate_integrator_limits{rate_controller_roll_integrator_limit, rate_controller_pitch_integrator_limit, rate_controller_yaw_integrator_limit};
 
+      math::ButterworthFilter gyro_derivative_x_lpf2{butterworth_filter_cutoff_frequency_hz, controller::task::control_task_period_in_ms / 1000.0f};
+      math::ButterworthFilter gyro_derivative_y_lpf2{butterworth_filter_cutoff_frequency_hz, controller::task::control_task_period_in_ms / 1000.0f};
+      math::ButterworthFilter gyro_derivative_z_lpf2{butterworth_filter_cutoff_frequency_hz, controller::task::control_task_period_in_ms / 1000.0f};
+
       aeromight_control::RateController rate_controller{rate_gains_p,
                                                         rate_gains_i,
                                                         rate_gains_d,
@@ -136,14 +142,15 @@ extern "C"
                                                             actuator_max,
                                                             yaw_saturation_limit_factor};
 
-      math::FirstOrderLpf gyro_x_lpf{gyro_lpf_cutoff_frequency_hz};
-      math::FirstOrderLpf gyro_y_lpf{gyro_lpf_cutoff_frequency_hz};
-      math::FirstOrderLpf gyro_z_lpf{gyro_lpf_cutoff_frequency_hz};
+      math::FirstOrderLpf gyro_x_lpf{first_order_lpf_cutoff_frequency_hz};
+      math::FirstOrderLpf gyro_y_lpf{first_order_lpf_cutoff_frequency_hz};
+      math::FirstOrderLpf gyro_z_lpf{first_order_lpf_cutoff_frequency_hz};
 
       aeromight_control::Control<decltype(attitude_controller),
                                  decltype(rate_controller),
                                  decltype(control_allocator),
                                  decltype(gyro_x_lpf),
+                                 decltype(gyro_derivative_x_lpf2),
                                  sys_time::ClockSource,
                                  LogClient>
           control{attitude_controller,
@@ -152,6 +159,9 @@ extern "C"
                   gyro_x_lpf,
                   gyro_y_lpf,
                   gyro_z_lpf,
+                  gyro_derivative_x_lpf2,
+                  gyro_derivative_y_lpf2,
+                  gyro_derivative_z_lpf2,
                   aeromight_boundaries::aeromight_data.actuator_control,
                   aeromight_boundaries::aeromight_data.control_health_storage,
                   aeromight_boundaries::aeromight_data.flight_control_setpoints,
