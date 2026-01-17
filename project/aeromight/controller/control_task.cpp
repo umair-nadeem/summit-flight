@@ -53,7 +53,8 @@ extern "C"
       constexpr float    max_valid_imu_sample_dt_s                      = 0.02f;
       constexpr float    max_valid_barometer_sample_dt_s                = 10.0f;
       // control parameters
-      constexpr float    time_delta_limit_s                             = 0.008f;
+      constexpr float    time_delta_lower_limit_s                       = 0.001f;
+      constexpr float    time_delta_upper_limit_s                       = 0.008f;
       constexpr float    actuator_min                                   = 0.0f;
       constexpr float    actuator_max                                   = 1.0f;
       constexpr float    lift_throttle                                  = 0.05f;
@@ -146,7 +147,8 @@ extern "C"
                   aeromight_boundaries::aeromight_data.flight_control_setpoints,
                   data->state_estimation,
                   logger_control,
-                  time_delta_limit_s,
+                  time_delta_lower_limit_s,
+                  time_delta_upper_limit_s,
                   max_roll_rate_radps,
                   max_pitch_rate_radps,
                   max_yaw_rate_radps,

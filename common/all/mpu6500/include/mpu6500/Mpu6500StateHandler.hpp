@@ -144,9 +144,9 @@ public:
       m_tx_buffer[0] = get_write_spi_command(params::smplrt_div_reg);
       m_tx_buffer[1] = m_sample_rate_divider;                                                                  // sample rate
       m_tx_buffer[2] = m_dlpf_config & params::ConfigBitMask::dlpf_cfg;                                        // config reg
-      m_tx_buffer[3] = ((m_gyro_full_scale << three_bit_shift) & params::GyroConfigBitMask::gyro_fs_sel);      // gyro config reg
+      m_tx_buffer[3] = ((m_gyro_full_scale << three_bit_shift) & params::GyroConfigBitMask::gyro_fs_sel);      // gyro config reg, FCHOICE_B[1:0]=0
       m_tx_buffer[4] = ((m_accel_full_scale << three_bit_shift) & params::AccelConfigBitMask::accel_fs_sel);   // accel config reg
-      m_tx_buffer[5] = m_accel_a_dlpf_config & params::AccelConfig2BitMask::accel_a_dlpf_config;               // accel config 2 reg
+      m_tx_buffer[5] = m_accel_a_dlpf_config & params::AccelConfig2BitMask::accel_a_dlpf_config;               // accel config 2 reg, ACCEL_FCHOICE_B=0
 
       m_spi_master.transfer(std::span{m_tx_buffer.data(), burst_len}, std::span{m_rx_buffer.data(), burst_len});
    }

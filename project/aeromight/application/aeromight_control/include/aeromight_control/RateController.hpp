@@ -40,7 +40,8 @@ public:
       if (!initialized)
       {
          reset();
-         initialized = true;
+         initialized                   = true;
+         m_previous_gyro_rate_measured = rate_gyro_measured_radps;
          return {};
       }
 
@@ -54,8 +55,11 @@ public:
                                           std::clamp(rate_setpoint_radps[2], -m_max_yaw_rate_radps, m_max_yaw_rate_radps)};
 
       const math::Vector3 rate_error = setpoints_radps - rate_gyro_measured_radps;
+      const math::Vector3 p          = m_gains_p.emul(rate_error);
+      const math::Vector3 i          = m_rate_integrator;
+      const math::Vector3 d          = m_gains_d.emul(rate_gyro_measured_radps - m_previous_gyro_rate_measured) / dt_s;
 
-      math::Vector3 torque_cmd = (m_gains_p.emul(rate_error)) + m_rate_integrator - (m_gains_d.emul(rate_gyro_measured_radps - m_previous_gyro_rate_measured) / dt_s);
+      math::Vector3 torque_cmd = p + i - d;
 
       torque_cmd[0] = std::clamp(torque_cmd[0], -m_torque_output_limit, m_torque_output_limit);
       torque_cmd[1] = std::clamp(torque_cmd[1], -m_torque_output_limit, m_torque_output_limit);

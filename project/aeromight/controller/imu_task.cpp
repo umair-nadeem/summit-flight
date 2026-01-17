@@ -30,7 +30,7 @@ extern "C"
       constexpr uint32_t mpu6500_receive_wait_timeout_ms              = 2u * controller::task::imu_task_period_in_ms;
       constexpr uint8_t  mpu6500_read_failures_limit                  = 5u;
       constexpr uint8_t  mpu6500_sample_rate_divider                  = 0x03;
-      constexpr uint8_t  mpu6500_dlpf_config                          = 0x02;
+      constexpr uint8_t  mpu6500_dlpf_config                          = 0x03;
       constexpr uint8_t  mpu6500_gyro_full_scale                      = 0x03;
       constexpr uint8_t  mpu6500_accel_full_scale                     = 0x03;
       constexpr uint8_t  mpu6500_accel_a_dlpf_config                  = 0x03;

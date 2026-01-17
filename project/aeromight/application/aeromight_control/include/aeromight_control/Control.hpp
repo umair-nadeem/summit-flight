@@ -30,7 +30,8 @@ public:
                     const FlightControlSetpoints&                flight_control_setpoint_storage,
                     const aeromight_boundaries::StateEstimation& state_estimation_data,
                     Logger&                                      logger,
-                    const float                                  time_delta_limit_s,
+                    const float                                  time_delta_lower_limit_s,
+                    const float                                  time_delta_upper_limit_s,
                     const float                                  max_roll_rate_radps,
                     const float                                  max_pitch_rate_radps,
                     const float                                  max_yaw_rate_radps,
@@ -45,7 +46,8 @@ public:
          m_flight_control_setpoint_storage{flight_control_setpoint_storage},
          m_state_estimation_data{state_estimation_data},
          m_logger{logger},
-         m_time_delta_limit_s{time_delta_limit_s},
+         m_time_delta_lower_limit_s{time_delta_lower_limit_s},
+         m_time_delta_upper_limit_s{time_delta_upper_limit_s},
          m_max_roll_rate_radps{max_roll_rate_radps},
          m_max_pitch_rate_radps{max_pitch_rate_radps},
          m_max_yaw_rate_radps{max_yaw_rate_radps},
@@ -224,7 +226,7 @@ private:
 
    void run_controllers(const bool airborne)
    {
-      m_time_delta_s = std::clamp(m_time_delta_s, 0.0f, m_time_delta_limit_s);
+      m_time_delta_s = std::clamp(m_time_delta_s, m_time_delta_lower_limit_s, m_time_delta_upper_limit_s);
 
       run_attitude_controller();
 
@@ -277,12 +279,18 @@ private:
    void print_log()
    {
       static uint32_t m_counter{0};
-      if ((m_counter++ % 250) == 0)
+      if ((m_counter++ % 125) == 0)
       {
-         m_logger.printf("r=%.2f, p=%.2f, y=%.2f, r=%.2f, p=%.2f, y=%.2f, t=%.2f, 1=%.2f, 2=%.2f, 3=%.2f, 4=%.2f",
+         m_logger.printf("%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, t=%.2f, 1=%.2f, 2=%.2f, 3=%.2f, 4=%.2f",
+                         m_state_estimation_data.gyro_radps[0],
+                         m_state_estimation_data.gyro_radps[1],
+                         m_state_estimation_data.gyro_radps[2],
                          m_state_estimation_data.euler.roll(),
                          m_state_estimation_data.euler.pitch(),
                          m_state_estimation_data.euler.yaw(),
+                         m_desired_rate_radps[0],
+                         m_desired_rate_radps[1],
+                         m_desired_rate_radps[2],
                          m_desired_torque[0],
                          m_desired_torque[1],
                          m_desired_torque[2],
@@ -317,7 +325,8 @@ private:
    const FlightControlSetpoints&         m_flight_control_setpoint_storage;
    const StateEstimation&                m_state_estimation_data;
    Logger&                               m_logger;
-   const float                           m_time_delta_limit_s;
+   const float                           m_time_delta_lower_limit_s;
+   const float                           m_time_delta_upper_limit_s;
    const float                           m_max_roll_rate_radps;
    const float                           m_max_pitch_rate_radps;
    const float                           m_max_yaw_rate_radps;
