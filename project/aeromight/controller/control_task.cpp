@@ -57,6 +57,7 @@ extern "C"
       constexpr float    actuator_min                                   = 0.0f;
       constexpr float    actuator_max                                   = 1.0f;
       constexpr float    lift_throttle                                  = 0.05f;
+      constexpr float    hover_throttle                                 = 0.50f;
       constexpr float    attitude_controller_roll_kp                    = 4.0f;
       constexpr float    attitude_controller_pitch_kp                   = 4.0f;
       constexpr float    attitude_controller_yaw_kp                     = 0.0f;
@@ -150,7 +151,8 @@ extern "C"
                   max_pitch_rate_radps,
                   max_yaw_rate_radps,
                   max_tilt_angle_rad,
-                  lift_throttle};
+                  lift_throttle,
+                  hover_throttle};
 
       aeromight_control::EstimationAndControl<decltype(estimation),
                                               decltype(control)>

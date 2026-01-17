@@ -35,7 +35,8 @@ public:
                     const float                                  max_pitch_rate_radps,
                     const float                                  max_yaw_rate_radps,
                     const float                                  max_tilt_angle_rad,
-                    const float                                  lift_throttle)
+                    const float                                  lift_throttle,
+                    const float                                  hover_throttle)
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
          m_control_allocator{control_allocator},
@@ -49,7 +50,8 @@ public:
          m_max_pitch_rate_radps{max_pitch_rate_radps},
          m_max_yaw_rate_radps{max_yaw_rate_radps},
          m_max_tilt_angle_rad{max_tilt_angle_rad},
-         m_lift_throttle{lift_throttle}
+         m_lift_throttle{lift_throttle},
+         m_hover_throttle{hover_throttle}
 
    {
       m_logger.enable();
@@ -77,6 +79,8 @@ public:
       publish_actuator_setpoints();
 
       publish_health();
+
+      print_log();
    }
 
    aeromight_boundaries::ControlState get_state() const
@@ -134,7 +138,7 @@ private:
                move_to_disarmed();
             }
 
-            run_controllers(true);
+            run_controllers(m_last_flight_control_setpoints.data.throttle > m_hover_throttle);
             run_control_allocator();
             break;
 
@@ -225,23 +229,6 @@ private:
       run_attitude_controller();
 
       m_desired_torque = run_rate_controller(airborne);
-
-      static uint32_t m_counter{0};
-      if ((m_counter++ % 250) == 0)
-      {
-         m_logger.printf("r=%.2f, p=%.2f, y=%.2f, r=%.2f, p=%.2f, y=%.2f, t=%.2f, 1=%.2f, 2=%.2f, 3=%.2f, 4=%.2f",
-                         m_state_estimation_data.euler.roll(),
-                         m_state_estimation_data.euler.pitch(),
-                         m_state_estimation_data.euler.yaw(),
-                         m_desired_torque[0],
-                         m_desired_torque[1],
-                         m_desired_torque[2],
-                         m_last_flight_control_setpoints.data.throttle,
-                         m_actuator_control.setpoints[0],
-                         m_actuator_control.setpoints[1],
-                         m_actuator_control.setpoints[2],
-                         m_actuator_control.setpoints[3]);
-      }
    }
 
    void run_control_allocator()
@@ -287,6 +274,26 @@ private:
       m_desired_rate_radps.zero();
    }
 
+   void print_log()
+   {
+      static uint32_t m_counter{0};
+      if ((m_counter++ % 250) == 0)
+      {
+         m_logger.printf("r=%.2f, p=%.2f, y=%.2f, r=%.2f, p=%.2f, y=%.2f, t=%.2f, 1=%.2f, 2=%.2f, 3=%.2f, 4=%.2f",
+                         m_state_estimation_data.euler.roll(),
+                         m_state_estimation_data.euler.pitch(),
+                         m_state_estimation_data.euler.yaw(),
+                         m_desired_torque[0],
+                         m_desired_torque[1],
+                         m_desired_torque[2],
+                         m_last_flight_control_setpoints.data.throttle,
+                         m_actuator_control.setpoints[0],
+                         m_actuator_control.setpoints[1],
+                         m_actuator_control.setpoints[2],
+                         m_actuator_control.setpoints[3]);
+      }
+   }
+
    bool armed() const noexcept
    {
       return m_last_flight_control_setpoints.data.armed;
@@ -316,6 +323,7 @@ private:
    const float                           m_max_yaw_rate_radps;
    const float                           m_max_tilt_angle_rad;
    const float                           m_lift_throttle;
+   const float                           m_hover_throttle;
    aeromight_boundaries::ActuatorControl m_actuator_control{};
    aeromight_boundaries::ControlHealth   m_local_control_health{};
    FlightControlSetpoints::Sample        m_last_flight_control_setpoints{};
