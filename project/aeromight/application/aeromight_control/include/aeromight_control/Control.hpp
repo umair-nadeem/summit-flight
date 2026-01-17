@@ -13,7 +13,12 @@
 namespace aeromight_control
 {
 
-template <typename AttitudeController, typename RateController, typename ControlAllocator, interfaces::IClockSource ClockSource, typename Logger>
+template <typename AttitudeController,
+          typename RateController,
+          typename ControlAllocator,
+          typename FirstOrderLpf,
+          interfaces::IClockSource ClockSource,
+          typename Logger>
 class Control
 {
    using ActuatorControl        = boundaries::SharedData<aeromight_boundaries::ActuatorControl>;
@@ -22,9 +27,14 @@ class Control
    using StateEstimation        = aeromight_boundaries::StateEstimation;
 
 public:
+   static constexpr std::size_t num_axis = 3u;
+
    explicit Control(AttitudeController&                          attitude_controller,
                     RateController&                              rate_controller,
                     ControlAllocator&                            control_allocator,
+                    FirstOrderLpf&                               gyro_x_lpf,
+                    FirstOrderLpf&                               gyro_y_lpf,
+                    FirstOrderLpf&                               gyro_z_lpf,
                     ActuatorControl&                             actuator_control_storage,
                     ControlHealth&                               control_health_storage,
                     const FlightControlSetpoints&                flight_control_setpoint_storage,
@@ -41,6 +51,7 @@ public:
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
          m_control_allocator{control_allocator},
+         m_gyro_lpf{gyro_x_lpf, gyro_y_lpf, gyro_z_lpf},
          m_actuator_control_storage{actuator_control_storage},
          m_control_health_storage{control_health_storage},
          m_flight_control_setpoint_storage{flight_control_setpoint_storage},
@@ -159,8 +170,11 @@ private:
 
    void get_time()
    {
-      m_current_time_ms        = ClockSource::now_ms();
-      m_time_delta_s           = static_cast<float>(m_current_time_ms - m_last_execution_time_ms) / 1000.0f;
+      m_current_time_ms = ClockSource::now_ms();
+
+      m_time_delta_s = static_cast<float>(m_current_time_ms - m_last_execution_time_ms) / 1000.0f;
+      m_time_delta_s = std::clamp(m_time_delta_s, m_time_delta_lower_limit_s, m_time_delta_upper_limit_s);
+
       m_last_execution_time_ms = m_current_time_ms;
    }
 
@@ -175,6 +189,7 @@ private:
    void move_to_killed()
    {
       reset();
+      reset_filters();
       stop_actuator();
       m_local_control_health.state = aeromight_boundaries::ControlState::emergency_kill;
       m_logger.print("killed");
@@ -183,6 +198,7 @@ private:
    void move_to_disarmed()
    {
       reset();
+      reset_filters();
       stop_actuator();
       m_local_control_health.state = aeromight_boundaries::ControlState::disarmed;
       m_logger.print("disarmed");
@@ -191,6 +207,7 @@ private:
    void move_to_armed()
    {
       reset();
+      reset_filters();
       m_actuator_control.setpoints.zero();
       m_local_control_health.state = aeromight_boundaries::ControlState::armed_on_ground;
       m_logger.print("armed on ground");
@@ -199,6 +216,7 @@ private:
    void move_to_airborne()
    {
       reset();
+      reset_filters();
       start_actuator();
       m_local_control_health.state = aeromight_boundaries::ControlState::airborne;
       m_logger.print("airborne");
@@ -221,13 +239,16 @@ private:
 
    math::Vector3 run_rate_controller(const bool run_integrator)
    {
-      return m_rate_controller.update(m_desired_rate_radps, m_state_estimation_data.gyro_radps, m_time_delta_s, run_integrator);
+      for (uint8_t i = 0; i < num_axis; i++)
+      {
+         m_filtered_gyro_radps[i] = m_gyro_lpf[i].get().apply(m_state_estimation_data.gyro_radps[i], m_time_delta_s);
+      }
+
+      return m_rate_controller.update(m_desired_rate_radps, m_filtered_gyro_radps, m_time_delta_s, run_integrator);
    }
 
    void run_controllers(const bool airborne)
    {
-      m_time_delta_s = std::clamp(m_time_delta_s, m_time_delta_lower_limit_s, m_time_delta_upper_limit_s);
-
       run_attitude_controller();
 
       m_desired_torque = run_rate_controller(airborne);
@@ -276,15 +297,23 @@ private:
       m_desired_rate_radps.zero();
    }
 
+   void reset_filters()
+   {
+      for (auto& filter : m_gyro_lpf)
+      {
+         filter.get().reset();
+      }
+   }
+
    void print_log()
    {
       static uint32_t m_counter{0};
       if ((m_counter++ % 125) == 0)
       {
          m_logger.printf("%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, t=%.2f, 1=%.2f, 2=%.2f, 3=%.2f, 4=%.2f",
-                         m_state_estimation_data.gyro_radps[0],
-                         m_state_estimation_data.gyro_radps[1],
-                         m_state_estimation_data.gyro_radps[2],
+                         m_filtered_gyro_radps[0],
+                         m_filtered_gyro_radps[1],
+                         m_filtered_gyro_radps[2],
                          m_state_estimation_data.euler.roll(),
                          m_state_estimation_data.euler.pitch(),
                          m_state_estimation_data.euler.yaw(),
@@ -317,30 +346,32 @@ private:
       return (m_last_flight_control_setpoints.data.throttle > m_lift_throttle);
    }
 
-   AttitudeController&                   m_attitude_controller;
-   RateController&                       m_rate_controller;
-   ControlAllocator&                     m_control_allocator;
-   ActuatorControl&                      m_actuator_control_storage;
-   ControlHealth&                        m_control_health_storage;
-   const FlightControlSetpoints&         m_flight_control_setpoint_storage;
-   const StateEstimation&                m_state_estimation_data;
-   Logger&                               m_logger;
-   const float                           m_time_delta_lower_limit_s;
-   const float                           m_time_delta_upper_limit_s;
-   const float                           m_max_roll_rate_radps;
-   const float                           m_max_pitch_rate_radps;
-   const float                           m_max_yaw_rate_radps;
-   const float                           m_max_tilt_angle_rad;
-   const float                           m_lift_throttle;
-   const float                           m_hover_throttle;
-   aeromight_boundaries::ActuatorControl m_actuator_control{};
-   aeromight_boundaries::ControlHealth   m_local_control_health{};
-   FlightControlSetpoints::Sample        m_last_flight_control_setpoints{};
-   math::Vector3                         m_desired_rate_radps{};
-   math::Vector3                         m_desired_torque{};
-   float                                 m_time_delta_s{0.0f};
-   uint32_t                              m_current_time_ms{0};
-   uint32_t                              m_last_execution_time_ms{0};
+   AttitudeController&                                         m_attitude_controller;
+   RateController&                                             m_rate_controller;
+   ControlAllocator&                                           m_control_allocator;
+   std::array<std::reference_wrapper<FirstOrderLpf>, num_axis> m_gyro_lpf;
+   ActuatorControl&                                            m_actuator_control_storage;
+   ControlHealth&                                              m_control_health_storage;
+   const FlightControlSetpoints&                               m_flight_control_setpoint_storage;
+   const StateEstimation&                                      m_state_estimation_data;
+   Logger&                                                     m_logger;
+   const float                                                 m_time_delta_lower_limit_s;
+   const float                                                 m_time_delta_upper_limit_s;
+   const float                                                 m_max_roll_rate_radps;
+   const float                                                 m_max_pitch_rate_radps;
+   const float                                                 m_max_yaw_rate_radps;
+   const float                                                 m_max_tilt_angle_rad;
+   const float                                                 m_lift_throttle;
+   const float                                                 m_hover_throttle;
+   aeromight_boundaries::ActuatorControl                       m_actuator_control{};
+   aeromight_boundaries::ControlHealth                         m_local_control_health{};
+   FlightControlSetpoints::Sample                              m_last_flight_control_setpoints{};
+   math::Vector3                                               m_filtered_gyro_radps{};
+   math::Vector3                                               m_desired_rate_radps{};
+   math::Vector3                                               m_desired_torque{};
+   float                                                       m_time_delta_s{0.0f};
+   uint32_t                                                    m_current_time_ms{0};
+   uint32_t                                                    m_last_execution_time_ms{0};
 };
 
 }   // namespace aeromight_control

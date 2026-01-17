@@ -10,6 +10,7 @@
 #include "error/error_handler.hpp"
 #include "estimation/AttitudeEstimator.hpp"
 #include "logging/LogClient.hpp"
+#include "math/FirstOrderLpf.hpp"
 #include "physics/constants.hpp"
 #include "rtos/QueueSender.hpp"
 #include "rtos/periodic_task.hpp"
@@ -53,7 +54,8 @@ extern "C"
       constexpr float    max_valid_imu_sample_dt_s                      = 0.02f;
       constexpr float    max_valid_barometer_sample_dt_s                = 10.0f;
       // control parameters
-      constexpr float    time_delta_lower_limit_s                       = 0.001f;
+      constexpr float    gyro_lpf_cutoff_frequency_hz                   = 80.0f;
+      constexpr float    time_delta_lower_limit_s                       = 0.002f;
       constexpr float    time_delta_upper_limit_s                       = 0.008f;
       constexpr float    actuator_min                                   = 0.0f;
       constexpr float    actuator_max                                   = 1.0f;
@@ -69,8 +71,8 @@ extern "C"
       constexpr float    rate_controller_roll_ki                        = 0.04f;
       constexpr float    rate_controller_pitch_ki                       = 0.04f;
       constexpr float    rate_controller_yaw_ki                         = 0.025f;
-      constexpr float    rate_controller_roll_kd                        = 0.01f;
-      constexpr float    rate_controller_pitch_kd                       = 0.01f;
+      constexpr float    rate_controller_roll_kd                        = 0.0075f;
+      constexpr float    rate_controller_pitch_kd                       = 0.0075f;
       constexpr float    rate_controller_yaw_kd                         = 0.00f;
       constexpr float    rate_controller_roll_integrator_limit          = 0.3f;
       constexpr float    rate_controller_pitch_integrator_limit         = 0.3f;
@@ -134,14 +136,22 @@ extern "C"
                                                             actuator_max,
                                                             yaw_saturation_limit_factor};
 
+      math::FirstOrderLpf gyro_x_lpf{gyro_lpf_cutoff_frequency_hz};
+      math::FirstOrderLpf gyro_y_lpf{gyro_lpf_cutoff_frequency_hz};
+      math::FirstOrderLpf gyro_z_lpf{gyro_lpf_cutoff_frequency_hz};
+
       aeromight_control::Control<decltype(attitude_controller),
                                  decltype(rate_controller),
                                  decltype(control_allocator),
+                                 decltype(gyro_x_lpf),
                                  sys_time::ClockSource,
                                  LogClient>
           control{attitude_controller,
                   rate_controller,
                   control_allocator,
+                  gyro_x_lpf,
+                  gyro_y_lpf,
+                  gyro_z_lpf,
                   aeromight_boundaries::aeromight_data.actuator_control,
                   aeromight_boundaries::aeromight_data.control_health_storage,
                   aeromight_boundaries::aeromight_data.flight_control_setpoints,
