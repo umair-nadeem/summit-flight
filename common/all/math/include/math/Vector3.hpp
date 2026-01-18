@@ -13,9 +13,13 @@ public:
 
    using BaseVector = Vector<T, size>;
 
-   Vec3()                       = default;
    Vec3(const Vec3&)            = default;
    Vec3& operator=(const Vec3&) = default;
+
+   Vec3()
+       : BaseVector{}
+   {
+   }
 
    explicit Vec3(const std::array<T, size>& other)
        : BaseVector{other}

@@ -102,15 +102,23 @@ public:
 
    void disarm_control()
    {
-      m_local_flight_control_setpoints.armed = false;
-      m_local_flight_control_setpoints.kill  = false;
+      m_local_flight_control_setpoints.armed    = false;
+      m_local_flight_control_setpoints.kill     = false;
+      m_local_flight_control_setpoints.throttle = 0.0f;
+      m_local_flight_control_setpoints.roll     = 0.0f;
+      m_local_flight_control_setpoints.pitch    = 0.0f;
+      m_local_flight_control_setpoints.yaw      = 0.0f;
       m_flight_control_setpoints_storage.update_latest(m_local_flight_control_setpoints, m_current_time_ms);
    }
 
    void kill_actuator()
    {
-      m_local_flight_control_setpoints.armed = false;
-      m_local_flight_control_setpoints.kill  = true;
+      m_local_flight_control_setpoints.armed    = false;
+      m_local_flight_control_setpoints.kill     = true;
+      m_local_flight_control_setpoints.throttle = 0.0f;
+      m_local_flight_control_setpoints.roll     = 0.0f;
+      m_local_flight_control_setpoints.pitch    = 0.0f;
+      m_local_flight_control_setpoints.yaw      = 0.0f;
       m_flight_control_setpoints_storage.update_latest(m_local_flight_control_setpoints, m_current_time_ms);
    }
 
@@ -135,19 +143,6 @@ public:
       m_local_flight_control_setpoints.yaw   = m_last_radio_control_setpoints.data.input.yaw;
 
       m_local_flight_control_setpoints.mode  = aeromight_boundaries::ControlMode::altitude_hold;
-      m_local_flight_control_setpoints.armed = true;
-      m_local_flight_control_setpoints.kill  = false;
-
-      m_flight_control_setpoints_storage.update_latest(m_local_flight_control_setpoints, m_current_time_ms);
-   }
-
-   void publish_auto_land_setpoint()
-   {
-      m_local_flight_control_setpoints.roll  = 0.0f;
-      m_local_flight_control_setpoints.pitch = 0.0f;
-      m_local_flight_control_setpoints.yaw   = m_last_radio_control_setpoints.data.input.yaw;
-
-      m_local_flight_control_setpoints.mode  = aeromight_boundaries::ControlMode::auto_land;
       m_local_flight_control_setpoints.armed = true;
       m_local_flight_control_setpoints.kill  = false;
 
@@ -247,11 +242,6 @@ public:
    bool timeout_control_readiness() const
    {
       return ((m_current_time_ms - m_reference_time_ms) >= m_timeout_control_readiness_ms);
-   }
-
-   bool timeout_auto_land() const
-   {
-      return ((m_current_time_ms - m_reference_time_ms) >= m_timeout_auto_land_ms);
    }
 
    bool is_state_change_persistent() const
@@ -365,18 +355,6 @@ public:
                  (m_last_radio_link_actuals.data.link_rssi_dbm >= m_min_good_signal_rssi_dbm));
       }
 
-      return false;
-   }
-
-   // cppcheck-suppress functionStatic
-   bool takeover_requested() const
-   {
-      return false;
-   }
-
-   // cppcheck-suppress functionStatic
-   bool landing_complete() const
-   {
       return false;
    }
 

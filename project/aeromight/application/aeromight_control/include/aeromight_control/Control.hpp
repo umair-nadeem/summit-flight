@@ -98,9 +98,7 @@ public:
 
       publish_health();
 
-      print_log();
-
-      m_last_filtered_gyro_rate_radps = m_filtered_gyro_radps;
+      m_last_filtered_gyro_radps = m_filtered_gyro_radps;
    }
 
    aeromight_boundaries::ControlState get_state() const
@@ -124,7 +122,7 @@ private:
             }
             break;
 
-         case aeromight_boundaries::ControlState::armed_on_ground:
+         case aeromight_boundaries::ControlState::armed:
             if (kill())
             {
                move_to_killed();
@@ -137,29 +135,7 @@ private:
                break;
             }
 
-            if (airborne())
-            {
-               move_to_airborne();
-            }
-
-            run_controllers(false);
-            m_actuator_control.setpoints.zero();
-            break;
-
-         case aeromight_boundaries::ControlState::airborne:
-            if (kill())
-            {
-               move_to_killed();
-               break;
-            }
-
-            if (!armed() || !airborne())
-            {
-               move_to_disarmed();
-            }
-
-            run_controllers(m_last_flight_control_setpoints.data.throttle > m_hover_throttle);
-            run_control_allocator();
+            run_control();
             break;
 
          case aeromight_boundaries::ControlState::emergency_kill:
@@ -215,43 +191,42 @@ private:
    {
       reset();
       reset_filters();
-      m_actuator_control.setpoints.zero();
-      m_local_control_health.state = aeromight_boundaries::ControlState::armed_on_ground;
-      m_logger.print("armed on ground");
-   }
-
-   void move_to_airborne()
-   {
-      reset();
-      reset_filters();
       start_actuator();
-      m_local_control_health.state = aeromight_boundaries::ControlState::airborne;
-      m_logger.print("airborne");
+      m_local_control_health.state = aeromight_boundaries::ControlState::armed;
+      m_logger.print("armed");
    }
 
-   void run_attitude_controller()
+   void get_rate_setpoints(const bool run_attitude_controller)
    {
-      const math::Vector3 angle_setpoint_rad{m_last_flight_control_setpoints.data.roll * m_max_tilt_angle_rad,
-                                             m_last_flight_control_setpoints.data.pitch * m_max_tilt_angle_rad,
-                                             0.0f};
-      const math::Vector3 angle_estimation_rad{m_state_estimation.euler.roll(),
-                                               m_state_estimation.euler.pitch(),
-                                               m_state_estimation.euler.yaw()};
+      if (run_attitude_controller)
+      {
+         const math::Vector3 angle_setpoint_rad{m_last_flight_control_setpoints.data.roll * m_max_tilt_angle_rad,
+                                                m_last_flight_control_setpoints.data.pitch * m_max_tilt_angle_rad,
+                                                0.0f};
+         const math::Vector3 angle_estimation_rad{m_state_estimation.euler.roll(),
+                                                  m_state_estimation.euler.pitch(),
+                                                  m_state_estimation.euler.yaw()};
 
-      m_desired_rate_radps = m_attitude_controller.update(angle_setpoint_rad, angle_estimation_rad);
+         m_angular_rate_setpoints = m_attitude_controller.update(angle_setpoint_rad, angle_estimation_rad);
+      }
+      else
+      {
+         m_angular_rate_setpoints[aeromight_boundaries::ControlAxis::roll]  = (m_last_flight_control_setpoints.data.roll * m_max_roll_rate_radps);
+         m_angular_rate_setpoints[aeromight_boundaries::ControlAxis::pitch] = (m_last_flight_control_setpoints.data.pitch * m_max_pitch_rate_radps);
+      }
 
-      // yaw always rate-controlled
-      m_desired_rate_radps[aeromight_boundaries::ControlAxis::yaw] = (m_last_flight_control_setpoints.data.yaw * m_max_yaw_rate_radps);
+      // yaw always bypassed
+      m_angular_rate_setpoints[aeromight_boundaries::ControlAxis::yaw] = (m_last_flight_control_setpoints.data.yaw * m_max_yaw_rate_radps);
    }
 
-   math::Vector3 run_rate_controller(const bool run_integrator)
+   void get_torque_setpoints(const bool run_integrator)
    {
       for (uint8_t i = 0; i < num_axis; i++)
       {
          m_filtered_gyro_radps[i] = m_gyro_lpf[i].get().apply(m_state_estimation.gyro_radps[i], m_time_delta_s);
       }
 
-      const math::Vector3 gyro_rate_derivative = {(m_filtered_gyro_radps - m_last_filtered_gyro_rate_radps) / m_time_delta_s};
+      const math::Vector3 gyro_rate_derivative = {(m_filtered_gyro_radps - m_last_filtered_gyro_radps) / m_time_delta_s};
       math::Vector3       filtered_angular_acceleration{};
 
       for (uint8_t i = 0; i < num_axis; i++)
@@ -259,21 +234,14 @@ private:
          filtered_angular_acceleration[i] = m_angular_acceleration_lpf2[i].get().apply(gyro_rate_derivative[i]);
       }
 
-      return m_rate_controller.update(m_desired_rate_radps, m_filtered_gyro_radps, filtered_angular_acceleration, m_time_delta_s, run_integrator);
+      m_torque_setpoints = m_rate_controller.update(m_angular_rate_setpoints, m_filtered_gyro_radps, filtered_angular_acceleration, m_time_delta_s, run_integrator);
    }
 
-   void run_controllers(const bool airborne)
+   void get_actuator_setpoints()
    {
-      run_attitude_controller();
-
-      m_desired_torque = run_rate_controller(airborne);
-   }
-
-   void run_control_allocator()
-   {
-      const math::Vector4 control_setpoints{m_desired_torque[aeromight_boundaries::ControlAxis::roll],
-                                            m_desired_torque[aeromight_boundaries::ControlAxis::pitch],
-                                            m_desired_torque[aeromight_boundaries::ControlAxis::yaw],
+      const math::Vector4 control_setpoints{m_torque_setpoints[aeromight_boundaries::ControlAxis::roll],
+                                            m_torque_setpoints[aeromight_boundaries::ControlAxis::pitch],
+                                            m_torque_setpoints[aeromight_boundaries::ControlAxis::yaw],
                                             m_last_flight_control_setpoints.data.throttle};
 
       m_control_allocator.set_control_setpoints(control_setpoints);
@@ -286,14 +254,25 @@ private:
       m_rate_controller.set_saturation_status(m_control_allocator.get_actuator_saturation_positive(), m_control_allocator.get_actuator_saturation_negative());
    }
 
+   void run_control()
+   {
+      get_rate_setpoints(true);
+      get_torque_setpoints(m_last_flight_control_setpoints.data.throttle > m_hover_throttle);
+      get_actuator_setpoints();
+
+      print_log();
+   }
+
    void start_actuator()
    {
       m_actuator_control.enabled = true;
+      m_actuator_control.setpoints.zero();
    }
 
    void stop_actuator()
    {
       m_actuator_control.enabled = false;
+      m_actuator_control.setpoints.zero();
    }
 
    void publish_actuator_setpoints()
@@ -309,7 +288,8 @@ private:
    void reset()
    {
       m_rate_controller.reset();
-      m_desired_rate_radps.zero();
+      m_angular_rate_setpoints.zero();
+      m_torque_setpoints.zero();
    }
 
    void reset_filters()
@@ -323,8 +303,6 @@ private:
       {
          filter.get().reset();
       }
-
-      m_last_filtered_gyro_rate_radps = m_filtered_gyro_radps;
    }
 
    void print_log()
@@ -332,19 +310,19 @@ private:
       static uint32_t m_counter{0};
       if ((m_counter++ % 125) == 0)
       {
-         m_logger.printf("%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, t=%.2f, 1=%.2f, 2=%.2f, 3=%.2f, 4=%.2f",
+         m_logger.printf("%.2f %.2f %.2f | %.2f %.2f %.2f | %.2f %.2f %.2f | %.2f %.2f %.2f | t=%.2f | 1=%.2f 2=%.2f 3=%.2f 4=%.2f",
                          m_filtered_gyro_radps[0],
                          m_filtered_gyro_radps[1],
                          m_filtered_gyro_radps[2],
                          m_state_estimation.euler.roll(),
                          m_state_estimation.euler.pitch(),
                          m_state_estimation.euler.yaw(),
-                         m_desired_rate_radps[0],
-                         m_desired_rate_radps[1],
-                         m_desired_rate_radps[2],
-                         m_desired_torque[0],
-                         m_desired_torque[1],
-                         m_desired_torque[2],
+                         m_angular_rate_setpoints[0],
+                         m_angular_rate_setpoints[1],
+                         m_angular_rate_setpoints[2],
+                         m_torque_setpoints[0],
+                         m_torque_setpoints[1],
+                         m_torque_setpoints[2],
                          m_last_flight_control_setpoints.data.throttle,
                          m_actuator_control.setpoints[0],
                          m_actuator_control.setpoints[1],
@@ -361,11 +339,6 @@ private:
    bool kill() const noexcept
    {
       return m_last_flight_control_setpoints.data.kill;
-   }
-
-   bool airborne() const noexcept
-   {
-      return (m_last_flight_control_setpoints.data.throttle > m_lift_throttle);
    }
 
    AttitudeController&                                             m_attitude_controller;
@@ -390,9 +363,9 @@ private:
    aeromight_boundaries::ControlHealth                             m_local_control_health{};
    FlightControlSetpoints::Sample                                  m_last_flight_control_setpoints{};
    math::Vector3                                                   m_filtered_gyro_radps{};
-   math::Vector3                                                   m_last_filtered_gyro_rate_radps{};
-   math::Vector3                                                   m_desired_rate_radps{};
-   math::Vector3                                                   m_desired_torque{};
+   math::Vector3                                                   m_last_filtered_gyro_radps{};
+   math::Vector3                                                   m_angular_rate_setpoints{};
+   math::Vector3                                                   m_torque_setpoints{};
    float                                                           m_time_delta_s{0.0f};
    uint32_t                                                        m_current_time_ms{0};
    uint32_t                                                        m_last_execution_time_ms{0};

@@ -7,8 +7,7 @@ enum class ControlState
 {
    inactive,
    disarmed,
-   armed_on_ground,
-   airborne,
+   armed,
    emergency_kill
 };
 

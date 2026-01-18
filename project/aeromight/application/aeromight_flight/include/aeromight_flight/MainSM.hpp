@@ -30,8 +30,6 @@ struct FlightManagerStateMachine
    static constexpr auto s_manual_checkpoint       = boost::sml::state<class StateManualCheckpoint>;
    static constexpr auto s_hover                   = boost::sml::state<class StateHover>;
    static constexpr auto s_hover_checkpoint        = boost::sml::state<class StateHoverCheckpoint>;
-   static constexpr auto s_auto_land               = boost::sml::state<class StateAutoLand>;
-   static constexpr auto s_auto_land_checkpoint    = boost::sml::state<class StateAutoLandCheckpoint>;
    static constexpr auto s_killed                  = boost::sml::state<class StateKilled>;
    static constexpr auto s_killed_checkpoint       = boost::sml::state<class StateKilledCheckpoint>;
    static constexpr auto s_to_fault                = boost::sml::state<class StateToFault>;
@@ -92,11 +90,6 @@ struct FlightManagerStateMachine
          state.publish_hover_setpoint();
       };
 
-      constexpr auto publish_auto_land_setpoint = [](StateHandler& state)
-      {
-         state.publish_auto_land_setpoint();
-      };
-
       constexpr auto set_wait_sensors_state = [](StateHandler& state)
       {
          state.set_state(FlightManagerState::wait_sensors);
@@ -137,11 +130,6 @@ struct FlightManagerStateMachine
          state.set_state(FlightManagerState::hover_mode);
       };
 
-      constexpr auto set_auto_land_state = [](StateHandler& state)
-      {
-         state.set_state(FlightManagerState::auto_land);
-      };
-
       constexpr auto set_killed_state = [](StateHandler& state)
       {
          state.set_state(FlightManagerState::killed);
@@ -172,11 +160,6 @@ struct FlightManagerStateMachine
       constexpr auto timeout_control_readiness = [](StateHandler& state)
       {
          return state.timeout_control_readiness();
-      };
-
-      constexpr auto timeout_auto_land = [](StateHandler& state)
-      {
-         return state.timeout_auto_land();
       };
 
       constexpr auto is_state_change_persistent = [](StateHandler& state)
@@ -234,16 +217,6 @@ struct FlightManagerStateMachine
          return state.is_radio_link_good();
       };
 
-      constexpr auto takeover_requested = [](StateHandler& state)
-      {
-         return state.takeover_requested();
-      };
-
-      constexpr auto landing_complete = [](StateHandler& state)
-      {
-         return state.landing_complete();
-      };
-
       // events
       static constexpr auto e_tick = event<EventTick>;
 
@@ -292,24 +265,15 @@ struct FlightManagerStateMachine
           s_manual_checkpoint         [kill]                                        / (kill_actuator, set_killed_state)                           = s_killed,
           s_manual_checkpoint         [disarm]                                      / (set_disarming_state, set_reference_time)                   = s_disarming,
           s_manual_checkpoint         [hover_mode]                                  / set_hover_state                                             = s_hover,
-          s_manual_checkpoint         [!is_health_good]                             / disarm_control                                              = s_to_fault,
-          s_manual_checkpoint         [!is_radio_link_good]                         / set_auto_land_state                                         = s_auto_land,
+          s_manual_checkpoint         [!is_health_good || !is_radio_link_good]      / disarm_control                                              = s_to_fault,
           s_manual_checkpoint                                                                                                                     = s_manual,
 
           s_hover             + e_tick                                              / (read_health_summary, read_radio_input, publish_hover_setpoint) = s_hover_checkpoint,
           s_hover_checkpoint          [kill]                                        / (kill_actuator, set_killed_state)                           = s_killed,
           s_hover_checkpoint          [disarm]                                      / (set_disarming_state, set_reference_time)                   = s_disarming,
           s_hover_checkpoint          [manual_mode]                                 / set_manual_state                                            = s_manual,
-          s_hover_checkpoint          [!is_health_good]                             / disarm_control                                              = s_to_fault,
-          s_hover_checkpoint          [!is_radio_link_good]                         / set_auto_land_state                                         = s_auto_land,
+          s_hover_checkpoint          [!is_health_good || !is_radio_link_good]      / disarm_control                                              = s_to_fault,
           s_hover_checkpoint                                                                                                                      = s_hover,
-
-          s_auto_land         + e_tick                                              / (read_health_summary, read_radio_input, publish_auto_land_setpoint) = s_auto_land_checkpoint,
-          s_auto_land_checkpoint      [kill]                                        / (kill_actuator, set_killed_state)                           = s_killed,
-          s_auto_land_checkpoint      [!is_health_good || timeout_auto_land]        / disarm_control                                              = s_to_fault,
-          s_auto_land_checkpoint      [landing_complete]                            / (disarm_control, set_disarmed_state)                        = s_disarmed,
-          s_auto_land_checkpoint      [is_radio_link_good && takeover_requested]    / set_manual_state                                            = s_manual,
-          s_auto_land_checkpoint                                                                                                                  = s_auto_land,
 
           s_killed            + e_tick                                              / (read_health_summary, read_radio_input)                     = s_killed_checkpoint,
           s_killed_checkpoint         [is_health_good && !kill && disarm]           / set_disarmed_state                                          = s_disarmed,

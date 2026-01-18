@@ -19,7 +19,7 @@ void AttitudeEstimator::update(const math::Vector3& accel_mps2, const math::Vect
    Quaternion q_last = m_q;
 
    // Angular rate of correction
-   Vector3     corr;
+   Vector3     corr{};
    const float spinRate = gyro_radps.norm();
 
    m_q.normalize();

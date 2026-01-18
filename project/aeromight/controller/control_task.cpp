@@ -63,13 +63,13 @@ extern "C"
       constexpr float    actuator_max                                   = 1.0f;
       constexpr float    lift_throttle                                  = 0.05f;
       constexpr float    hover_throttle                                 = 0.90f;
-      constexpr float    attitude_controller_roll_kp                    = 0.2f;
-      constexpr float    attitude_controller_pitch_kp                   = 0.2f;
+      constexpr float    attitude_controller_roll_kp                    = 0.5f;
+      constexpr float    attitude_controller_pitch_kp                   = 0.5f;
       constexpr float    attitude_controller_yaw_kp                     = 0.0f;
       constexpr float    rate_controller_output_limit                   = 1.0f;
       constexpr float    rate_controller_roll_kp                        = 0.04f;
       constexpr float    rate_controller_pitch_kp                       = 0.04f;
-      constexpr float    rate_controller_yaw_kp                         = 0.02f;
+      constexpr float    rate_controller_yaw_kp                         = 0.03f;
       constexpr float    rate_controller_roll_ki                        = 0.00f;
       constexpr float    rate_controller_pitch_ki                       = 0.00f;
       constexpr float    rate_controller_yaw_ki                         = 0.00f;

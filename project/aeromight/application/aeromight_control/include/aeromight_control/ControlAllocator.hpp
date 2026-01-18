@@ -173,10 +173,10 @@ private:
 
    static void mix(math::Vector4& actuator_torque, const float roll, const float pitch, const float yaw) noexcept
    {
-      actuator_torque[0] = roll + pitch - yaw;    // front-left CW
-      actuator_torque[1] = -roll + pitch + yaw;   // front-right CCW
-      actuator_torque[2] = -roll - pitch - yaw;   // rear-right CW
-      actuator_torque[3] = roll - pitch + yaw;    // rear-left CCW
+      actuator_torque[0] = roll + pitch + yaw;    // front-left CCW
+      actuator_torque[1] = -roll + pitch - yaw;   // front-right CW
+      actuator_torque[2] = -roll - pitch + yaw;   // rear-right CCW
+      actuator_torque[3] = roll - pitch - yaw;    // rear-left CW
    }
 
    constexpr bool is_saturated(const float actuator_min, const float actuator_max) const noexcept

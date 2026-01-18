@@ -11,9 +11,14 @@ namespace math
 template <typename T, std::size_t N>
 struct Vector
 {
-   Vector()                               = default;
    Vector(const Vector& other)            = default;
    Vector& operator=(const Vector& other) = default;
+
+   Vector()
+       : m_data{}
+   {
+      zero();
+   }
 
    explicit Vector(const std::array<T, N>& data)
        : m_data{data}
@@ -23,10 +28,7 @@ struct Vector
    explicit Vector(const T scalar)
        : m_data{scalar}
    {
-      for (std::size_t i = 0; i < N; i++)
-      {
-         m_data[i] = scalar;
-      }
+      m_data.fill(scalar);
    }
 
    Vector& operator=(const std::array<T, N>& other) noexcept
@@ -243,7 +245,7 @@ struct Vector
    }
 
 protected:
-   std::array<T, N> m_data{};
+   std::array<T, N> m_data;
 };
 
 }   // namespace math
