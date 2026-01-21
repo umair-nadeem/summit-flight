@@ -60,7 +60,9 @@ extern "C"
       constexpr float    time_delta_lower_limit_s                       = 0.002f;
       constexpr float    time_delta_upper_limit_s                       = 0.008f;
       constexpr float    actuator_min                                   = 0.0f;
+      constexpr float    actuator_idle                                  = 0.2f;
       constexpr float    actuator_max                                   = 1.0f;
+      constexpr float    slew_rate_limit_s                              = 2.5f;
       constexpr float    lift_throttle                                  = 0.05f;
       constexpr float    hover_throttle                                 = 0.90f;
       constexpr float    attitude_controller_roll_kp                    = 0.5f;
@@ -139,8 +141,10 @@ extern "C"
                                                         max_yaw_rate_radps};
 
       aeromight_control::ControlAllocator control_allocator{actuator_min,
+                                                            actuator_idle,
                                                             actuator_max,
-                                                            yaw_saturation_limit_factor};
+                                                            yaw_saturation_limit_factor,
+                                                            slew_rate_limit_s};
 
       math::FirstOrderLpf gyro_x_lpf{first_order_lpf_cutoff_frequency_hz};
       math::FirstOrderLpf gyro_y_lpf{first_order_lpf_cutoff_frequency_hz};

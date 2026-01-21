@@ -155,8 +155,8 @@ private:
    {
       m_current_time_ms = ClockSource::now_ms();
 
-      m_time_delta_s = static_cast<float>(m_current_time_ms - m_last_execution_time_ms) / 1000.0f;
-      m_time_delta_s = std::clamp(m_time_delta_s, m_time_delta_lower_limit_s, m_time_delta_upper_limit_s);
+      m_dt_s = static_cast<float>(m_current_time_ms - m_last_execution_time_ms) / 1000.0f;
+      m_dt_s = std::clamp(m_dt_s, m_time_delta_lower_limit_s, m_time_delta_upper_limit_s);
 
       m_last_execution_time_ms = m_current_time_ms;
    }
@@ -227,10 +227,10 @@ private:
    {
       for (uint8_t i = 0; i < num_axis; i++)
       {
-         m_filtered_gyro_radps[i] = m_gyro_lpf[i].get().apply(m_state_estimation.gyro_radps[i], m_time_delta_s);
+         m_filtered_gyro_radps[i] = m_gyro_lpf[i].get().apply(m_state_estimation.gyro_radps[i], m_dt_s);
       }
 
-      const math::Vector3 gyro_rate_derivative = {(m_filtered_gyro_radps - m_last_filtered_gyro_radps) / m_time_delta_s};
+      const math::Vector3 gyro_rate_derivative = {(m_filtered_gyro_radps - m_last_filtered_gyro_radps) / m_dt_s};
       math::Vector3       filtered_angular_acceleration{};
 
       for (uint8_t i = 0; i < num_axis; i++)
@@ -238,9 +238,7 @@ private:
          filtered_angular_acceleration[i] = m_angular_acceleration_lpf2[i].get().apply(gyro_rate_derivative[i]);
       }
 
-      m_torque_setpoints = m_rate_controller.update(m_angular_rate_setpoints, m_filtered_gyro_radps, filtered_angular_acceleration, m_time_delta_s, run_integrator);
-
-      // @TODO: apply low pass filtering on yaw-axis to reduce high frequency torque caused by rotor acceleration
+      m_torque_setpoints = m_rate_controller.update(m_angular_rate_setpoints, m_filtered_gyro_radps, filtered_angular_acceleration, m_dt_s, run_integrator);
    }
 
    void get_actuator_setpoints()
@@ -252,11 +250,13 @@ private:
 
       m_control_allocator.set_control_setpoints(control_setpoints);
 
-      m_actuator_control.setpoints = m_control_allocator.allocate();
+      m_control_allocator.allocate();
 
-      // @TODO: apply slew rate limiting
+      m_control_allocator.apply_slew_rate_limits(m_dt_s);
 
-      m_control_allocator.clip_actuator_setpoints(m_actuator_control.setpoints);
+      m_control_allocator.clip_actuator_setpoints();
+
+      m_actuator_control.setpoints = m_control_allocator.get_actuator_setpoints();
 
       // determine allocator saturation
       m_control_allocator.estimate_saturation();
@@ -375,7 +375,7 @@ private:
    math::Vector3                                                   m_last_filtered_gyro_radps{};
    math::Vector3                                                   m_angular_rate_setpoints{};
    math::Vector3                                                   m_torque_setpoints{};
-   float                                                           m_time_delta_s{0.0f};
+   float                                                           m_dt_s{0.0f};
    uint32_t                                                        m_current_time_ms{0};
    uint32_t                                                        m_last_execution_time_ms{0};
 };

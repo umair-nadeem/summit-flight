@@ -16,15 +16,18 @@ public:
    explicit ControlAllocator(const float actuator_min,
                              const float actuator_idle,
                              const float actuator_max,
-                             const float yaw_saturation_limit_factor)
+                             const float yaw_saturation_limit_factor,
+                             const float slew_rate_limit_s)
        : m_actuator_min{actuator_min},
          m_actuator_idle{actuator_idle},
          m_actuator_max{actuator_max},
-         m_yaw_saturation_limit_factor{yaw_saturation_limit_factor}
+         m_yaw_saturation_limit_factor{yaw_saturation_limit_factor},
+         m_slew_rate_limit_s{slew_rate_limit_s}
    {
       error::verify((actuator_min < actuator_idle) && (actuator_idle < actuator_max));
       error::verify(aeromight_boundaries::ActuatorParams::min <= actuator_min);
       error::verify(actuator_max <= aeromight_boundaries::ActuatorParams::max);
+      error::verify(m_slew_rate_limit_s > epsilon);
    }
 
    void set_control_setpoints(const math::Vector4& control_setpoints)
@@ -32,8 +35,10 @@ public:
       m_control_setpoints = control_setpoints;
    }
 
-   aeromight_boundaries::ActuatorSetpoints allocate()
+   void allocate()
    {
+      m_last_actuator_setpoints = m_actuator_setpoints;
+
       math::Vector4 actuator_torque{};
       mix(actuator_torque,
           m_control_setpoints[aeromight_boundaries::ControlAxis::roll],
@@ -42,7 +47,7 @@ public:
 
       perform_desaturation(actuator_torque, m_control_setpoints[aeromight_boundaries::ControlAxis::thrust]);
 
-      return math::Vector4{actuator_torque + m_control_setpoints[aeromight_boundaries::ControlAxis::thrust]};
+      m_actuator_setpoints = actuator_torque + m_control_setpoints[aeromight_boundaries::ControlAxis::thrust];
    }
 
    void estimate_saturation()
@@ -93,12 +98,36 @@ public:
       }
    }
 
-   void clip_actuator_setpoints(aeromight_boundaries::ActuatorSetpoints& setpionts) const
+   void apply_slew_rate_limits(const float dt_s)
    {
-      setpionts[0] = std::clamp(setpionts[0], m_actuator_min, m_actuator_max);
-      setpionts[1] = std::clamp(setpionts[1], m_actuator_min, m_actuator_max);
-      setpionts[2] = std::clamp(setpionts[2], m_actuator_min, m_actuator_max);
-      setpionts[3] = std::clamp(setpionts[3], m_actuator_min, m_actuator_max);
+      const float max_delta_sp = dt_s * (m_actuator_max - m_actuator_min) / m_slew_rate_limit_s;
+
+      for (std::size_t i = 0; i < m_actuator_setpoints.size; i++)
+      {
+         const float delta_sp = m_actuator_setpoints[i] - m_last_actuator_setpoints[i];
+
+         if (delta_sp > max_delta_sp)
+         {
+            m_actuator_setpoints[i] = m_last_actuator_setpoints[i] + max_delta_sp;
+         }
+         else if (delta_sp < -max_delta_sp)
+         {
+            m_actuator_setpoints[i] = m_last_actuator_setpoints[i] - max_delta_sp;
+         }
+      }
+   }
+
+   void clip_actuator_setpoints()
+   {
+      for (std::size_t i = 0; i < m_actuator_setpoints.size; i++)
+      {
+         m_actuator_setpoints[i] = std::clamp(m_actuator_setpoints[i], m_actuator_min, m_actuator_max);
+      }
+   }
+
+   const math::Vector4& get_actuator_setpoints() const
+   {
+      return m_actuator_setpoints;
    }
 
    constexpr const SaturationFlags& get_actuator_saturation_positive() const noexcept
@@ -180,7 +209,10 @@ private:
    const float     m_actuator_idle;
    const float     m_actuator_max;
    const float     m_yaw_saturation_limit_factor;
+   const float     m_slew_rate_limit_s;
    math::Vector4   m_control_setpoints{0.0f};
+   math::Vector4   m_actuator_setpoints{0.0f};
+   math::Vector4   m_last_actuator_setpoints{0.0f};
    bool            m_actuator_saturation{false};
    SaturationFlags m_control_saturation_positive{};
    SaturationFlags m_control_saturation_negative{};
