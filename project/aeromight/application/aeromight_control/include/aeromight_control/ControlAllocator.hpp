@@ -125,6 +125,16 @@ public:
       }
    }
 
+   void reset()
+   {
+      m_control_setpoints.zero();
+      m_actuator_setpoints.zero();
+      m_last_actuator_setpoints.zero();
+      m_actuator_saturation = false;
+      m_control_saturation_positive.fill(false);
+      m_control_saturation_negative.fill(false);
+   }
+
    const math::Vector4& get_actuator_setpoints() const
    {
       return m_actuator_setpoints;

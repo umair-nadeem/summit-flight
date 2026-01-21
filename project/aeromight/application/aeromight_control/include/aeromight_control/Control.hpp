@@ -45,12 +45,13 @@ public:
                     const FlightControlSetpoints&                flight_control_setpoint_storage,
                     const aeromight_boundaries::StateEstimation& state_estimation_data,
                     Logger&                                      logger,
-                    const float                                  time_delta_lower_limit_s,
-                    const float                                  time_delta_upper_limit_s,
+                    const float                                  min_dt_s,
+                    const float                                  max_dt_s,
+                    const bool                                   run_attitude_controller,
+                    const float                                  max_tilt_angle_rad,
                     const float                                  max_roll_rate_radps,
                     const float                                  max_pitch_rate_radps,
                     const float                                  max_yaw_rate_radps,
-                    const float                                  max_tilt_angle_rad,
                     const float                                  hover_throttle)
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
@@ -62,12 +63,13 @@ public:
          m_flight_control_setpoint_storage{flight_control_setpoint_storage},
          m_state_estimation{state_estimation_data},
          m_logger{logger},
-         m_time_delta_lower_limit_s{time_delta_lower_limit_s},
-         m_time_delta_upper_limit_s{time_delta_upper_limit_s},
+         m_min_dt_s{min_dt_s},
+         m_max_dt_s{max_dt_s},
+         m_run_attitude_controller{run_attitude_controller},
+         m_max_tilt_angle_rad{max_tilt_angle_rad},
          m_max_roll_rate_radps{max_roll_rate_radps},
          m_max_pitch_rate_radps{max_pitch_rate_radps},
          m_max_yaw_rate_radps{max_yaw_rate_radps},
-         m_max_tilt_angle_rad{max_tilt_angle_rad},
          m_hover_throttle{hover_throttle}
 
    {
@@ -96,8 +98,6 @@ public:
       publish_actuator_setpoints();
 
       publish_health();
-
-      m_last_filtered_gyro_radps = m_filtered_gyro_radps;
    }
 
    aeromight_boundaries::ControlState get_state() const
@@ -155,7 +155,7 @@ private:
       m_current_time_ms = ClockSource::now_ms();
 
       m_dt_s = static_cast<float>(m_current_time_ms - m_last_execution_time_ms) / 1000.0f;
-      m_dt_s = std::clamp(m_dt_s, m_time_delta_lower_limit_s, m_time_delta_upper_limit_s);
+      m_dt_s = std::clamp(m_dt_s, m_min_dt_s, m_max_dt_s);
 
       m_last_execution_time_ms = m_current_time_ms;
    }
@@ -195,11 +195,11 @@ private:
       m_logger.print("armed");
    }
 
-   void get_rate_setpoints(const bool run_attitude_controller)
+   void get_rate_setpoints()
    {
       using Axis = aeromight_boundaries::ControlAxis;
 
-      if (run_attitude_controller)
+      if (m_run_attitude_controller)
       {
          math::Vector2 manual_setpoints{m_last_flight_control_setpoints.data.roll * m_max_tilt_angle_rad,
                                         m_last_flight_control_setpoints.data.pitch * m_max_tilt_angle_rad};
@@ -220,7 +220,7 @@ private:
          m_angular_rate_setpoints = m_attitude_controller.update(angle_setpoints, angle_estimation_rad);
 
          m_angular_rate_setpoints[Axis::roll]  = std::clamp(m_angular_rate_setpoints[Axis::roll], -m_max_roll_rate_radps, m_max_roll_rate_radps);
-         m_angular_rate_setpoints[Axis::pitch] = std::clamp(m_angular_rate_setpoints[Axis::pitch], -m_max_roll_rate_radps, m_max_roll_rate_radps);
+         m_angular_rate_setpoints[Axis::pitch] = std::clamp(m_angular_rate_setpoints[Axis::pitch], -m_max_pitch_rate_radps, m_max_pitch_rate_radps);
       }
       else   // generate rate setpoints from sticks
       {
@@ -234,12 +234,14 @@ private:
 
    void get_torque_setpoints(const bool run_integrator)
    {
+      m_last_filtered_gyro_radps = m_filtered_gyro_radps;
+
       for (uint8_t i = 0; i < num_axis; i++)
       {
          m_filtered_gyro_radps[i] = m_gyro_lpf[i].get().apply(m_state_estimation.gyro_radps[i], m_dt_s);
       }
 
-      const math::Vector3 gyro_rate_derivative = {(m_filtered_gyro_radps - m_last_filtered_gyro_radps) / m_dt_s};
+      const math::Vector3 gyro_rate_derivative{(m_filtered_gyro_radps - m_last_filtered_gyro_radps) / m_dt_s};
       math::Vector3       filtered_angular_acceleration{};
 
       for (uint8_t i = 0; i < num_axis; i++)
@@ -274,7 +276,7 @@ private:
 
    void run_control()
    {
-      get_rate_setpoints(true);
+      get_rate_setpoints();
       get_torque_setpoints(m_last_flight_control_setpoints.data.throttle > m_hover_throttle);
       get_actuator_setpoints();
 
@@ -305,9 +307,10 @@ private:
 
    void reset()
    {
-      m_rate_controller.reset();
       m_angular_rate_setpoints.zero();
       m_torque_setpoints.zero();
+      m_rate_controller.reset();
+      m_control_allocator.reset();
    }
 
    void reset_filters()
@@ -369,12 +372,13 @@ private:
    const FlightControlSetpoints&                                   m_flight_control_setpoint_storage;
    const StateEstimation&                                          m_state_estimation;
    Logger&                                                         m_logger;
-   const float                                                     m_time_delta_lower_limit_s;
-   const float                                                     m_time_delta_upper_limit_s;
+   const float                                                     m_min_dt_s;
+   const float                                                     m_max_dt_s;
+   const bool                                                      m_run_attitude_controller;
+   const float                                                     m_max_tilt_angle_rad;
    const float                                                     m_max_roll_rate_radps;
    const float                                                     m_max_pitch_rate_radps;
    const float                                                     m_max_yaw_rate_radps;
-   const float                                                     m_max_tilt_angle_rad;
    const float                                                     m_hover_throttle;
    aeromight_boundaries::ActuatorControl                           m_actuator_control{};
    aeromight_boundaries::ControlHealth                             m_local_control_health{};

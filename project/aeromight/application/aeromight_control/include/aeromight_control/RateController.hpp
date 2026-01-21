@@ -16,18 +16,12 @@ public:
                            const math::Vector3& gains_i,
                            const math::Vector3& gains_d,
                            const math::Vector3& integrator_limit,
-                           const float          torque_output_limit,
-                           const float          max_roll_rate_radps,
-                           const float          max_pitch_rate_radps,
-                           const float          max_yaw_rate_radps)
+                           const float          torque_output_limit)
        : m_gains_p{gains_p},
          m_gains_i{gains_i},
          m_gains_d{gains_d},
          m_integrator_limit{integrator_limit},
-         m_torque_output_limit{torque_output_limit},
-         m_max_roll_rate_radps{max_roll_rate_radps},
-         m_max_pitch_rate_radps{max_pitch_rate_radps},
-         m_max_yaw_rate_radps{max_yaw_rate_radps}
+         m_torque_output_limit{torque_output_limit}
    {
    }
 
@@ -40,16 +34,11 @@ public:
 
       if (!initialized)
       {
-         reset();
          initialized = true;
          return {};
       }
 
-      const math::Vector3 setpoints_radps{std::clamp(rate_setpoint_radps[0], -m_max_roll_rate_radps, m_max_roll_rate_radps),
-                                          std::clamp(rate_setpoint_radps[1], -m_max_pitch_rate_radps, m_max_pitch_rate_radps),
-                                          std::clamp(rate_setpoint_radps[2], -m_max_yaw_rate_radps, m_max_yaw_rate_radps)};
-
-      const math::Vector3 rate_error = setpoints_radps - rate_gyro_measured_radps;
+      const math::Vector3 rate_error = rate_setpoint_radps - rate_gyro_measured_radps;
       const math::Vector3 p          = m_gains_p.emul(rate_error);
       const math::Vector3 i          = m_rate_integrator;
       const math::Vector3 d          = m_gains_d.emul(angular_acceleration_radps2);
@@ -81,6 +70,9 @@ public:
    void reset()
    {
       m_rate_integrator.zero();
+      m_control_saturation_positive.fill(false);
+      m_control_saturation_negative.fill(false);
+      initialized = false;
    }
 
 private:
@@ -111,13 +103,10 @@ private:
    const math::Vector3        m_gains_d;
    const math::Vector3        m_integrator_limit;
    const float                m_torque_output_limit;
-   const float                m_max_roll_rate_radps;
-   const float                m_max_pitch_rate_radps;
-   const float                m_max_yaw_rate_radps;
    math::Vector3              m_rate_integrator{};
-   bool                       initialized{false};
    std::array<bool, num_axis> m_control_saturation_positive{};
    std::array<bool, num_axis> m_control_saturation_negative{};
+   bool                       initialized{false};
 };
 
 }   // namespace aeromight_control
