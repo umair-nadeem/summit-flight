@@ -13,18 +13,18 @@ class ControlAllocator
    using SaturationFlags = std::array<bool, 3u>;
 
 public:
-   explicit ControlAllocator(const float actuator_min_actual,
-                             const float actuator_max_actual,
+   explicit ControlAllocator(const float actuator_min,
+                             const float actuator_idle,
+                             const float actuator_max,
                              const float yaw_saturation_limit_factor)
-       : m_actuator_min_actual{actuator_min_actual},
-         m_actuator_max_actual{actuator_max_actual},
-         m_yaw_saturation_limit_factor{yaw_saturation_limit_factor},
-         m_actuator_span_actual{actuator_max_actual - actuator_min_actual}
+       : m_actuator_min{actuator_min},
+         m_actuator_idle{actuator_idle},
+         m_actuator_max{actuator_max},
+         m_yaw_saturation_limit_factor{yaw_saturation_limit_factor}
    {
-      error::verify(actuator_min_actual < actuator_max_actual);
-      error::verify(aeromight_boundaries::ActuatorParams::min <= actuator_min_actual);
-      error::verify(actuator_max_actual <= aeromight_boundaries::ActuatorParams::max);
-      error::verify(0.0f < m_actuator_span_actual);
+      error::verify((actuator_min < actuator_idle) && (actuator_idle < actuator_max));
+      error::verify(aeromight_boundaries::ActuatorParams::min <= actuator_min);
+      error::verify(actuator_max <= aeromight_boundaries::ActuatorParams::max);
    }
 
    void set_control_setpoints(const math::Vector4& control_setpoints)
@@ -40,50 +40,9 @@ public:
           m_control_setpoints[aeromight_boundaries::ControlAxis::pitch],
           apply_yaw_limit(m_control_setpoints[aeromight_boundaries::ControlAxis::yaw]));
 
-      float         actuator_sp_min = 0.0f;
-      float         actuator_sp_max = 0.0f;
-      math::Vector4 actuator_sp{actuator_torque + m_control_setpoints[aeromight_boundaries::ControlAxis::thrust]};
+      perform_desaturation(actuator_torque, m_control_setpoints[aeromight_boundaries::ControlAxis::thrust]);
 
-      estimate_actuator_min_max(actuator_sp, actuator_sp_min, actuator_sp_max);   // assuming actuator_sp_max is positive
-
-      m_actuator_saturation = is_saturated(actuator_sp_min, actuator_sp_max);
-      if (m_actuator_saturation)
-      {
-         const float torque_span = (actuator_sp_max - actuator_sp_min);                                       // torque differential span exceeds actuator span
-         const float scale       = (torque_span > epsilon) ? (m_actuator_span_actual / torque_span) : 1.0f;   // scale down torque differential
-         actuator_sp             = actuator_sp * scale;                                                       // update actuator setpoint
-
-         // recalculate min/max
-         estimate_actuator_min_max(actuator_sp, actuator_sp_min, actuator_sp_max);
-      }
-
-      // shift thrust from upper-end of limit
-      if (m_actuator_max_actual < actuator_sp_max)
-      {
-         const float shift = actuator_sp_max - m_actuator_max_actual;
-         for (std::size_t i = 0; i < actuator_sp.size; i++)
-         {
-            actuator_sp[i] -= shift;
-         }
-         // shift min and max
-         actuator_sp_min -= shift;
-         actuator_sp_max -= shift;
-      }
-
-      // shift thrust from lower-end of limit
-      if (actuator_sp_min < m_actuator_min_actual)
-      {
-         const float shift = m_actuator_min_actual - actuator_sp_min;
-         for (std::size_t i = 0; i < actuator_sp.size; i++)
-         {
-            actuator_sp[i] += shift;
-         }
-         // shift min and max
-         actuator_sp_min += shift;
-         actuator_sp_max += shift;
-      }
-
-      return actuator_sp;
+      return math::Vector4{actuator_torque + m_control_setpoints[aeromight_boundaries::ControlAxis::thrust]};
    }
 
    void estimate_saturation()
@@ -136,10 +95,10 @@ public:
 
    void clip_actuator_setpoints(aeromight_boundaries::ActuatorSetpoints& setpionts) const
    {
-      setpionts[0] = std::clamp(setpionts[0], m_actuator_min_actual, m_actuator_max_actual);
-      setpionts[1] = std::clamp(setpionts[1], m_actuator_min_actual, m_actuator_max_actual);
-      setpionts[2] = std::clamp(setpionts[2], m_actuator_min_actual, m_actuator_max_actual);
-      setpionts[3] = std::clamp(setpionts[3], m_actuator_min_actual, m_actuator_max_actual);
+      setpionts[0] = std::clamp(setpionts[0], m_actuator_min, m_actuator_max);
+      setpionts[1] = std::clamp(setpionts[1], m_actuator_min, m_actuator_max);
+      setpionts[2] = std::clamp(setpionts[2], m_actuator_min, m_actuator_max);
+      setpionts[3] = std::clamp(setpionts[3], m_actuator_min, m_actuator_max);
    }
 
    constexpr const SaturationFlags& get_actuator_saturation_positive() const noexcept
@@ -153,6 +112,31 @@ public:
    }
 
 private:
+   void perform_desaturation(math::Vector4& actuator_torque, const float collective_thrust)
+   {
+      const float upper_margin   = m_actuator_max - collective_thrust;
+      const float lower_margin   = std::max((collective_thrust - m_actuator_idle), 0.0f);
+      const float available_span = 2.0f * std::min(upper_margin, lower_margin);   // will become zero at throttle extremes
+
+      float torque_min = 0.0f;
+      float torque_max = 0.0f;
+      estimate_actuator_min_max(actuator_torque, torque_min, torque_max);
+
+      // make torque zero-centered
+      const float torque_center = 0.5f * (torque_min + torque_max);
+      actuator_torque           = actuator_torque - torque_center;
+      estimate_actuator_min_max(actuator_torque, torque_min, torque_max);
+
+      const float torque_span = torque_max - torque_min;
+      m_actuator_saturation   = (torque_span > available_span);
+
+      if (m_actuator_saturation)
+      {
+         const float scale = (torque_span > epsilon) ? (available_span / torque_span) : 1.0f;   // scale down torque differential
+         actuator_torque   = actuator_torque * scale;                                           // update actuator torque
+      }
+   }
+
    static constexpr void estimate_actuator_min_max(const math::Vector4& actuator_sp, float& actuator_min, float& actuator_max)
    {
       actuator_min = actuator_sp[0];
@@ -179,12 +163,6 @@ private:
       actuator_torque[3] = roll - pitch - yaw;    // rear-left CW
    }
 
-   constexpr bool is_saturated(const float actuator_min, const float actuator_max) const noexcept
-   {
-      const float actuator_span_sp = (actuator_max - actuator_min);
-      return (actuator_span_sp > m_actuator_span_actual);
-   }
-
    constexpr float get_yaw_limit(const float thrust) const noexcept
    {
       return (thrust * m_yaw_saturation_limit_factor);
@@ -198,10 +176,10 @@ private:
 
    static constexpr float epsilon = 1e-6f;
 
-   const float     m_actuator_min_actual;
-   const float     m_actuator_max_actual;
+   const float     m_actuator_min;
+   const float     m_actuator_idle;
+   const float     m_actuator_max;
    const float     m_yaw_saturation_limit_factor;
-   const float     m_actuator_span_actual;
    math::Vector4   m_control_setpoints{0.0f};
    bool            m_actuator_saturation{false};
    SaturationFlags m_control_saturation_positive{};

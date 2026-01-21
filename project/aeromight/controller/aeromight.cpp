@@ -70,7 +70,6 @@ TaskHandle_t control_task_handle;
 TaskHandle_t flight_manager_task_handle;
 TaskHandle_t radio_link_task_handle;
 TaskHandle_t health_monitoring_task_handle;
-TaskHandle_t barometer_task_handle;
 TaskHandle_t logging_task_handle;
 
 // queues
@@ -156,20 +155,6 @@ void register_tasks()
 
    health_monitoring_task_handle = rtos::create_task(health_monitoring_task_config);
 
-   // barometer task
-   std::memset(barometer_task_stack_buffer, 0, sizeof(barometer_task_stack_buffer));
-
-   rtos::RtosTaskConfig barometer_task_config{
-       .func                 = barometer_task,
-       .name                 = controller::task::barometer_task_name,
-       .stack_depth_in_words = controller::task::barometer_task_stack_depth_in_words,
-       .params               = static_cast<void*>(&barometer_task_data),
-       .priority             = controller::task::barometer_task_priority,
-       .stack_buffer         = barometer_task_stack_buffer,
-       .task_block           = barometer_task_tcb};
-
-   barometer_task_handle = rtos::create_task(barometer_task_config);
-
    // logging task
    std::memset(logging_task_stack_buffer, 0, sizeof(logging_task_stack_buffer));
 
@@ -232,9 +217,6 @@ void setup_task_notifications()
    imu_task_data.imu_task_tick_notifier_from_isr.set_task_to_notify(imu_task_handle);
    imu_task_data.imu_task_rx_complete_notifier_from_isr.set_task_to_notify(imu_task_handle);
 
-   // barometer task
-   barometer_task_data.barometer_task_rx_complete_notifier_from_isr.set_task_to_notify(barometer_task_handle);
-
    // control task
    flight_manager_task_data.control_task_start_notifier.set_task_to_notify(control_task_handle);
 }
@@ -295,7 +277,6 @@ extern "C"
          controller::init_hardware();
          controller::setup_uart();
          controller::setup_spi();
-         controller::setup_i2c();
          controller::setup_adc();
 
          // start sys clock

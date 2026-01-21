@@ -203,14 +203,18 @@ private:
          const math::Vector3 angle_setpoint_rad{m_last_flight_control_setpoints.data.roll * m_max_tilt_angle_rad,
                                                 m_last_flight_control_setpoints.data.pitch * m_max_tilt_angle_rad,
                                                 0.0f};
+
+         // @TODO: scale values by max_tilt_angle/norm as well
          const math::Vector3 angle_estimation_rad{m_state_estimation.euler.roll(),
                                                   m_state_estimation.euler.pitch(),
                                                   m_state_estimation.euler.yaw()};
 
          m_angular_rate_setpoints = m_attitude_controller.update(angle_setpoint_rad, angle_estimation_rad);
+         // @TODO: apply rate limits clamp to rate setpoints
       }
-      else
+      else   // generate rate setpoints from sticks
       {
+         //@TODO: scale values by acro rate max
          m_angular_rate_setpoints[aeromight_boundaries::ControlAxis::roll]  = (m_last_flight_control_setpoints.data.roll * m_max_roll_rate_radps);
          m_angular_rate_setpoints[aeromight_boundaries::ControlAxis::pitch] = (m_last_flight_control_setpoints.data.pitch * m_max_pitch_rate_radps);
       }
@@ -235,6 +239,8 @@ private:
       }
 
       m_torque_setpoints = m_rate_controller.update(m_angular_rate_setpoints, m_filtered_gyro_radps, filtered_angular_acceleration, m_time_delta_s, run_integrator);
+
+      // @TODO: apply low pass filtering on yaw-axis to reduce high frequency torque caused by rotor acceleration
    }
 
    void get_actuator_setpoints()
@@ -247,6 +253,9 @@ private:
       m_control_allocator.set_control_setpoints(control_setpoints);
 
       m_actuator_control.setpoints = m_control_allocator.allocate();
+
+      // @TODO: apply slew rate limiting
+
       m_control_allocator.clip_actuator_setpoints(m_actuator_control.setpoints);
 
       // determine allocator saturation

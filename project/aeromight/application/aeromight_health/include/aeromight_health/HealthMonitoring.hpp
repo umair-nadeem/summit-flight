@@ -99,17 +99,12 @@ private:
             const bool imu_ready       = imu_is_ready();
             const bool barometer_ready = barometer_is_ready();
 
-            if (imu_ready)
-            {
-               m_health_summary.imu_health = aeromight_boundaries::SubsystemHealth::operational;
-            }
-
             if (barometer_ready)
             {
                m_health_summary.barometer_health = aeromight_boundaries::SubsystemHealth::operational;
             }
 
-            if (imu_ready && barometer_ready)
+            if (imu_ready)
             {
                m_health_summary.all_sensors_ready = true;
                m_state                            = HealthMonitoringState::wait_for_estimation_control_readiness;
@@ -118,18 +113,11 @@ private:
             }
             else if (wait_for_sensors_readiness_passed())
             {
-               if (!imu_ready)
-               {
-                  m_health_summary.imu_health    = aeromight_boundaries::SubsystemHealth::fault;
-                  m_health_summary.flight_health = aeromight_boundaries::FlightHealthStatus::critical;
-                  m_logger.print("imu readiness timed out");
-               }
 
-               if (!barometer_ready)
-               {
-                  m_health_summary.barometer_health = aeromight_boundaries::SubsystemHealth::fault;
-                  m_logger.print("barometer readiness timed out");
-               }
+               m_health_summary.imu_health    = aeromight_boundaries::SubsystemHealth::fault;
+               m_health_summary.flight_health = aeromight_boundaries::FlightHealthStatus::critical;
+               m_logger.print("imu readiness timed out");
+
                m_health_summary.all_sensors_ready = false;
                m_state                            = HealthMonitoringState::wait_for_estimation_control_readiness;
                m_state_entry_time_ms              = m_current_time_ms;
@@ -360,8 +348,7 @@ private:
 
    bool estimation_is_ready() const
    {
-      return (m_estimation_health_snapshot.data.valid_reference_pressure_acquired &&
-              (m_estimation_health_snapshot.data.state == aeromight_boundaries::EstimatorState::running));
+      return (m_estimation_health_snapshot.data.state == aeromight_boundaries::EstimatorState::running);
    }
 
    bool control_is_ready() const

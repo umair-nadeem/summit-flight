@@ -63,7 +63,7 @@ public:
       {
          get_time();
          reset();
-         m_local_estimator_health.state = State::get_reference_pressure;
+         m_local_estimator_health.state = State::running;
          publish_health();
          m_logger.print("started");
       }
@@ -222,7 +222,7 @@ private:
       }
 
       // read barometer data
-      if (read_from_barometer())
+      if (m_local_estimator_health.valid_reference_pressure_acquired && read_from_barometer())
       {
          run_altitude_estimation();
       }
