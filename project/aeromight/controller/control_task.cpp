@@ -58,26 +58,25 @@ extern "C"
       constexpr float    first_order_lpf_cutoff_frequency_hz            = 80.0f;
       constexpr float    butterworth_filter_cutoff_frequency_hz         = 25.0f;
       constexpr float    time_delta_lower_limit_s                       = 0.002f;
-      constexpr float    time_delta_upper_limit_s                       = 0.008f;
+      constexpr float    time_delta_upper_limit_s                       = 0.010f;
       constexpr float    actuator_min                                   = 0.0f;
       constexpr float    actuator_idle                                  = 0.2f;
       constexpr float    actuator_max                                   = 1.0f;
       constexpr float    slew_rate_limit_s                              = 2.5f;
-      constexpr float    lift_throttle                                  = 0.05f;
-      constexpr float    hover_throttle                                 = 0.90f;
+      constexpr float    hover_throttle                                 = 0.70f;
       constexpr float    attitude_controller_roll_kp                    = 0.5f;
       constexpr float    attitude_controller_pitch_kp                   = 0.5f;
       constexpr float    attitude_controller_yaw_kp                     = 0.0f;
-      constexpr float    rate_controller_output_limit                   = 1.0f;
-      constexpr float    rate_controller_roll_kp                        = 0.04f;
-      constexpr float    rate_controller_pitch_kp                       = 0.04f;
+      constexpr float    torque_limit                                   = 1.0f;
+      constexpr float    rate_controller_roll_kp                        = 0.05f;
+      constexpr float    rate_controller_pitch_kp                       = 0.05f;
       constexpr float    rate_controller_yaw_kp                         = 0.03f;
-      constexpr float    rate_controller_roll_ki                        = 0.00f;
-      constexpr float    rate_controller_pitch_ki                       = 0.00f;
-      constexpr float    rate_controller_yaw_ki                         = 0.00f;
-      constexpr float    rate_controller_roll_kd                        = 0.00f;
-      constexpr float    rate_controller_pitch_kd                       = 0.00f;
-      constexpr float    rate_controller_yaw_kd                         = 0.00f;
+      constexpr float    rate_controller_roll_ki                        = 0.0f;
+      constexpr float    rate_controller_pitch_ki                       = 0.0f;
+      constexpr float    rate_controller_yaw_ki                         = 0.0f;
+      constexpr float    rate_controller_roll_kd                        = 0.0f;
+      constexpr float    rate_controller_pitch_kd                       = 0.0f;
+      constexpr float    rate_controller_yaw_kd                         = 0.0f;
       constexpr float    rate_controller_roll_integrator_limit          = 0.3f;
       constexpr float    rate_controller_pitch_integrator_limit         = 0.3f;
       constexpr float    rate_controller_yaw_integrator_limit           = 0.3f;
@@ -135,7 +134,7 @@ extern "C"
                                                         rate_gains_i,
                                                         rate_gains_d,
                                                         rate_integrator_limits,
-                                                        rate_controller_output_limit,
+                                                        torque_limit,
                                                         max_roll_rate_radps,
                                                         max_pitch_rate_radps,
                                                         max_yaw_rate_radps};
@@ -177,7 +176,6 @@ extern "C"
                   max_pitch_rate_radps,
                   max_yaw_rate_radps,
                   max_tilt_angle_rad,
-                  lift_throttle,
                   hover_throttle};
 
       aeromight_control::EstimationAndControl<decltype(estimation),

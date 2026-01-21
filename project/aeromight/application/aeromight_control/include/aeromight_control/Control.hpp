@@ -51,7 +51,6 @@ public:
                     const float                                  max_pitch_rate_radps,
                     const float                                  max_yaw_rate_radps,
                     const float                                  max_tilt_angle_rad,
-                    const float                                  lift_throttle,
                     const float                                  hover_throttle)
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
@@ -69,7 +68,6 @@ public:
          m_max_pitch_rate_radps{max_pitch_rate_radps},
          m_max_yaw_rate_radps{max_yaw_rate_radps},
          m_max_tilt_angle_rad{max_tilt_angle_rad},
-         m_lift_throttle{lift_throttle},
          m_hover_throttle{hover_throttle}
 
    {
@@ -199,6 +197,8 @@ private:
 
    void get_rate_setpoints(const bool run_attitude_controller)
    {
+      using Axis = aeromight_boundaries::ControlAxis;
+
       if (run_attitude_controller)
       {
          math::Vector2 manual_setpoints{m_last_flight_control_setpoints.data.roll * m_max_tilt_angle_rad,
@@ -219,17 +219,17 @@ private:
 
          m_angular_rate_setpoints = m_attitude_controller.update(angle_setpoints, angle_estimation_rad);
 
-         // @TODO: apply rate limits clamp to rate setpoints
+         m_angular_rate_setpoints[Axis::roll]  = std::clamp(m_angular_rate_setpoints[Axis::roll], -m_max_roll_rate_radps, m_max_roll_rate_radps);
+         m_angular_rate_setpoints[Axis::pitch] = std::clamp(m_angular_rate_setpoints[Axis::pitch], -m_max_roll_rate_radps, m_max_roll_rate_radps);
       }
       else   // generate rate setpoints from sticks
       {
-         //@TODO: scale values by acro rate max
-         m_angular_rate_setpoints[aeromight_boundaries::ControlAxis::roll]  = (m_last_flight_control_setpoints.data.roll * m_max_roll_rate_radps);
-         m_angular_rate_setpoints[aeromight_boundaries::ControlAxis::pitch] = (m_last_flight_control_setpoints.data.pitch * m_max_pitch_rate_radps);
+         m_angular_rate_setpoints[Axis::roll]  = (m_last_flight_control_setpoints.data.roll * m_max_roll_rate_radps);
+         m_angular_rate_setpoints[Axis::pitch] = (m_last_flight_control_setpoints.data.pitch * m_max_pitch_rate_radps);
       }
 
-      // yaw always bypassed
-      m_angular_rate_setpoints[aeromight_boundaries::ControlAxis::yaw] = (m_last_flight_control_setpoints.data.yaw * m_max_yaw_rate_radps);
+      // yaw rate from manual setpoint
+      m_angular_rate_setpoints[Axis::yaw] = (m_last_flight_control_setpoints.data.yaw * m_max_yaw_rate_radps);
    }
 
    void get_torque_setpoints(const bool run_integrator)
@@ -375,7 +375,6 @@ private:
    const float                                                     m_max_pitch_rate_radps;
    const float                                                     m_max_yaw_rate_radps;
    const float                                                     m_max_tilt_angle_rad;
-   const float                                                     m_lift_throttle;
    const float                                                     m_hover_throttle;
    aeromight_boundaries::ActuatorControl                           m_actuator_control{};
    aeromight_boundaries::ControlHealth                             m_local_control_health{};
