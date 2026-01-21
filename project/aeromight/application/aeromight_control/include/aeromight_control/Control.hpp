@@ -9,6 +9,7 @@
 #include "aeromight_boundaries/StateEstimation.hpp"
 #include "boundaries/SharedData.hpp"
 #include "interfaces/IClockSource.hpp"
+#include "math/Vector2.hpp"
 
 namespace aeromight_control
 {
@@ -200,16 +201,24 @@ private:
    {
       if (run_attitude_controller)
       {
-         const math::Vector3 angle_setpoint_rad{m_last_flight_control_setpoints.data.roll * m_max_tilt_angle_rad,
-                                                m_last_flight_control_setpoints.data.pitch * m_max_tilt_angle_rad,
-                                                0.0f};
+         math::Vector2 manual_setpoints{m_last_flight_control_setpoints.data.roll * m_max_tilt_angle_rad,
+                                        m_last_flight_control_setpoints.data.pitch * m_max_tilt_angle_rad};
 
-         // @TODO: scale values by max_tilt_angle/norm as well
+         const float tilt_norm = manual_setpoints.norm();
+
+         if (tilt_norm > m_max_tilt_angle_rad)
+         {
+            manual_setpoints *= (m_max_tilt_angle_rad / tilt_norm);
+         }
+
          const math::Vector3 angle_estimation_rad{m_state_estimation.euler.roll(),
                                                   m_state_estimation.euler.pitch(),
                                                   m_state_estimation.euler.yaw()};
 
-         m_angular_rate_setpoints = m_attitude_controller.update(angle_setpoint_rad, angle_estimation_rad);
+         const math::Vector3 angle_setpoints{manual_setpoints[0], manual_setpoints[1], 0.0f};
+
+         m_angular_rate_setpoints = m_attitude_controller.update(angle_setpoints, angle_estimation_rad);
+
          // @TODO: apply rate limits clamp to rate setpoints
       }
       else   // generate rate setpoints from sticks
