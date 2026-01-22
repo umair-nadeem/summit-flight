@@ -63,17 +63,17 @@ extern "C"
       // attitude controller
       constexpr bool     run_attitude_controller                        = false;
       constexpr float    max_tilt_angle_rad                             = 15 * physics::constants::deg_to_rad;
-      constexpr float    attitude_controller_roll_kp                    = 0.5f;
-      constexpr float    attitude_controller_pitch_kp                   = 0.5f;
+      constexpr float    attitude_controller_roll_kp                    = 0.0f;
+      constexpr float    attitude_controller_pitch_kp                   = 0.0f;
       constexpr float    attitude_controller_yaw_kp                     = 0.0f;
       constexpr float    max_roll_rate_radps                            = 1.5f;
       constexpr float    max_pitch_rate_radps                           = 1.5f;
       constexpr float    max_yaw_rate_radps                             = 1.0f;
       // rate controller
       constexpr float    torque_limit                                   = 1.0f;
-      constexpr float    rate_controller_roll_kp                        = 0.05f;
-      constexpr float    rate_controller_pitch_kp                       = 0.05f;
-      constexpr float    rate_controller_yaw_kp                         = 0.03f;
+      constexpr float    rate_controller_roll_kp                        = 0.04f;
+      constexpr float    rate_controller_pitch_kp                       = 0.04f;
+      constexpr float    rate_controller_yaw_kp                         = 0.02f;
       constexpr float    rate_controller_roll_ki                        = 0.0f;
       constexpr float    rate_controller_pitch_ki                       = 0.0f;
       constexpr float    rate_controller_yaw_ki                         = 0.0f;
@@ -88,7 +88,7 @@ extern "C"
       constexpr float    actuator_idle                                  = 0.2f;
       constexpr float    actuator_max                                   = 1.0f;
       constexpr float    yaw_saturation_limit_factor                    = 0.15f;
-      constexpr float    slew_rate_limit_s                              = 2.5f;
+      constexpr float    slew_rate_limit_s                              = 3.0f;
 
       LogClient logger_estimation{logging::logging_queue_sender, "estimation"};
       LogClient logger_control{logging::logging_queue_sender, "control"};
