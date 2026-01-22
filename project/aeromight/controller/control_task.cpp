@@ -58,13 +58,13 @@ extern "C"
       constexpr float    min_dt_s                                       = 0.002f;
       constexpr float    max_dt_s                                       = 0.010f;
       constexpr float    first_order_lpf_cutoff_frequency_hz            = 80.0f;
-      constexpr float    butterworth_filter_cutoff_frequency_hz         = 25.0f;
+      constexpr float    butterworth_filter_cutoff_frequency_hz         = 30.0f;
       constexpr float    hover_throttle                                 = 0.70f;
       // attitude controller
-      constexpr bool     run_attitude_controller                        = false;
-      constexpr float    max_tilt_angle_rad                             = 15 * physics::constants::deg_to_rad;
-      constexpr float    attitude_controller_roll_kp                    = 0.0f;
-      constexpr float    attitude_controller_pitch_kp                   = 0.0f;
+      constexpr bool     run_attitude_controller                        = true;
+      constexpr float    max_tilt_angle_rad                             = 50 * physics::constants::deg_to_rad;
+      constexpr float    attitude_controller_roll_kp                    = 0.6f;
+      constexpr float    attitude_controller_pitch_kp                   = 0.6f;
       constexpr float    attitude_controller_yaw_kp                     = 0.0f;
       constexpr float    max_roll_rate_radps                            = 1.5f;
       constexpr float    max_pitch_rate_radps                           = 1.5f;
