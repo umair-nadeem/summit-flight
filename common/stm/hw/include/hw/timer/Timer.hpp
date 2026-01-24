@@ -17,6 +17,7 @@ public:
    }
 
    void start();
+   void enable_interrupt();
    void clear_update_flag();
    bool is_update_flag_active() const;
 

@@ -22,6 +22,9 @@
 #include "sys_time/ClockSource.hpp"
 #include "task_params.hpp"
 
+// sys clock timer
+hw::timer::TimerConfig sys_time::ClockSource::timer_config{controller::global_data.timer.tim2_config};
+
 namespace logging
 {
 rtos::QueueSender<params::LogBuffer> logging_queue_sender{};
@@ -257,7 +260,6 @@ void setup_adc()
 
 void start_sys_clock()
 {
-   sys_time::ClockSource::init();
    sys_clock_data.syc_clock_timer.start();
 }
 

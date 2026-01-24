@@ -5,8 +5,12 @@ namespace hw::timer
 
 void Timer::start()
 {
-   LL_TIM_EnableIT_UPDATE(m_config.timer_handle);
    LL_TIM_EnableCounter(m_config.timer_handle);
+}
+
+void Timer::enable_interrupt()
+{
+   LL_TIM_EnableIT_UPDATE(m_config.timer_handle);
 }
 
 void Timer::clear_update_flag()

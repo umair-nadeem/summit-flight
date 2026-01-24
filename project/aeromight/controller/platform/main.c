@@ -109,6 +109,9 @@ int main(void)
   DWT->CYCCNT = 0;                       // reset
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;   // enable
 
+  // freeze TIM2 clock when debugging
+  DBGMCU->APB1FZ |= DBGMCU_APB1_FZ_DBG_TIM2_STOP;
+
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -502,16 +505,12 @@ static void MX_TIM2_Init(void)
   /* Peripheral clock enable */
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM2);
 
-  /* TIM2 interrupt Init */
-  NVIC_SetPriority(TIM2_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),3, 0));
-  NVIC_EnableIRQ(TIM2_IRQn);
-
   /* USER CODE BEGIN TIM2_Init 1 */
 
   /* USER CODE END TIM2_Init 1 */
-  TIM_InitStruct.Prescaler = 9999;
+  TIM_InitStruct.Prescaler = 99;
   TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
-  TIM_InitStruct.Autoreload = 9;
+  TIM_InitStruct.Autoreload = 0xFFFFFFFF;
   TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
   LL_TIM_Init(TIM2, &TIM_InitStruct);
   LL_TIM_DisableARRPreload(TIM2);

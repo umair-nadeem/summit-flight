@@ -10,7 +10,6 @@ target_include_directories(aeromight_lib INTERFACE
 target_sources(aeromight_lib INTERFACE 
    ${CMAKE_CURRENT_LIST_DIR}/platform/main.c
    ${CMAKE_CURRENT_LIST_DIR}/os/port.c
-   ${CMAKE_CURRENT_LIST_DIR}/sys_clock.cpp
 
    aeromight.cpp
    logging_task.cpp

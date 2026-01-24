@@ -192,6 +192,7 @@ extern "C"
          if (flags.value().test(static_cast<uint8_t>(aeromight_boundaries::ControlTaskEvents::start)))
          {
             // start pwm
+            data->control_task_pwm_timer.enable_interrupt();
             data->control_task_pwm_timer.start();
             data->control_task_pwm_timer.enable_all_outputs();
 

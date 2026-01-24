@@ -80,7 +80,6 @@ public:
    {
       if (m_local_control_health.state == aeromight_boundaries::ControlState::inactive)
       {
-         m_last_execution_time_ms = ClockSource::now_ms();
          get_time();
          move_to_disarmed();
          publish_health();
@@ -152,12 +151,12 @@ private:
 
    void get_time()
    {
-      m_current_time_ms = ClockSource::now_ms();
+      m_last_execution_time_us = m_current_time_us;
+      m_current_time_us        = ClockSource::now_us();
+      m_current_time_ms        = m_current_time_us / 1000u;
 
-      m_dt_s = static_cast<float>(m_current_time_ms - m_last_execution_time_ms) / 1000.0f;
+      m_dt_s = static_cast<float>(m_current_time_us - m_last_execution_time_us) * 0.000001f;
       m_dt_s = std::clamp(m_dt_s, m_min_dt_s, m_max_dt_s);
-
-      m_last_execution_time_ms = m_current_time_ms;
    }
 
    void get_flight_control_setpoints()
@@ -331,7 +330,8 @@ private:
       static uint32_t m_counter{0};
       if ((m_counter++ % 125) == 0)
       {
-         m_logger.printf("%.2f %.2f %.2f | %.2f %.2f %.2f | %.2f %.2f %.2f | %.2f %.2f %.2f | t=%.2f | 1=%.2f 2=%.2f 3=%.2f 4=%.2f",
+         m_logger.printf("%.5f | %.2f %.2f %.2f | %.2f %.2f %.2f | %.2f %.2f %.2f | %.2f %.2f %.2f | t=%.2f | 1=%.2f 2=%.2f 3=%.2f 4=%.2f",
+                         m_dt_s,
                          m_filtered_gyro_radps[0],
                          m_filtered_gyro_radps[1],
                          m_filtered_gyro_radps[2],
@@ -389,7 +389,8 @@ private:
    math::Vector3                                                   m_torque_setpoints{};
    float                                                           m_dt_s{0.0f};
    uint32_t                                                        m_current_time_ms{0};
-   uint32_t                                                        m_last_execution_time_ms{0};
+   uint32_t                                                        m_current_time_us{0};
+   uint32_t                                                        m_last_execution_time_us{0};
 };
 
 }   // namespace aeromight_control

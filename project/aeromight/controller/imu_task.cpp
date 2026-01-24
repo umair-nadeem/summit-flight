@@ -76,6 +76,7 @@ extern "C"
                               controller::task::imu_task_period_in_ms};
 
       imu_driver_executor.start();
+      data->imu_task_tick_timer.enable_interrupt();
       data->imu_task_tick_timer.start();
 
       while (true)
