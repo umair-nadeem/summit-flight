@@ -59,7 +59,14 @@ extern "C"
       constexpr float    max_dt_s                                       = 0.010f;
       constexpr float    first_order_lpf_cutoff_frequency_hz            = 80.0f;
       constexpr float    butterworth_filter_cutoff_frequency_hz         = 30.0f;
-      constexpr float    hover_throttle                                 = 0.70f;
+      // throttle and thrust
+      constexpr float    thrust_limiting                                = 0.3f;
+      constexpr float    actuator_min                                   = 0.0f;
+      constexpr float    actuator_max                                   = 1.0f - thrust_limiting;
+      constexpr float    actuator_idle                                  = 0.2f;
+      constexpr float    throttle_min                                   = actuator_min;
+      constexpr float    throttle_max                                   = actuator_max;
+      constexpr float    throttle_hover                                 = 0.50f;
       // attitude controller
       constexpr bool     run_attitude_controller                        = true;
       constexpr float    max_tilt_angle_rad                             = 50 * physics::constants::deg_to_rad;
@@ -73,7 +80,7 @@ extern "C"
       constexpr float    torque_limit                                   = 1.0f;
       constexpr float    rate_controller_roll_kp                        = 0.04f;
       constexpr float    rate_controller_pitch_kp                       = 0.04f;
-      constexpr float    rate_controller_yaw_kp                         = 0.02f;
+      constexpr float    rate_controller_yaw_kp                         = 0.04f;
       constexpr float    rate_controller_roll_ki                        = 0.0f;
       constexpr float    rate_controller_pitch_ki                       = 0.0f;
       constexpr float    rate_controller_yaw_ki                         = 0.0f;
@@ -84,11 +91,8 @@ extern "C"
       constexpr float    rate_controller_pitch_integrator_limit         = 0.3f;
       constexpr float    rate_controller_yaw_integrator_limit           = 0.3f;
       // control allocator
-      constexpr float    actuator_min                                   = 0.0f;
-      constexpr float    actuator_idle                                  = 0.2f;
-      constexpr float    actuator_max                                   = 1.0f;
       constexpr float    yaw_saturation_limit_factor                    = 0.15f;
-      constexpr float    slew_rate_limit_s                              = 3.0f;
+      constexpr float    slew_rate_limit_s                              = 2.0f;
 
       LogClient logger_estimation{logging::logging_queue_sender, "estimation"};
       LogClient logger_control{logging::logging_queue_sender, "control"};
@@ -141,8 +145,8 @@ extern "C"
                                                         torque_limit};
 
       aeromight_control::ControlAllocator control_allocator{actuator_min,
-                                                            actuator_idle,
                                                             actuator_max,
+                                                            actuator_idle,
                                                             yaw_saturation_limit_factor,
                                                             slew_rate_limit_s};
 
@@ -178,7 +182,9 @@ extern "C"
                   max_roll_rate_radps,
                   max_pitch_rate_radps,
                   max_yaw_rate_radps,
-                  hover_throttle};
+                  throttle_min,
+                  throttle_max,
+                  throttle_hover};
 
       aeromight_control::EstimationAndControl<decltype(estimation),
                                               decltype(control)>

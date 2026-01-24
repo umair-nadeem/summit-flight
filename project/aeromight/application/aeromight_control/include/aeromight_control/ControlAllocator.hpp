@@ -14,13 +14,13 @@ class ControlAllocator
 
 public:
    explicit ControlAllocator(const float actuator_min,
-                             const float actuator_idle,
                              const float actuator_max,
+                             const float actuator_idle,
                              const float yaw_saturation_limit_factor,
                              const float slew_rate_limit_s)
        : m_actuator_min{actuator_min},
-         m_actuator_idle{actuator_idle},
          m_actuator_max{actuator_max},
+         m_actuator_idle{actuator_idle},
          m_yaw_saturation_limit_factor{yaw_saturation_limit_factor},
          m_slew_rate_limit_s{slew_rate_limit_s}
    {
@@ -216,8 +216,8 @@ private:
    static constexpr float epsilon = 1e-6f;
 
    const float     m_actuator_min;
-   const float     m_actuator_idle;
    const float     m_actuator_max;
+   const float     m_actuator_idle;
    const float     m_yaw_saturation_limit_factor;
    const float     m_slew_rate_limit_s;
    math::Vector4   m_control_setpoints{0.0f};
