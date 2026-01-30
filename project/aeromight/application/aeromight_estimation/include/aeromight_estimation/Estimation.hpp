@@ -38,7 +38,9 @@ public:
                        const uint32_t       max_age_imu_data_ms,
                        const uint32_t       max_age_baro_data_ms,
                        const float          max_valid_imu_sample_dt_s,
-                       const float          max_valid_barometer_sample_dt_s)
+                       const float          max_valid_barometer_sample_dt_s,
+                       const float          roll_trim,
+                       const float          pitch_trim)
        : m_attitude_estimator{attitude_estimator},
          m_altitude_ekf{altitude_ekf},
          m_estimator_health_storage{estimator_health_storage},
@@ -52,7 +54,9 @@ public:
          m_max_age_imu_data_ms{max_age_imu_data_ms},
          m_max_age_baro_data_ms{max_age_baro_data_ms},
          m_max_valid_imu_sample_dt_s{max_valid_imu_sample_dt_s},
-         m_max_valid_barometer_sample_dt_s{max_valid_barometer_sample_dt_s}
+         m_max_valid_barometer_sample_dt_s{max_valid_barometer_sample_dt_s},
+         m_roll_trim{roll_trim},
+         m_pitch_trim{pitch_trim}
    {
       m_logger.enable();
    }
@@ -248,10 +252,13 @@ private:
       // update attitude state estimation
       m_attitude_estimator.update(accel_mps2, gyro_radps, m_imu_sample_dt_s);
 
-      m_local_estimation_data.attitude   = m_attitude_estimator.get_quaternion();
-      m_local_estimation_data.gyro_radps = m_attitude_estimator.get_unbiased_gyro_data(gyro_radps);
-      m_local_estimation_data.gyro_bias  = m_attitude_estimator.get_gyro_bias();
-      m_local_estimation_data.euler      = math::quaternion_to_euler(m_local_estimation_data.attitude);
+      m_local_estimation_data.attitude      = m_attitude_estimator.get_quaternion();
+      m_local_estimation_data.accel_mps2    = accel_mps2;
+      m_local_estimation_data.gyro_radps    = m_attitude_estimator.get_unbiased_gyro_data(gyro_radps);
+      m_local_estimation_data.gyro_bias     = m_attitude_estimator.get_gyro_bias();
+      m_local_estimation_data.euler         = math::quaternion_to_euler(m_local_estimation_data.attitude);
+      m_local_estimation_data.euler.roll()  = m_local_estimation_data.euler.roll() + m_roll_trim;
+      m_local_estimation_data.euler.pitch() = m_local_estimation_data.euler.pitch() + m_pitch_trim;
 
       // predict altitude with ekf2
       m_altitude_ekf.predict(accel_mps2, m_local_estimation_data.attitude, m_imu_sample_dt_s);
@@ -412,6 +419,8 @@ private:
    const uint32_t                        m_max_age_baro_data_ms;
    const float                           m_max_valid_imu_sample_dt_s;
    const float                           m_max_valid_barometer_sample_dt_s;
+   const float                           m_roll_trim;
+   const float                           m_pitch_trim;
    aeromight_boundaries::EstimatorHealth m_local_estimator_health{};
    StateEstimation                       m_local_estimation_data{};
    ImuData::Sample                       m_last_imu_sample{};

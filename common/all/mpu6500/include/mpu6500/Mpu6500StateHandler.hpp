@@ -514,7 +514,7 @@ private:
 
       // bias = a - G_b
       // accel bias is the residual vector after subtracting the G component
-      m_bias.accel = m_self_test_stats.mean_accel - gravity_body;
+      m_bias.accel = Vec3{0.0f, 0.0f, m_self_test_stats.mean_accel[2] - gravity_body[2]};
 
       // gyro bias is just mean
       m_bias.gyro = m_self_test_stats.mean_gyro;

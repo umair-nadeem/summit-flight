@@ -334,8 +334,10 @@ private:
       static uint32_t m_counter{0};
       if ((m_counter++ % 125) == 0)
       {
-         m_logger.printf("%.1f | %.2f %.2f %.2f | %.2f %.2f %.2f | %.2f %.2f %.2f | %.2f %.2f %.2f | t=%.2f | 1=%.2f 2=%.2f 3=%.2f 4=%.2f",
-                         m_dt_s * 1000.0f,
+         m_logger.printf("acc %.2f %.2f %.2f | gyr %.2f %.2f %.2f | est %.3f %.3f %.3f | rate %.2f %.2f %.2f | trq %.4f %.4f %.4f | pwm %.4f %.4f %.4f %.4f",
+                         m_state_estimation.accel_mps2[0],
+                         m_state_estimation.accel_mps2[1],
+                         m_state_estimation.accel_mps2[2],
                          m_state_estimation.gyro_radps[0],
                          m_state_estimation.gyro_radps[1],
                          m_state_estimation.gyro_radps[2],
@@ -348,7 +350,6 @@ private:
                          m_torque_setpoints[0],
                          m_torque_setpoints[1],
                          m_torque_setpoints[2],
-                         m_flight_control_setpoints.data.throttle,
                          m_actuator_control.setpoints[0],
                          m_actuator_control.setpoints[1],
                          m_actuator_control.setpoints[2],

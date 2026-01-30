@@ -54,6 +54,8 @@ extern "C"
       constexpr uint32_t max_age_baro_data_ms                           = controller::task::barometer_task_period_in_ms * 10u;
       constexpr float    max_valid_imu_sample_dt_s                      = 0.02f;
       constexpr float    max_valid_barometer_sample_dt_s                = 10.0f;
+      constexpr float    roll_trim                                      = -0.018f;
+      constexpr float    pitch_trim                                     = -0.011f;
       // control parameters
       constexpr float    min_dt_s                                       = 0.002f;
       constexpr float    max_dt_s                                       = 0.010f;
@@ -123,7 +125,9 @@ extern "C"
                      max_age_imu_data_ms,
                      max_age_baro_data_ms,
                      max_valid_imu_sample_dt_s,
-                     max_valid_barometer_sample_dt_s};
+                     max_valid_barometer_sample_dt_s,
+                     roll_trim,
+                     pitch_trim};
 
       const math::Vector3 attitude_gains_p{attitude_controller_roll_kp, attitude_controller_pitch_kp, attitude_controller_yaw_kp};
 

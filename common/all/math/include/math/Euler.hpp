@@ -8,7 +8,9 @@ namespace math
 struct Euler
 {
    explicit Euler()
+       : m_data{}
    {
+      zero();
    }
 
    explicit Euler(const float x,
@@ -18,19 +20,19 @@ struct Euler
    {
    }
 
-   void roll(const float x)
+   float& roll() noexcept
    {
-      m_data[0] = x;
+      return m_data[0];
    }
 
-   void pitch(const float y)
+   float& pitch() noexcept
    {
-      m_data[1] = y;
+      return m_data[1];
    }
 
-   void yaw(const float z)
+   float& yaw() noexcept
    {
-      m_data[2] = z;
+      return m_data[2];
    }
 
    void zero()

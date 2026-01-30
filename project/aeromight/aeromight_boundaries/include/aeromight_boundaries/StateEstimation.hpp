@@ -13,6 +13,7 @@ struct StateEstimation
    uint32_t timestamp_ms{};
 
    math::Quaternion attitude{};
+   math::Vector3    accel_mps2{};
    math::Vector3    gyro_radps{};
    math::Vector3    gyro_bias{};
 
