@@ -57,7 +57,7 @@ extern "C"
       // control parameters
       constexpr float    min_dt_s                                       = 0.002f;
       constexpr float    max_dt_s                                       = 0.010f;
-      constexpr float    first_order_lpf_cutoff_frequency_hz            = 80.0f;
+      constexpr float    manual_input_lpf_cutoff_hz                     = 10.0f;
       constexpr float    butterworth_filter_cutoff_frequency_hz         = 30.0f;
       // throttle and thrust
       constexpr float    thrust_limiting                                = 0.3f;
@@ -150,23 +150,23 @@ extern "C"
                                                             yaw_saturation_limit_factor,
                                                             slew_rate_limit_s};
 
-      math::FirstOrderLpf gyro_x_lpf{first_order_lpf_cutoff_frequency_hz};
-      math::FirstOrderLpf gyro_y_lpf{first_order_lpf_cutoff_frequency_hz};
-      math::FirstOrderLpf gyro_z_lpf{first_order_lpf_cutoff_frequency_hz};
+      math::FirstOrderLpf roll_input_lpf{manual_input_lpf_cutoff_hz};
+      math::FirstOrderLpf pitch_input_lpf{manual_input_lpf_cutoff_hz};
+      math::FirstOrderLpf yaw_input_lpf{manual_input_lpf_cutoff_hz};
 
       aeromight_control::Control<decltype(attitude_controller),
                                  decltype(rate_controller),
                                  decltype(control_allocator),
-                                 decltype(gyro_x_lpf),
+                                 decltype(roll_input_lpf),
                                  decltype(gyro_derivative_x_lpf2),
                                  sys_time::ClockSource,
                                  LogClient>
           control{attitude_controller,
                   rate_controller,
                   control_allocator,
-                  gyro_x_lpf,
-                  gyro_y_lpf,
-                  gyro_z_lpf,
+                  roll_input_lpf,
+                  pitch_input_lpf,
+                  yaw_input_lpf,
                   gyro_derivative_x_lpf2,
                   gyro_derivative_y_lpf2,
                   gyro_derivative_z_lpf2,
