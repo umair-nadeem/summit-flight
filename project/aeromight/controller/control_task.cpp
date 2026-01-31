@@ -54,11 +54,12 @@ extern "C"
       constexpr uint32_t max_age_baro_data_ms                           = controller::task::barometer_task_period_in_ms * 10u;
       constexpr float    max_valid_imu_sample_dt_s                      = 0.02f;
       constexpr float    max_valid_barometer_sample_dt_s                = 10.0f;
-      constexpr float    roll_trim                                      = -0.018f;
-      constexpr float    pitch_trim                                     = -0.011f;
+      constexpr float    roll_trim                                      = -0.02f;
+      constexpr float    pitch_trim                                     = -0.01f;
       // control parameters
       constexpr float    min_dt_s                                       = 0.002f;
       constexpr float    max_dt_s                                       = 0.010f;
+      constexpr float    gyro_lpf_cutoff_hz                             = 80.0f;
       constexpr float    manual_input_lpf_cutoff_hz                     = 10.0f;
       constexpr float    butterworth_filter_cutoff_frequency_hz         = 20.0f;
       // throttle and thrust
@@ -68,31 +69,33 @@ extern "C"
       constexpr float    actuator_idle                                  = 0.2f;
       constexpr float    throttle_min                                   = actuator_min;
       constexpr float    throttle_max                                   = actuator_max;
-      constexpr float    throttle_hover                                 = 0.50f;
+      constexpr float    throttle_hover                                 = 0.4f;
+      constexpr float    throttle_curve_exponential                     = 0.55f;
       // attitude controller
       constexpr bool     run_attitude_controller                        = true;
-      constexpr float    max_tilt_angle_rad                             = 50 * physics::constants::deg_to_rad;
-      constexpr float    attitude_controller_roll_kp                    = 0.8f;
-      constexpr float    attitude_controller_pitch_kp                   = 0.8f;
+      constexpr float    max_tilt_angle_rad                             = 55 * physics::constants::deg_to_rad;
+      constexpr float    attitude_controller_roll_kp                    = 1.2f;
+      constexpr float    attitude_controller_pitch_kp                   = 1.2f;
       constexpr float    attitude_controller_yaw_kp                     = 0.0f;
       constexpr float    max_roll_rate_radps                            = 1.5f;
       constexpr float    max_pitch_rate_radps                           = 1.5f;
       constexpr float    max_yaw_rate_radps                             = 1.0f;
       // rate controller
       constexpr float    torque_limit                                   = 1.0f;
-      constexpr float    rate_controller_roll_kp                        = 0.04f;
-      constexpr float    rate_controller_pitch_kp                       = 0.04f;
-      constexpr float    rate_controller_yaw_kp                         = 0.04f;
-      constexpr float    rate_controller_roll_ki                        = 0.0f;
-      constexpr float    rate_controller_pitch_ki                       = 0.0f;
+      constexpr float    rate_controller_roll_kp                        = 0.035f;
+      constexpr float    rate_controller_pitch_kp                       = 0.035f;
+      constexpr float    rate_controller_yaw_kp                         = 0.035f;
+      constexpr float    rate_controller_roll_ki                        = 0.002f;
+      constexpr float    rate_controller_pitch_ki                       = 0.002f;
       constexpr float    rate_controller_yaw_ki                         = 0.0f;
       constexpr float    rate_controller_roll_kd                        = 0.003f;
       constexpr float    rate_controller_pitch_kd                       = 0.003f;
       constexpr float    rate_controller_yaw_kd                         = 0.0f;
-      constexpr float    rate_controller_roll_integrator_limit          = 0.3f;
-      constexpr float    rate_controller_pitch_integrator_limit         = 0.3f;
-      constexpr float    rate_controller_yaw_integrator_limit           = 0.3f;
+      constexpr float    rate_controller_roll_integrator_limit          = 0.2f;
+      constexpr float    rate_controller_pitch_integrator_limit         = 0.2f;
+      constexpr float    rate_controller_yaw_integrator_limit           = 0.2f;
       // control allocator
+      constexpr float    thrust_deadband                                = 0.01f;
       constexpr float    yaw_saturation_limit_factor                    = 0.15f;
       constexpr float    slew_rate_limit_s                              = 1.5f;
 
@@ -151,8 +154,13 @@ extern "C"
       aeromight_control::ControlAllocator control_allocator{actuator_min,
                                                             actuator_max,
                                                             actuator_idle,
+                                                            thrust_deadband,
                                                             yaw_saturation_limit_factor,
                                                             slew_rate_limit_s};
+
+      math::FirstOrderLpf gyro_x_lpf{gyro_lpf_cutoff_hz};
+      math::FirstOrderLpf gyro_y_lpf{gyro_lpf_cutoff_hz};
+      math::FirstOrderLpf gyro_z_lpf{gyro_lpf_cutoff_hz};
 
       math::FirstOrderLpf roll_input_lpf{manual_input_lpf_cutoff_hz};
       math::FirstOrderLpf pitch_input_lpf{manual_input_lpf_cutoff_hz};
@@ -168,6 +176,9 @@ extern "C"
           control{attitude_controller,
                   rate_controller,
                   control_allocator,
+                  gyro_x_lpf,
+                  gyro_y_lpf,
+                  gyro_z_lpf,
                   roll_input_lpf,
                   pitch_input_lpf,
                   yaw_input_lpf,
@@ -188,7 +199,8 @@ extern "C"
                   max_yaw_rate_radps,
                   throttle_min,
                   throttle_max,
-                  throttle_hover};
+                  throttle_hover,
+                  throttle_curve_exponential};
 
       aeromight_control::EstimationAndControl<decltype(estimation),
                                               decltype(control)>

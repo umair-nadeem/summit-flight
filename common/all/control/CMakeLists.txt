@@ -1,8 +1,7 @@
 add_module(
    SOURCES
+      src/AttitudeControl.cpp
    LIBS
-      control
-      error
       math
-      utilities
+      physics
 )

@@ -8,6 +8,7 @@
 #include "aeromight_boundaries/FlightControlSetpoints.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
 #include "boundaries/SharedData.hpp"
+#include "control/AttitudeControl.hpp"
 #include "interfaces/IClockSource.hpp"
 #include "math/Vector2.hpp"
 
@@ -34,6 +35,9 @@ public:
    explicit Control(AttitudeController&                          attitude_controller,
                     RateController&                              rate_controller,
                     ControlAllocator&                            control_allocator,
+                    FirstOrderLpf&                               gyro_x_lpf,
+                    FirstOrderLpf&                               gyro_y_lpf,
+                    FirstOrderLpf&                               gyro_z_lpf,
                     FirstOrderLpf&                               roll_input_lpf,
                     FirstOrderLpf&                               pitch_input_lpf,
                     FirstOrderLpf&                               yaw_input_lpf,
@@ -54,10 +58,12 @@ public:
                     const float                                  max_yaw_rate_radps,
                     const float                                  throttle_min,
                     const float                                  throttle_max,
-                    const float                                  throttle_hover)
+                    const float                                  throttle_hover,
+                    const float                                  throttle_curve_exponential)
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
          m_control_allocator{control_allocator},
+         m_gyro_lpf{gyro_x_lpf, gyro_y_lpf, gyro_z_lpf},
          m_manual_input_lpf{roll_input_lpf, pitch_input_lpf, yaw_input_lpf},
          m_angular_acceleration_lpf2{angular_acceleration_x_lpf2, angular_acceleration_y_lpf2, angular_acceleration_z_lpf2},
          m_actuator_control_storage{actuator_control_storage},
@@ -74,10 +80,12 @@ public:
          m_max_yaw_rate_radps{max_yaw_rate_radps},
          m_throttle_min{throttle_min},
          m_throttle_max{throttle_max},
-         m_throttle_hover{throttle_hover}
+         m_throttle_hover{throttle_hover},
+         m_throttle_curve_exponential{throttle_curve_exponential}
 
    {
       m_logger.enable();
+      control::AttitudeControl::init(m_throttle_hover, m_throttle_curve_exponential);
    }
 
    void start()
@@ -166,10 +174,12 @@ private:
    void get_flight_control_setpoints()
    {
       m_flight_control_setpoints = m_flight_control_setpoint_storage.get_latest();
+      auto& data                 = m_flight_control_setpoints.data;
 
       // Pilot Command Mapping: perform pitch sign inversion (flight stick pullback -> pitch up)
-      m_flight_control_setpoints.data.pitch *= -1.0f;
-      m_flight_control_setpoints.data.throttle = std::clamp(m_flight_control_setpoints.data.throttle, m_throttle_min, m_throttle_max);
+      data.pitch *= -1.0f;
+      data.throttle = control::AttitudeControl::throttle_curve(data.throttle, m_throttle_hover, m_throttle_curve_exponential);
+      data.throttle = std::clamp(data.throttle, m_throttle_min, m_throttle_max);
    }
 
    void move_to_killed()
@@ -238,7 +248,14 @@ private:
 
    void get_torque_setpoints(const bool run_integrator)
    {
-      const math::Vector3 angular_acceleration{(m_state_estimation.gyro_radps - m_last_gyro_radps) / m_dt_s};
+      m_last_filtered_gyro_radps = m_filtered_gyro_radps;
+
+      for (uint8_t i = 0; i < num_axis; i++)
+      {
+         m_filtered_gyro_radps[i] = m_gyro_lpf[i].get().apply(m_state_estimation.gyro_radps[i], m_dt_s);
+      }
+
+      const math::Vector3 angular_acceleration{(m_filtered_gyro_radps - m_last_filtered_gyro_radps) / m_dt_s};
       math::Vector3       filtered_angular_acceleration{};
 
       for (uint8_t i = 0; i < num_axis; i++)
@@ -247,12 +264,10 @@ private:
       }
 
       m_torque_setpoints = m_rate_controller.update(m_angular_rate_setpoints,
-                                                    m_state_estimation.gyro_radps,
+                                                    m_filtered_gyro_radps,
                                                     filtered_angular_acceleration,
                                                     m_dt_s,
                                                     run_integrator);
-
-      m_last_gyro_radps = m_state_estimation.gyro_radps;
    }
 
    void get_actuator_setpoints()
@@ -334,7 +349,7 @@ private:
       static uint32_t m_counter{0};
       if ((m_counter++ % 125) == 0)
       {
-         m_logger.printf("acc %.2f %.2f %.2f | gyr %.2f %.2f %.2f | est %.3f %.3f %.3f | rate %.2f %.2f %.2f | trq %.4f %.4f %.4f | pwm %.4f %.4f %.4f %.4f",
+         m_logger.printf("acc %.2f %.2f %.2f | gyr %.2f %.2f %.2f | est %.3f %.3f %.3f | rate %.2f %.2f %.2f | trq %.4f %.4f %.4f | t %.2f | pwm %.4f %.4f %.4f %.4f",
                          m_state_estimation.accel_mps2[0],
                          m_state_estimation.accel_mps2[1],
                          m_state_estimation.accel_mps2[2],
@@ -350,6 +365,7 @@ private:
                          m_torque_setpoints[0],
                          m_torque_setpoints[1],
                          m_torque_setpoints[2],
+                         m_flight_control_setpoints.data.throttle,
                          m_actuator_control.setpoints[0],
                          m_actuator_control.setpoints[1],
                          m_actuator_control.setpoints[2],
@@ -370,6 +386,7 @@ private:
    AttitudeController&                                             m_attitude_controller;
    RateController&                                                 m_rate_controller;
    ControlAllocator&                                               m_control_allocator;
+   std::array<std::reference_wrapper<FirstOrderLpf>, num_axis>     m_gyro_lpf;
    std::array<std::reference_wrapper<FirstOrderLpf>, num_axis>     m_manual_input_lpf;
    std::array<std::reference_wrapper<ButterworthFilter>, num_axis> m_angular_acceleration_lpf2;
    ActuatorControl&                                                m_actuator_control_storage;
@@ -387,10 +404,12 @@ private:
    const float                                                     m_throttle_min;
    const float                                                     m_throttle_max;
    const float                                                     m_throttle_hover;
+   const float                                                     m_throttle_curve_exponential;
    aeromight_boundaries::ActuatorControl                           m_actuator_control{};
    aeromight_boundaries::ControlHealth                             m_control_health{};
    FlightControlSetpoints::Sample                                  m_flight_control_setpoints{};
-   math::Vector3                                                   m_last_gyro_radps{};
+   math::Vector3                                                   m_filtered_gyro_radps{};
+   math::Vector3                                                   m_last_filtered_gyro_radps{};
    math::Vector3                                                   m_angular_rate_setpoints{};
    math::Vector3                                                   m_torque_setpoints{};
    float                                                           m_dt_s{0.0f};

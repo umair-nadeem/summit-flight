@@ -16,11 +16,13 @@ public:
    explicit ControlAllocator(const float actuator_min,
                              const float actuator_max,
                              const float actuator_idle,
+                             const float thrust_deadband,
                              const float yaw_saturation_limit_factor,
                              const float slew_rate_limit_s)
        : m_actuator_min{actuator_min},
          m_actuator_max{actuator_max},
          m_actuator_idle{actuator_idle},
+         m_thrust_deadband{thrust_deadband},
          m_yaw_saturation_limit_factor{yaw_saturation_limit_factor},
          m_slew_rate_limit_s{slew_rate_limit_s}
    {
@@ -48,6 +50,8 @@ public:
       perform_desaturation(actuator_torque, m_control_setpoints[aeromight_boundaries::ControlAxis::thrust]);
 
       m_actuator_setpoints = actuator_torque + m_control_setpoints[aeromight_boundaries::ControlAxis::thrust];
+
+      apply_deadband_to_actuator_outputs();
    }
 
    void estimate_saturation()
@@ -176,6 +180,17 @@ private:
       }
    }
 
+   void apply_deadband_to_actuator_outputs()
+   {
+      for (std::size_t i = 0; i < m_actuator_setpoints.size; i++)
+      {
+         if (std::fabs(m_actuator_setpoints[i]) < m_thrust_deadband)
+         {
+            m_actuator_setpoints[i] = 0.0f;
+         }
+      }
+   }
+
    static constexpr void estimate_actuator_min_max(const math::Vector4& actuator_sp, float& actuator_min, float& actuator_max)
    {
       actuator_min = actuator_sp[0];
@@ -218,6 +233,7 @@ private:
    const float     m_actuator_min;
    const float     m_actuator_max;
    const float     m_actuator_idle;
+   const float     m_thrust_deadband;
    const float     m_yaw_saturation_limit_factor;
    const float     m_slew_rate_limit_s;
    math::Vector4   m_control_setpoints{0.0f};
