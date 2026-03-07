@@ -260,7 +260,7 @@ void setup_adc()
 
 void start_sys_clock()
 {
-   sys_clock_data.syc_clock_timer.start();
+   sys_clock_data.syc_clock_timer.enable_counter();
 }
 
 }   // namespace controller

@@ -13,9 +13,4 @@ enum class ControlTaskEvents : uint8_t
 
 using ControlTaskNotificationFlags = std::bitset<4u>;
 
-inline constexpr uint8_t pos_to_value(ControlTaskEvents pos)
-{
-   return 1u << static_cast<uint8_t>(pos);
-}
-
 }   // namespace aeromight_boundaries

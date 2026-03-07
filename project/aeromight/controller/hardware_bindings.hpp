@@ -45,14 +45,17 @@ struct GlobalData
 
    struct Timer
    {
-      // TIM1
+      // TIM1 -> Master PWM
       hw::timer::TimerConfig tim1_config{.timer_handle = TIM1};
 
-      // TIM2
+      // TIM2 -> Sys Clock
       hw::timer::TimerConfig tim2_config{.timer_handle = TIM2};
 
-      // TIM3
+      // TIM3 -> IMU
       hw::timer::TimerConfig tim3_config{.timer_handle = TIM3};
+
+      // TIM4 -> Slave PWM
+      hw::timer::TimerConfig tim4_config{.timer_handle = TIM4};
    } timer;
 };
 

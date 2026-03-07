@@ -13,9 +13,4 @@ enum class BarometerTaskEvents : uint8_t
 
 using BarometerNotificationFlags = std::bitset<4u>;
 
-inline constexpr uint8_t pos_to_value(BarometerTaskEvents pos)
-{
-   return 1u << static_cast<uint8_t>(pos);
-}
-
 }   // namespace aeromight_boundaries

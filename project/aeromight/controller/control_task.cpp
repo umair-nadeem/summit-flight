@@ -214,9 +214,15 @@ extern "C"
          if (flags.value().test(static_cast<uint8_t>(aeromight_boundaries::ControlTaskEvents::start)))
          {
             // start pwm
-            data->control_task_pwm_timer.enable_interrupt();
-            data->control_task_pwm_timer.start();
-            data->control_task_pwm_timer.enable_all_outputs();
+            data->master_pwm_timer.enable_interrupt();
+
+            data->slave_pwm_timer.enable_channel(data->slave_pwm_timer_channels);
+            data->master_pwm_timer.enable_channel(data->master_pwm_timer_channels);
+
+            data->master_pwm_timer.enable_all_outputs();
+
+            data->slave_pwm_timer.enable_counter();
+            data->master_pwm_timer.enable_counter();
 
             estimation_and_control.start();
             rtos::run_periodic_task(estimation_and_control);
@@ -252,9 +258,9 @@ extern "C"
       auto& data = controller::control_task_data;
 
       // Check update interrupt
-      if (data.control_task_pwm_timer.is_update_flag_active())
+      if (data.master_pwm_timer.is_update_flag_active())
       {
-         data.control_task_pwm_timer.clear_update_flag();
+         data.master_pwm_timer.clear_update_flag();
 
          const auto& actuator_control_storage = aeromight_boundaries::aeromight_data.actuator_control;
 
@@ -270,7 +276,8 @@ extern "C"
          {
             const uint32_t pwm = enable_outputs ? actuator_to_ccr(act.setpoints[i]) : pwm_min_us;
 
-            data.control_task_pwm_timer.set_compare_value_for_channel(data.motor_to_channel_map[i], pwm);
+            auto& out = data.motor_output_map[i];
+            out.timer.set_compare_value_for_channel(out.channel, pwm);
          }
       }
    }

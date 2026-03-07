@@ -6,6 +6,7 @@
 #include "hw/pcb_component/Led.hpp"
 #include "rtos/Notifier.hpp"
 #include "rtos/QueueReceiver.hpp"
+#include "utilities/pos_to_value.hpp"
 
 extern "C"
 {
@@ -24,7 +25,7 @@ struct FlightManagerTaskData
 
    rtos::QueueReceiver<aeromight_boundaries::HealthSummary> health_summary_queue_receiver{};
 
-   aeromight_boundaries::ControlTaskNotificationFlags                 control_task_start_notification{aeromight_boundaries::pos_to_value(aeromight_boundaries::ControlTaskEvents::start)};
+   aeromight_boundaries::ControlTaskNotificationFlags                 control_task_start_notification{utilities::pos_to_value(aeromight_boundaries::ControlTaskEvents::start)};
    rtos::Notifier<aeromight_boundaries::ControlTaskNotificationFlags> control_task_start_notifier{control_task_start_notification};
 };
 

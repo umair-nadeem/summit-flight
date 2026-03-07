@@ -46,7 +46,7 @@ TEST_F(ImuDriverExecutorTest, test_execute_without_event)
 
 TEST_F(ImuDriverExecutorTest, test_execute_tick_event)
 {
-   aeromight_boundaries::ImuNotificationFlags flags{aeromight_boundaries::pos_to_value(aeromight_boundaries::ImuTaskEvents::tick)};
+   aeromight_boundaries::ImuNotificationFlags flags{utilities::pos_to_value(aeromight_boundaries::ImuTaskEvents::tick)};
    EXPECT_CALL(notification_waiter, wait(period_ms)).WillOnce(testing::Return(flags));
 
    EXPECT_CALL(mpu_driver_mock, notify_receive_complete()).Times(0);
@@ -56,7 +56,7 @@ TEST_F(ImuDriverExecutorTest, test_execute_tick_event)
 
 TEST_F(ImuDriverExecutorTest, test_execute_rx_complete_notification)
 {
-   aeromight_boundaries::ImuNotificationFlags flags{aeromight_boundaries::pos_to_value(aeromight_boundaries::ImuTaskEvents::rx_complete)};
+   aeromight_boundaries::ImuNotificationFlags flags{utilities::pos_to_value(aeromight_boundaries::ImuTaskEvents::rx_complete)};
    EXPECT_CALL(notification_waiter, wait(period_ms)).WillOnce(testing::Return(flags));
 
    EXPECT_CALL(mpu_driver_mock, notify_receive_complete());

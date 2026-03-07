@@ -40,7 +40,7 @@ TEST_F(BarometerDriverExecutorTest, test_execute_without_event)
 
 TEST_F(BarometerDriverExecutorTest, test_execute_rx_complete_notification)
 {
-   aeromight_boundaries::BarometerNotificationFlags flags{aeromight_boundaries::pos_to_value(aeromight_boundaries::BarometerTaskEvents::rx_complete)};
+   aeromight_boundaries::BarometerNotificationFlags flags{utilities::pos_to_value(aeromight_boundaries::BarometerTaskEvents::rx_complete)};
    EXPECT_CALL(notification_waiter, wait(notification_wait_period_in_ms)).WillOnce(testing::Return(flags));
 
    EXPECT_CALL(baro_driver_mock, notify_receive_complete());

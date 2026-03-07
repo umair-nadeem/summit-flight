@@ -14,9 +14,4 @@ enum class ImuTaskEvents : uint8_t
 
 using ImuNotificationFlags = std::bitset<4u>;
 
-inline constexpr uint8_t pos_to_value(ImuTaskEvents pos)
-{
-   return 1u << static_cast<uint8_t>(pos);
-}
-
 }   // namespace aeromight_boundaries
