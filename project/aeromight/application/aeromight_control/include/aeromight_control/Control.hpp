@@ -281,8 +281,6 @@ private:
 
       m_control_allocator.allocate();
 
-      m_control_allocator.apply_slew_rate_limits(m_dt_s);
-
       m_control_allocator.clip_actuator_setpoints();
 
       m_actuator_control.setpoints = m_control_allocator.get_actuator_setpoints();
