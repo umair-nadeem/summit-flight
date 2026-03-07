@@ -66,37 +66,37 @@ extern "C"
       constexpr float    thrust_limiting                                = 0.3f;
       constexpr float    actuator_min                                   = 0.0f;
       constexpr float    actuator_max                                   = 1.0f - thrust_limiting;
-      constexpr float    actuator_idle                                  = 0.2f;
+      constexpr float    actuator_idle                                  = 0.1f;
       constexpr float    throttle_min                                   = actuator_min;
       constexpr float    throttle_max                                   = actuator_max;
       constexpr float    throttle_hover                                 = 0.4f;
       constexpr float    throttle_curve_exponential                     = 0.7f;
       // attitude controller
-      constexpr bool     run_attitude_controller                        = true;
-      constexpr float    max_tilt_angle_rad                             = 65 * physics::constants::deg_to_rad;
+      constexpr bool     run_attitude_controller                        = false;
+      constexpr float    max_tilt_angle_rad                             = 30 * physics::constants::deg_to_rad;
       constexpr float    attitude_controller_roll_kp                    = 2.0f;
       constexpr float    attitude_controller_pitch_kp                   = 2.0f;
       constexpr float    attitude_controller_yaw_kp                     = 0.0f;
-      constexpr float    max_roll_rate_radps                            = 1.5f;
-      constexpr float    max_pitch_rate_radps                           = 1.5f;
-      constexpr float    max_yaw_rate_radps                             = 1.0f;
+      constexpr float    max_roll_rate_radps                            = 3.0f;
+      constexpr float    max_pitch_rate_radps                           = 3.0f;
+      constexpr float    max_yaw_rate_radps                             = 3.0f;
       // rate controller
       constexpr float    torque_limit                                   = 1.0f;
-      constexpr float    rate_controller_roll_kp                        = 0.035f;
-      constexpr float    rate_controller_pitch_kp                       = 0.035f;
-      constexpr float    rate_controller_yaw_kp                         = 0.035f;
-      constexpr float    rate_controller_roll_ki                        = 0.002f;
-      constexpr float    rate_controller_pitch_ki                       = 0.002f;
+      constexpr float    rate_controller_roll_kp                        = 0.04f;
+      constexpr float    rate_controller_pitch_kp                       = 0.04f;
+      constexpr float    rate_controller_yaw_kp                         = 0.04f;
+      constexpr float    rate_controller_roll_ki                        = 0.0f;
+      constexpr float    rate_controller_pitch_ki                       = 0.0f;
       constexpr float    rate_controller_yaw_ki                         = 0.0f;
-      constexpr float    rate_controller_roll_kd                        = 0.003f;
-      constexpr float    rate_controller_pitch_kd                       = 0.003f;
+      constexpr float    rate_controller_roll_kd                        = 0.0f;
+      constexpr float    rate_controller_pitch_kd                       = 0.0f;
       constexpr float    rate_controller_yaw_kd                         = 0.0f;
       constexpr float    rate_controller_roll_integrator_limit          = 0.03f;
       constexpr float    rate_controller_pitch_integrator_limit         = 0.03f;
       constexpr float    rate_controller_yaw_integrator_limit           = 0.0f;
       // control allocator
       constexpr float    thrust_deadband                                = 0.01f;
-      constexpr float    yaw_saturation_limit_factor                    = 0.15f;
+      constexpr float    yaw_saturation_limit_factor                    = 0.25f;
       constexpr float    slew_rate_limit_s                              = 1.0f;
 
       LogClient logger_estimation{logging::logging_queue_sender, "estimation"};
