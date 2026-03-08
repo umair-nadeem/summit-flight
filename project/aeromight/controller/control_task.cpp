@@ -60,8 +60,8 @@ extern "C"
       constexpr float    min_dt_s                                       = 0.002f;
       constexpr float    max_dt_s                                       = 0.010f;
       constexpr float    gyro_lpf_cutoff_hz                             = 80.0f;
-      constexpr float    manual_input_lpf_cutoff_hz                     = 10.0f;
-      constexpr float    butterworth_filter_cutoff_frequency_hz         = 20.0f;
+      constexpr float    stick_input_lpf_cutoff_hz                      = 10.0f;
+      constexpr float    pid_dterm_filter_cutoff_frequency_hz           = 25.0f;
       // throttle and thrust
       constexpr float    thrust_limiting                                = 0.3f;
       constexpr float    actuator_min                                   = 0.0f;
@@ -82,18 +82,21 @@ extern "C"
       constexpr float    max_yaw_rate_radps                             = 3.0f;
       // rate controller
       constexpr float    torque_limit                                   = 1.0f;
+      // p
       constexpr float    rate_controller_roll_kp                        = 0.04f;
       constexpr float    rate_controller_pitch_kp                       = 0.04f;
       constexpr float    rate_controller_yaw_kp                         = 0.04f;
+      // i
       constexpr float    rate_controller_roll_ki                        = 0.0f;
       constexpr float    rate_controller_pitch_ki                       = 0.0f;
       constexpr float    rate_controller_yaw_ki                         = 0.0f;
-      constexpr float    rate_controller_roll_kd                        = 0.0f;
-      constexpr float    rate_controller_pitch_kd                       = 0.0f;
-      constexpr float    rate_controller_yaw_kd                         = 0.0f;
       constexpr float    rate_controller_roll_integrator_limit          = 0.03f;
       constexpr float    rate_controller_pitch_integrator_limit         = 0.03f;
       constexpr float    rate_controller_yaw_integrator_limit           = 0.0f;
+      // d
+      constexpr float    rate_controller_roll_kd                        = 0.0005f;
+      constexpr float    rate_controller_pitch_kd                       = 0.0005f;
+      constexpr float    rate_controller_yaw_kd                         = 0.0f;
       // control allocator
       constexpr float    thrust_deadband                                = 0.01f;
       constexpr float    yaw_saturation_limit_factor                    = 0.25f;
@@ -141,10 +144,6 @@ extern "C"
       const math::Vector3 rate_gains_d{rate_controller_roll_kd, rate_controller_pitch_kd, rate_controller_yaw_kd};
       const math::Vector3 rate_integrator_limits{rate_controller_roll_integrator_limit, rate_controller_pitch_integrator_limit, rate_controller_yaw_integrator_limit};
 
-      math::ButterworthFilter gyro_derivative_x_lpf2{butterworth_filter_cutoff_frequency_hz, controller::task::control_task_period_in_ms / 1000.0f};
-      math::ButterworthFilter gyro_derivative_y_lpf2{butterworth_filter_cutoff_frequency_hz, controller::task::control_task_period_in_ms / 1000.0f};
-      math::ButterworthFilter gyro_derivative_z_lpf2{butterworth_filter_cutoff_frequency_hz, controller::task::control_task_period_in_ms / 1000.0f};
-
       aeromight_control::RateController rate_controller{rate_gains_p,
                                                         rate_gains_i,
                                                         rate_gains_d,
@@ -162,15 +161,19 @@ extern "C"
       math::FirstOrderLpf gyro_y_lpf{gyro_lpf_cutoff_hz};
       math::FirstOrderLpf gyro_z_lpf{gyro_lpf_cutoff_hz};
 
-      math::FirstOrderLpf roll_input_lpf{manual_input_lpf_cutoff_hz};
-      math::FirstOrderLpf pitch_input_lpf{manual_input_lpf_cutoff_hz};
-      math::FirstOrderLpf yaw_input_lpf{manual_input_lpf_cutoff_hz};
+      math::FirstOrderLpf roll_input_lpf{stick_input_lpf_cutoff_hz};
+      math::FirstOrderLpf pitch_input_lpf{stick_input_lpf_cutoff_hz};
+      math::FirstOrderLpf yaw_input_lpf{stick_input_lpf_cutoff_hz};
+
+      math::ButterworthFilter pid_dterm_x_lpf{pid_dterm_filter_cutoff_frequency_hz, controller::task::control_task_period_in_ms / 1000.0f};
+      math::ButterworthFilter pid_dterm_y_lpf{pid_dterm_filter_cutoff_frequency_hz, controller::task::control_task_period_in_ms / 1000.0f};
+      math::ButterworthFilter pid_dterm_z_lpf{pid_dterm_filter_cutoff_frequency_hz, controller::task::control_task_period_in_ms / 1000.0f};
 
       aeromight_control::Control<decltype(attitude_controller),
                                  decltype(rate_controller),
                                  decltype(control_allocator),
                                  decltype(roll_input_lpf),
-                                 decltype(gyro_derivative_x_lpf2),
+                                 decltype(pid_dterm_x_lpf),
                                  sys_time::ClockSource,
                                  LogClient>
           control{attitude_controller,
@@ -182,9 +185,9 @@ extern "C"
                   roll_input_lpf,
                   pitch_input_lpf,
                   yaw_input_lpf,
-                  gyro_derivative_x_lpf2,
-                  gyro_derivative_y_lpf2,
-                  gyro_derivative_z_lpf2,
+                  pid_dterm_x_lpf,
+                  pid_dterm_y_lpf,
+                  pid_dterm_z_lpf,
                   aeromight_boundaries::aeromight_data.actuator_control,
                   aeromight_boundaries::aeromight_data.control_health_storage,
                   aeromight_boundaries::aeromight_data.flight_control_setpoints,

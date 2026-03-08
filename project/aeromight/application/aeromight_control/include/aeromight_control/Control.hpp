@@ -41,9 +41,9 @@ public:
                     FirstOrderLpf&                               roll_input_lpf,
                     FirstOrderLpf&                               pitch_input_lpf,
                     FirstOrderLpf&                               yaw_input_lpf,
-                    ButterworthFilter&                           angular_acceleration_x_lpf2,
-                    ButterworthFilter&                           angular_acceleration_y_lpf2,
-                    ButterworthFilter&                           angular_acceleration_z_lpf2,
+                    ButterworthFilter&                           pid_dterm_x_lpf,
+                    ButterworthFilter&                           pid_dterm_y_lpf,
+                    ButterworthFilter&                           pid_dterm_z_lpf,
                     ActuatorControl&                             actuator_control_storage,
                     ControlHealth&                               control_health_storage,
                     const FlightControlSetpoints&                flight_control_setpoint_storage,
@@ -64,8 +64,8 @@ public:
          m_rate_controller{rate_controller},
          m_control_allocator{control_allocator},
          m_gyro_lpf{gyro_x_lpf, gyro_y_lpf, gyro_z_lpf},
-         m_manual_input_lpf{roll_input_lpf, pitch_input_lpf, yaw_input_lpf},
-         m_angular_acceleration_lpf2{angular_acceleration_x_lpf2, angular_acceleration_y_lpf2, angular_acceleration_z_lpf2},
+         m_stick_input_lpf{roll_input_lpf, pitch_input_lpf, yaw_input_lpf},
+         m_pid_dterm_lpf{pid_dterm_x_lpf, pid_dterm_y_lpf, pid_dterm_z_lpf},
          m_actuator_control_storage{actuator_control_storage},
          m_control_health_storage{control_health_storage},
          m_flight_control_setpoint_storage{flight_control_setpoint_storage},
@@ -215,8 +215,8 @@ private:
 
       if (m_run_attitude_controller)
       {
-         math::Vector2 manual_setpoints{m_manual_input_lpf[Axis::roll].get().apply(m_flight_control_setpoints.data.roll * m_max_tilt_angle_rad, m_dt_s),
-                                        m_manual_input_lpf[Axis::pitch].get().apply(m_flight_control_setpoints.data.pitch * m_max_tilt_angle_rad, m_dt_s)};
+         math::Vector2 manual_setpoints{m_stick_input_lpf[Axis::roll].get().apply(m_flight_control_setpoints.data.roll * m_max_tilt_angle_rad, m_dt_s),
+                                        m_stick_input_lpf[Axis::pitch].get().apply(m_flight_control_setpoints.data.pitch * m_max_tilt_angle_rad, m_dt_s)};
 
          const float tilt_norm = manual_setpoints.norm();
 
@@ -238,34 +238,34 @@ private:
       }
       else   // generate rate setpoints from sticks
       {
-         m_angular_rate_setpoints[Axis::roll]  = m_manual_input_lpf[Axis::roll].get().apply(m_flight_control_setpoints.data.roll * m_max_roll_rate_radps, m_dt_s);
-         m_angular_rate_setpoints[Axis::pitch] = m_manual_input_lpf[Axis::pitch].get().apply(m_flight_control_setpoints.data.pitch * m_max_pitch_rate_radps, m_dt_s);
+         m_angular_rate_setpoints[Axis::roll]  = m_stick_input_lpf[Axis::roll].get().apply(m_flight_control_setpoints.data.roll * m_max_roll_rate_radps, m_dt_s);
+         m_angular_rate_setpoints[Axis::pitch] = m_stick_input_lpf[Axis::pitch].get().apply(m_flight_control_setpoints.data.pitch * m_max_pitch_rate_radps, m_dt_s);
       }
 
       // yaw rate from manual setpoint
-      m_angular_rate_setpoints[Axis::yaw] = m_manual_input_lpf[Axis::yaw].get().apply(m_flight_control_setpoints.data.yaw * m_max_yaw_rate_radps, m_dt_s);
+      m_angular_rate_setpoints[Axis::yaw] = m_stick_input_lpf[Axis::yaw].get().apply(m_flight_control_setpoints.data.yaw * m_max_yaw_rate_radps, m_dt_s);
    }
 
    void get_torque_setpoints(const bool run_integrator)
    {
-      m_last_filtered_gyro_radps = m_filtered_gyro_radps;
-
+      // gyro LPF
       for (uint8_t i = 0; i < num_axis; i++)
       {
-         m_filtered_gyro_radps[i] = m_gyro_lpf[i].get().apply(m_state_estimation.gyro_radps[i], m_dt_s);
+         m_gyro_radps[i] = m_gyro_lpf[i].get().apply(m_state_estimation.gyro_radps[i], m_dt_s);
       }
 
-      const math::Vector3 angular_acceleration{(m_filtered_gyro_radps - m_last_filtered_gyro_radps) / m_dt_s};
-      math::Vector3       filtered_angular_acceleration{};
-
+      // PID d-term LPF
+      m_previous_dterm_gyro_radps = m_dterm_gyro_radps;
       for (uint8_t i = 0; i < num_axis; i++)
       {
-         filtered_angular_acceleration[i] = m_angular_acceleration_lpf2[i].get().apply(angular_acceleration[i]);
+         m_dterm_gyro_radps[i] = m_pid_dterm_lpf[i].get().apply(m_gyro_radps[i]);
       }
+
+      const math::Vector3 angular_acceleration{(m_dterm_gyro_radps - m_previous_dterm_gyro_radps) / m_dt_s};
 
       m_torque_setpoints = m_rate_controller.update(m_angular_rate_setpoints,
-                                                    m_filtered_gyro_radps,
-                                                    filtered_angular_acceleration,
+                                                    m_gyro_radps,
+                                                    angular_acceleration,
                                                     m_dt_s,
                                                     run_integrator);
    }
@@ -331,12 +331,12 @@ private:
 
    void reset_filters()
    {
-      for (auto& filter : m_manual_input_lpf)
+      for (auto& filter : m_stick_input_lpf)
       {
          filter.get().reset();
       }
 
-      for (auto& filter : m_angular_acceleration_lpf2)
+      for (auto& filter : m_pid_dterm_lpf)
       {
          filter.get().reset();
       }
@@ -385,8 +385,8 @@ private:
    RateController&                                                 m_rate_controller;
    ControlAllocator&                                               m_control_allocator;
    std::array<std::reference_wrapper<FirstOrderLpf>, num_axis>     m_gyro_lpf;
-   std::array<std::reference_wrapper<FirstOrderLpf>, num_axis>     m_manual_input_lpf;
-   std::array<std::reference_wrapper<ButterworthFilter>, num_axis> m_angular_acceleration_lpf2;
+   std::array<std::reference_wrapper<FirstOrderLpf>, num_axis>     m_stick_input_lpf;
+   std::array<std::reference_wrapper<ButterworthFilter>, num_axis> m_pid_dterm_lpf;
    ActuatorControl&                                                m_actuator_control_storage;
    ControlHealth&                                                  m_control_health_storage;
    const FlightControlSetpoints&                                   m_flight_control_setpoint_storage;
@@ -406,8 +406,9 @@ private:
    aeromight_boundaries::ActuatorControl                           m_actuator_control{};
    aeromight_boundaries::ControlHealth                             m_control_health{};
    FlightControlSetpoints::Sample                                  m_flight_control_setpoints{};
-   math::Vector3                                                   m_filtered_gyro_radps{};
-   math::Vector3                                                   m_last_filtered_gyro_radps{};
+   math::Vector3                                                   m_gyro_radps{};
+   math::Vector3                                                   m_dterm_gyro_radps{};
+   math::Vector3                                                   m_previous_dterm_gyro_radps{};
    math::Vector3                                                   m_angular_rate_setpoints{};
    math::Vector3                                                   m_torque_setpoints{};
    float                                                           m_dt_s{0.0f};
