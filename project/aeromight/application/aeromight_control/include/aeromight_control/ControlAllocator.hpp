@@ -29,7 +29,7 @@ public:
       error::verify((actuator_min < actuator_idle) && (actuator_idle < actuator_max));
       error::verify(aeromight_boundaries::ActuatorParams::min <= actuator_min);
       error::verify(actuator_max <= aeromight_boundaries::ActuatorParams::max);
-      error::verify(m_slew_rate_limit_s > epsilon);
+      error::verify(m_slew_rate_limit_s > math::constants::epsilon);
    }
 
    void set_control_setpoints(const math::Vector4& control_setpoints)
@@ -175,8 +175,8 @@ private:
 
       if (m_actuator_saturation)
       {
-         const float scale = (torque_span > epsilon) ? (available_span / torque_span) : 1.0f;   // scale down torque differential
-         actuator_torque   = actuator_torque * scale;                                           // update actuator torque
+         const float scale = (torque_span > math::constants::epsilon) ? (available_span / torque_span) : 1.0f;   // scale down torque differential
+         actuator_torque   = actuator_torque * scale;                                                            // update actuator torque
       }
    }
 
@@ -227,8 +227,6 @@ private:
       const float yaw_limit = get_yaw_limit(m_control_setpoints[aeromight_boundaries::ControlAxis::thrust]);
       return std::clamp(yaw_control_sp, -yaw_limit, yaw_limit);
    }
-
-   static constexpr float epsilon = 1e-6f;
 
    const float     m_actuator_min;
    const float     m_actuator_max;

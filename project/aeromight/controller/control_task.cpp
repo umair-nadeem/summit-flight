@@ -12,7 +12,7 @@
 #include "logging/LogClient.hpp"
 #include "math/ButterworthFilter.hpp"
 #include "math/FirstOrderLpf.hpp"
-#include "physics/constants.hpp"
+#include "math/constants.hpp"
 #include "rtos/QueueSender.hpp"
 #include "rtos/periodic_task.hpp"
 #include "rtos/utilities.hpp"
@@ -62,6 +62,7 @@ extern "C"
       constexpr float    gyro_lpf_cutoff_hz                             = 80.0f;
       constexpr float    stick_input_lpf_cutoff_hz                      = 10.0f;
       constexpr float    pid_dterm_filter_cutoff_frequency_hz           = 25.0f;
+      constexpr float    thrust_linearization                           = 0.8f;
       // throttle and thrust
       constexpr float    thrust_limiting                                = 0.3f;
       constexpr float    actuator_min                                   = 0.0f;
@@ -70,12 +71,11 @@ extern "C"
       constexpr float    throttle_min                                   = actuator_min;
       constexpr float    throttle_max                                   = actuator_max;
       constexpr float    throttle_hover                                 = 0.4f;
-      constexpr float    throttle_curve_exponential                     = 0.7f;
       // attitude controller
       constexpr bool     run_attitude_controller                        = false;
-      constexpr float    max_tilt_angle_rad                             = 30 * physics::constants::deg_to_rad;
-      constexpr float    attitude_controller_roll_kp                    = 2.0f;
-      constexpr float    attitude_controller_pitch_kp                   = 2.0f;
+      constexpr float    max_tilt_angle_rad                             = 30 * math::constants::deg_to_rad;
+      constexpr float    attitude_controller_roll_kp                    = 5.0f;
+      constexpr float    attitude_controller_pitch_kp                   = 5.0f;
       constexpr float    attitude_controller_yaw_kp                     = 0.0f;
       constexpr float    max_roll_rate_radps                            = 3.0f;
       constexpr float    max_pitch_rate_radps                           = 3.0f;
@@ -94,8 +94,8 @@ extern "C"
       constexpr float    rate_controller_pitch_integrator_limit         = 0.03f;
       constexpr float    rate_controller_yaw_integrator_limit           = 0.0f;
       // d
-      constexpr float    rate_controller_roll_kd                        = 0.0005f;
-      constexpr float    rate_controller_pitch_kd                       = 0.0005f;
+      constexpr float    rate_controller_roll_kd                        = 0.0f;
+      constexpr float    rate_controller_pitch_kd                       = 0.0f;
       constexpr float    rate_controller_yaw_kd                         = 0.0f;
       // control allocator
       constexpr float    thrust_deadband                                = 0.01f;
@@ -202,8 +202,10 @@ extern "C"
                   max_yaw_rate_radps,
                   throttle_min,
                   throttle_max,
-                  throttle_hover,
-                  throttle_curve_exponential};
+                  actuator_min,
+                  actuator_max,
+                  thrust_linearization,
+                  throttle_hover};
 
       aeromight_control::EstimationAndControl<decltype(estimation),
                                               decltype(control)>

@@ -24,8 +24,8 @@ public:
 private:
    static constexpr float max_gyro_bias_radps = 0.1f;
    static constexpr float max_gyro_spin_rate  = 0.175f;
-   static constexpr float upper_accel_limit   = physics::constants::g_to_mps2 * 1.1f;
-   static constexpr float lower_accel_limit   = physics::constants::g_to_mps2 * 0.9f;
+   static constexpr float upper_accel_limit   = math::constants::g_to_mps2 * 1.1f;
+   static constexpr float lower_accel_limit   = math::constants::g_to_mps2 * 0.9f;
 
    const float      m_accelerometer_weight;
    const float      m_gyro_bias_weight;

@@ -45,7 +45,7 @@ void AltitudeEkf::predict(const math::Vector3&    accel_body_mps2,
 
    // remove bias
    accel_body[2] -= m_state.a_z_bias;
-   float accel_world_z = transform_accel_to_world_z(accel_body, attitude) + physics::constants::g_to_mps2;
+   float accel_world_z = transform_accel_to_world_z(accel_body, attitude) + math::constants::g_to_mps2;
 
    // apply tilt-compensation gate to accel_z
    const math::Euler euler = math::quaternion_to_euler(attitude);

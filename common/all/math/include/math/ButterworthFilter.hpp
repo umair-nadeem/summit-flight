@@ -1,7 +1,7 @@
 #pragma once
 
 #include "error/error_handler.hpp"
-#include "physics/constants.hpp"
+#include "math/constants.hpp"
 
 namespace math
 {
@@ -45,7 +45,7 @@ private:
    {
       static constexpr float sqrt2                 = 1.41421356237f;
       const float            sampling_frequency_hz = 1.0f / dt_s;
-      const float            omega                 = tanf(physics::constants::pi * m_cutoff_frequency_hz / sampling_frequency_hz);
+      const float            omega                 = tanf(math::constants::pi * m_cutoff_frequency_hz / sampling_frequency_hz);
       const float            omega2                = omega * omega;
       const float            transfer_function     = 1.0f / (1.f + (sqrt2 * omega) + omega2);
 

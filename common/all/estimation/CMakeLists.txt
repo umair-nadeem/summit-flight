@@ -3,5 +3,4 @@ add_module(
       src/AttitudeEstimator.cpp
    LIBS
       math
-      physics
 )

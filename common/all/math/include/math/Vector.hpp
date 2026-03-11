@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "error/error_handler.hpp"
+#include "math/constants.hpp"
 
 namespace math
 {
@@ -210,7 +211,7 @@ struct Vector
    constexpr Vector normalized() const
    {
       const T n = norm();
-      if (n > static_cast<T>(1e-6f))
+      if (n > static_cast<T>(math::constants::epsilon))
       {
          return {(*this) / n};
       }
@@ -237,7 +238,7 @@ struct Vector
    void normalize() noexcept
    {
       const T n = norm();
-      if (n > static_cast<T>(1e-6f))
+      if (n > static_cast<T>(math::constants::epsilon))
       {
          auto& a = *(this);
          a /= n;

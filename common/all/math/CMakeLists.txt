@@ -2,5 +2,5 @@ add_module(
    SOURCES
    LIBS
       error
-      physics
+      math
 )

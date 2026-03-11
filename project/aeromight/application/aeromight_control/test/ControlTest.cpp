@@ -49,7 +49,7 @@ protected:
    static constexpr float max_roll_rate_radps  = 3.5f;
    static constexpr float max_pitch_rate_radps = 3.5f;
    static constexpr float max_yaw_rate_radps   = 2.0f;
-   static constexpr float max_tilt_angle_rad   = 30 * physics::constants::deg_to_rad;   // 30 degrees
+   static constexpr float max_tilt_angle_rad   = 30 * math::constants::deg_to_rad;   // 30 degrees
    static constexpr float lift_throttle        = 0.05f;
 
    AttitudeControllerMock                                               attitude_controller_mock{};

@@ -8,7 +8,7 @@
 #include "aeromight_boundaries/FlightControlSetpoints.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
 #include "boundaries/SharedData.hpp"
-#include "control/AttitudeControl.hpp"
+#include "control/Motor.hpp"
 #include "interfaces/IClockSource.hpp"
 #include "math/Vector2.hpp"
 
@@ -58,8 +58,10 @@ public:
                     const float                                  max_yaw_rate_radps,
                     const float                                  throttle_min,
                     const float                                  throttle_max,
-                    const float                                  throttle_hover,
-                    const float                                  throttle_curve_exponential)
+                    const float                                  actuator_min,
+                    const float                                  actuator_max,
+                    const float                                  thrust_linearization,
+                    const float                                  throttle_hover)
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
          m_control_allocator{control_allocator},
@@ -80,12 +82,12 @@ public:
          m_max_yaw_rate_radps{max_yaw_rate_radps},
          m_throttle_min{throttle_min},
          m_throttle_max{throttle_max},
-         m_throttle_hover{throttle_hover},
-         m_throttle_curve_exponential{throttle_curve_exponential}
-
+         m_actuator_min{actuator_min},
+         m_actuator_max{actuator_max},
+         m_thrust_linearization{thrust_linearization},
+         m_throttle_hover{throttle_hover}
    {
       m_logger.enable();
-      control::AttitudeControl::init(m_throttle_hover, m_throttle_curve_exponential);
    }
 
    void start()
@@ -178,7 +180,6 @@ private:
 
       // Pilot Command Mapping: perform pitch sign inversion (flight stick pullback -> pitch up)
       data.pitch *= -1.0f;
-      data.throttle = control::AttitudeControl::throttle_curve(data.throttle, m_throttle_hover, m_throttle_curve_exponential);
       data.throttle = std::clamp(data.throttle, m_throttle_min, m_throttle_max);
    }
 
@@ -288,6 +289,8 @@ private:
       // determine allocator saturation
       m_control_allocator.estimate_saturation();
       m_rate_controller.set_saturation_status(m_control_allocator.get_actuator_saturation_positive(), m_control_allocator.get_actuator_saturation_negative());
+
+      control::Motor::apply_thrust_linearization(m_actuator_control.setpoints, m_thrust_linearization, m_actuator_min, m_actuator_max);
    }
 
    void run_control()
@@ -401,8 +404,10 @@ private:
    const float                                                     m_max_yaw_rate_radps;
    const float                                                     m_throttle_min;
    const float                                                     m_throttle_max;
+   const float                                                     m_actuator_min;
+   const float                                                     m_actuator_max;
+   const float                                                     m_thrust_linearization;
    const float                                                     m_throttle_hover;
-   const float                                                     m_throttle_curve_exponential;
    aeromight_boundaries::ActuatorControl                           m_actuator_control{};
    aeromight_boundaries::ControlHealth                             m_control_health{};
    FlightControlSetpoints::Sample                                  m_flight_control_setpoints{};

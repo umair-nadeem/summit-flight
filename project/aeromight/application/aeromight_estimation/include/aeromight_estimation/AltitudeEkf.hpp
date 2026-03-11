@@ -27,7 +27,7 @@ private:
    void enfore_covariance_matrix_symmetry();
 
    static constexpr float       initial_uncertainty         = 10.0f;
-   static constexpr float       min_recognizable_covariance = 1e-6f;
+   static constexpr float       min_recognizable_covariance = math::constants::epsilon;
    static constexpr std::size_t num_state_dimensions        = 3u;
 
    const float                                                     m_process_noise_z;                  // altitude noise

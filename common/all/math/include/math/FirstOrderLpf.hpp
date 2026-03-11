@@ -1,6 +1,6 @@
 #pragma once
 
-#include "physics/constants.hpp"
+#include "math/constants.hpp"
 
 namespace math
 {
@@ -9,7 +9,7 @@ class FirstOrderLpf
 {
 public:
    explicit FirstOrderLpf(const float cutoff_frequency_hz)
-       : m_rc{1.0f / (2.0f * physics::constants::pi * cutoff_frequency_hz)}
+       : m_rc{1.0f / (2.0f * math::constants::pi * cutoff_frequency_hz)}
    {
    }
 

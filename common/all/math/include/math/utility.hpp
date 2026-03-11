@@ -22,7 +22,7 @@ inline Euler quaternion_to_euler(const Quaternion& q)
    const float cosy_cosp = 1.0f - 2.0f * (q[2] * q[2] + q[3] * q[3]);
 
    const float roll  = std::atan2(sinr_cosp, cosr_cosp);
-   const float pitch = (std::fabs(sinp) >= 1.0f) ? std::copysignf(physics::constants::pi_by_2, sinp) : std::asin(sinp);
+   const float pitch = (std::fabs(sinp) >= 1.0f) ? std::copysignf(math::constants::pi_by_2, sinp) : std::asin(sinp);
    const float yaw   = std::atan2(siny_cosp, cosy_cosp);
 
    return Euler{roll, pitch, yaw};

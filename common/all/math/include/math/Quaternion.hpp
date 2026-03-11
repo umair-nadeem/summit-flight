@@ -3,7 +3,7 @@
 #include <cmath>
 
 #include "Vector3.hpp"
-#include "physics/constants.hpp"
+#include "math/constants.hpp"
 
 namespace math
 {
@@ -103,7 +103,7 @@ struct Quaternion final : public Vector<float, 4u>
    {
       const float n = norm();
       auto&       a = *(this);
-      if (n > 1e-6f)
+      if (n > math::constants::epsilon)
       {
          a /= n;
       }

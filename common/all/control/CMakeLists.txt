@@ -3,5 +3,4 @@ add_module(
       src/AttitudeControl.cpp
    LIBS
       math
-      physics
 )

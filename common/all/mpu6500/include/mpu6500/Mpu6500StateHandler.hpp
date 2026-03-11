@@ -9,8 +9,8 @@
 #include "imu_sensor/ImuData.hpp"
 #include "imu_sensor/ImuHealth.hpp"
 #include "interfaces/IClockSource.hpp"
+#include "math/constants.hpp"
 #include "params.hpp"
-#include "physics/constants.hpp"
 
 namespace mpu6500
 {
@@ -54,10 +54,10 @@ public:
          m_accel_a_dlpf_config{accel_a_dlpf_config},
          m_gyro_range_plausibility_margin_radps{gyro_range_plausibility_margin_radps},
          m_accel_range_plausibility_margin_mps2{accel_range_plausibility_margin_mps2},
-         m_gyro_scale{physics::constants::deg_to_rad / params::gyro_sensitivity_scale_factor[m_gyro_full_scale]},
-         m_accel_scale{physics::constants::g_to_mps2 / params::accel_sensitivity_scale_factor[m_accel_full_scale]},
-         m_gyro_absolute_plausibility_limit_radps{(params::gyro_abs_full_scale_range_dps[m_gyro_full_scale] * physics::constants::deg_to_rad) + m_gyro_range_plausibility_margin_radps},
-         m_accel_absolute_plausibility_limit_mps2{(params::accel_abs_full_scale_range_g[m_accel_full_scale] * physics::constants::g_to_mps2) + m_accel_range_plausibility_margin_mps2},
+         m_gyro_scale{math::constants::deg_to_rad / params::gyro_sensitivity_scale_factor[m_gyro_full_scale]},
+         m_accel_scale{math::constants::g_to_mps2 / params::accel_sensitivity_scale_factor[m_accel_full_scale]},
+         m_gyro_absolute_plausibility_limit_radps{(params::gyro_abs_full_scale_range_dps[m_gyro_full_scale] * math::constants::deg_to_rad) + m_gyro_range_plausibility_margin_radps},
+         m_accel_absolute_plausibility_limit_mps2{(params::accel_abs_full_scale_range_g[m_accel_full_scale] * math::constants::g_to_mps2) + m_accel_range_plausibility_margin_mps2},
          m_num_samples_self_test{num_samples_self_test},
          m_gyro_tolerance_radps{gyro_tolerance_radps},
          m_accel_tolerance_mps2{accel_tolerance_mps2}
@@ -510,7 +510,7 @@ private:
 
       // unit vector -> a^ = a/|a|
       // gravity_body vector -> G_b = G * a^
-      const Vec3 gravity_body = m_self_test_stats.mean_accel * (physics::constants::g_to_mps2 / magnitude);
+      const Vec3 gravity_body = m_self_test_stats.mean_accel * (math::constants::g_to_mps2 / magnitude);
 
       // bias = a - G_b
       // accel bias is the residual vector after subtracting the G component
@@ -590,7 +590,7 @@ private:
    bool is_platform_stationary() const
    {
       const float magnitude = m_self_test_stats.mean_accel.norm();
-      return std::abs(magnitude - physics::constants::g_to_mps2) <= m_accel_tolerance_mps2;
+      return std::abs(magnitude - math::constants::g_to_mps2) <= m_accel_tolerance_mps2;
    }
 
    bool is_accel_stable() const
