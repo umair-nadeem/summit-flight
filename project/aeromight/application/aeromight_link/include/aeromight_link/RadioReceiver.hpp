@@ -94,9 +94,7 @@ private:
       m_radio_control_setpoints.input.throttle = normalize_throttle(rc_data.channels[rc_channel_throttle]);
 
       // update armed state
-      m_radio_control_setpoints.state              = get_arm_state(normalize_channel(rc_data.channels[rc_channel_arm_state]));
-      m_radio_control_setpoints.mode               = get_flight_mode(normalize_channel(rc_data.channels[rc_channel_flight_mode]));
-      m_radio_control_setpoints.kill_switch_active = get_kill_switch_state(normalize_channel(rc_data.channels[rc_channel_kill_switch]));
+      m_radio_control_setpoints.state = get_arm_state(normalize_channel(rc_data.channels[rc_channel_arm_state]));
 
       // publish to shared buffer
       m_radio_control_setpoints_storage.update_latest(m_radio_control_setpoints, ClockSource::now_ms());
@@ -140,29 +138,6 @@ private:
    static constexpr aeromight_boundaries::FlightArmedState get_arm_state(const float switch_value) noexcept
    {
       return (switch_value > rc_channel_switch_discrete_threshold) ? aeromight_boundaries::FlightArmedState::arm : aeromight_boundaries::FlightArmedState::disarm;
-   }
-
-   static constexpr aeromight_boundaries::FlightMode get_flight_mode(const float switch_value) noexcept
-   {
-      if (switch_value <= -rc_channel_switch_discrete_threshold)
-      {
-         return aeromight_boundaries::FlightMode::stabilized_manual;
-      }
-      else if ((-rc_channel_switch_discrete_threshold < switch_value) && (switch_value <= rc_channel_switch_discrete_threshold))
-      {
-         return aeromight_boundaries::FlightMode::altitude_hold;
-      }
-      else if (rc_channel_switch_discrete_threshold < switch_value)
-      {
-         return aeromight_boundaries::FlightMode::auto_land;
-      }
-
-      return aeromight_boundaries::FlightMode::none;
-   }
-
-   static constexpr bool get_kill_switch_state(const float switch_value) noexcept
-   {
-      return (switch_value > rc_channel_switch_discrete_threshold) ? true : false;
    }
 
    static constexpr float rc_channel_switch_discrete_threshold = 0.5f;

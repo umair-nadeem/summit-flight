@@ -12,10 +12,6 @@ enum class FlightManagerState
    disarmed,
    arming,
    armed,
-   manual_mode,
-   hover_mode,
-   auto_land,
-   killed,
    fault
 };
 

@@ -28,8 +28,7 @@ public:
                           const uint32_t                                                             max_age_stale_data_ms,
                           const uint32_t                                                             min_state_debounce_duration_ms,
                           const uint32_t                                                             timeout_sensors_readiness_ms,
-                          const uint32_t                                                             timeout_control_readiness_ms,
-                          const uint32_t                                                             timeout_auto_land_ms)
+                          const uint32_t                                                             timeout_control_readiness_ms)
        : m_period_ms{period_ms},
          m_state_handler{health_summary_queue_receiver,
                          control_start_notifier,
@@ -44,8 +43,7 @@ public:
                          max_age_stale_data_ms,
                          min_state_debounce_duration_ms,
                          timeout_sensors_readiness_ms,
-                         timeout_control_readiness_ms,
-                         timeout_auto_land_ms}
+                         timeout_control_readiness_ms}
    {
       logger.enable();
    }
@@ -53,7 +51,10 @@ public:
    void run_once()
    {
       m_state_handler.get_time();
+      m_state_handler.read_health_summary();
+      m_state_handler.read_radio_input();
       m_state_machine.process_event(typename StateMachineDef::EventTick{});
+      m_state_handler.publish_flight_control_setpoints();
    }
 
    FlightManagerState get_state() const

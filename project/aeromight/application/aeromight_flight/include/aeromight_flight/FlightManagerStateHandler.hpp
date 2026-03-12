@@ -41,8 +41,7 @@ public:
                                       const uint32_t               max_age_stale_data_ms,
                                       const uint32_t               min_state_debounce_duration_ms,
                                       const uint32_t               timeout_sensors_readiness_ms,
-                                      const uint32_t               timeout_control_readiness_ms,
-                                      const uint32_t               timeout_auto_land_ms)
+                                      const uint32_t               timeout_control_readiness_ms)
        : m_health_summary_queue_receiver{health_summary_queue_receiver},
          m_control_start_notifier(control_start_notifier),
          m_led{led},
@@ -56,8 +55,7 @@ public:
          m_max_age_stale_data_ms{max_age_stale_data_ms},
          m_min_state_debounce_duration_ms{min_state_debounce_duration_ms},
          m_timeout_sensors_readiness_ms{timeout_sensors_readiness_ms},
-         m_timeout_control_readiness_ms{timeout_control_readiness_ms},
-         m_timeout_auto_land_ms{timeout_auto_land_ms}
+         m_timeout_control_readiness_ms{timeout_control_readiness_ms}
    {
    }
 
@@ -86,6 +84,15 @@ public:
       m_last_radio_link_actuals      = m_radio_link_actuals_storage.get_latest();
    }
 
+   void publish_flight_control_setpoints()
+   {
+      m_local_flight_control_setpoints.throttle = std::clamp(m_last_radio_control_setpoints.data.input.throttle, 0.0f, 1.0f);
+      m_local_flight_control_setpoints.roll     = m_last_radio_control_setpoints.data.input.roll;
+      m_local_flight_control_setpoints.pitch    = m_last_radio_control_setpoints.data.input.pitch;
+      m_local_flight_control_setpoints.yaw      = m_last_radio_control_setpoints.data.input.yaw;
+      m_flight_control_setpoints_storage.update_latest(m_local_flight_control_setpoints, m_current_time_ms);
+   }
+
    void start_control()
    {
       m_control_start_notifier.notify();
@@ -94,59 +101,12 @@ public:
 
    void arm_control()
    {
-      m_local_flight_control_setpoints.armed    = true;
-      m_local_flight_control_setpoints.kill     = false;
-      m_local_flight_control_setpoints.throttle = std::clamp(m_last_radio_control_setpoints.data.input.throttle, 0.0f, 1.0f);
-      m_flight_control_setpoints_storage.update_latest(m_local_flight_control_setpoints, m_current_time_ms);
+      m_local_flight_control_setpoints.armed = true;
    }
 
    void disarm_control()
    {
-      m_local_flight_control_setpoints.armed    = false;
-      m_local_flight_control_setpoints.kill     = false;
-      m_local_flight_control_setpoints.throttle = 0.0f;
-      m_local_flight_control_setpoints.roll     = 0.0f;
-      m_local_flight_control_setpoints.pitch    = 0.0f;
-      m_local_flight_control_setpoints.yaw      = 0.0f;
-      m_flight_control_setpoints_storage.update_latest(m_local_flight_control_setpoints, m_current_time_ms);
-   }
-
-   void kill_actuator()
-   {
-      m_local_flight_control_setpoints.armed    = false;
-      m_local_flight_control_setpoints.kill     = true;
-      m_local_flight_control_setpoints.throttle = 0.0f;
-      m_local_flight_control_setpoints.roll     = 0.0f;
-      m_local_flight_control_setpoints.pitch    = 0.0f;
-      m_local_flight_control_setpoints.yaw      = 0.0f;
-      m_flight_control_setpoints_storage.update_latest(m_local_flight_control_setpoints, m_current_time_ms);
-   }
-
-   void publish_manual_setpoint()
-   {
-      m_local_flight_control_setpoints.throttle = std::clamp(m_last_radio_control_setpoints.data.input.throttle, 0.0f, 1.0f);
-      m_local_flight_control_setpoints.roll     = m_last_radio_control_setpoints.data.input.roll;
-      m_local_flight_control_setpoints.pitch    = m_last_radio_control_setpoints.data.input.pitch;
-      m_local_flight_control_setpoints.yaw      = m_last_radio_control_setpoints.data.input.yaw;
-
-      m_local_flight_control_setpoints.mode  = aeromight_boundaries::ControlMode::manual_rate;
-      m_local_flight_control_setpoints.armed = true;
-      m_local_flight_control_setpoints.kill  = false;
-
-      m_flight_control_setpoints_storage.update_latest(m_local_flight_control_setpoints, m_current_time_ms);
-   }
-
-   void publish_hover_setpoint()
-   {
-      m_local_flight_control_setpoints.roll  = m_last_radio_control_setpoints.data.input.roll;
-      m_local_flight_control_setpoints.pitch = m_last_radio_control_setpoints.data.input.pitch;
-      m_local_flight_control_setpoints.yaw   = m_last_radio_control_setpoints.data.input.yaw;
-
-      m_local_flight_control_setpoints.mode  = aeromight_boundaries::ControlMode::altitude_hold;
-      m_local_flight_control_setpoints.armed = true;
-      m_local_flight_control_setpoints.kill  = false;
-
-      m_flight_control_setpoints_storage.update_latest(m_local_flight_control_setpoints, m_current_time_ms);
+      m_local_flight_control_setpoints.armed = false;
    }
 
    void set_state(const FlightManagerState state)
@@ -184,23 +144,6 @@ public:
          case FlightManagerState::armed:
             turn_on_status_led();
             m_logger.print("entered state->armed");
-            break;
-
-         case FlightManagerState::manual_mode:
-            m_logger.print("entered state->manual_mode");
-            break;
-
-         case FlightManagerState::hover_mode:
-            m_logger.print("entered state->hover_mode");
-            break;
-
-         case FlightManagerState::auto_land:
-            m_logger.print("entered state->auto_land");
-            break;
-
-         case FlightManagerState::killed:
-            turn_off_status_led();
-            m_logger.print("entered state->killed");
             break;
 
          case FlightManagerState::fault:
@@ -269,24 +212,9 @@ public:
       return (m_last_radio_control_setpoints.data.state == aeromight_boundaries::FlightArmedState::disarm);
    }
 
-   bool kill() const
-   {
-      return m_last_radio_control_setpoints.data.kill_switch_active;
-   }
-
    bool throttle_below_limit() const noexcept
    {
       return (m_last_radio_control_setpoints.data.input.throttle < m_arming_throttle);
-   }
-
-   bool manual_mode() const
-   {
-      return (m_last_radio_control_setpoints.data.mode == aeromight_boundaries::FlightMode::stabilized_manual);
-   }
-
-   bool hover_mode() const
-   {
-      return (m_last_radio_control_setpoints.data.mode == aeromight_boundaries::FlightMode::altitude_hold);
    }
 
    bool stale_health() const
@@ -421,7 +349,6 @@ private:
    const uint32_t                               m_min_state_debounce_duration_ms;
    const uint32_t                               m_timeout_sensors_readiness_ms;
    const uint32_t                               m_timeout_control_readiness_ms;
-   const uint32_t                               m_timeout_auto_land_ms;
    aeromight_boundaries::FlightControlSetpoints m_local_flight_control_setpoints{};
    aeromight_boundaries::HealthSummary          m_last_health_summary{};
    RadioControlSetpoints::Sample                m_last_radio_control_setpoints{};

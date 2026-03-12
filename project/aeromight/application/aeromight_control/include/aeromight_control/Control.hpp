@@ -4,7 +4,6 @@
 
 #include "aeromight_boundaries/ActuatorSetpoints.hpp"
 #include "aeromight_boundaries/ControlHealth.hpp"
-#include "aeromight_boundaries/ControlState.hpp"
 #include "aeromight_boundaries/FlightControlSetpoints.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
 #include "boundaries/SharedData.hpp"
@@ -53,9 +52,7 @@ public:
                     const float                                  max_dt_s,
                     const bool                                   run_attitude_controller,
                     const float                                  max_tilt_angle_rad,
-                    const float                                  max_roll_rate_radps,
-                    const float                                  max_pitch_rate_radps,
-                    const float                                  max_yaw_rate_radps,
+                    const math::Vector3                          max_rate_radps,
                     const float                                  throttle_min,
                     const float                                  throttle_max,
                     const float                                  actuator_min,
@@ -77,9 +74,7 @@ public:
          m_max_dt_s{max_dt_s},
          m_run_attitude_controller{run_attitude_controller},
          m_max_tilt_angle_rad{max_tilt_angle_rad},
-         m_max_roll_rate_radps{max_roll_rate_radps},
-         m_max_pitch_rate_radps{max_pitch_rate_radps},
-         m_max_yaw_rate_radps{max_yaw_rate_radps},
+         m_max_rate_radps{max_rate_radps},
          m_throttle_min{throttle_min},
          m_throttle_max{throttle_max},
          m_actuator_min{actuator_min},
@@ -92,12 +87,9 @@ public:
 
    void start()
    {
-      if (m_control_health.state == aeromight_boundaries::ControlState::inactive)
-      {
-         get_time();
-         move_to_disarmed();
-         publish_health();
-      }
+      m_control_health.enabled = true;
+      get_time();
+      publish_health();
    }
 
    void execute()
@@ -106,63 +98,45 @@ public:
 
       get_flight_control_setpoints();
 
-      run_state_machine();
+      run_control();
+
+      update_actuator_setpoints();
+
+      if (m_actuator_control.enabled)
+      {
+         if (!m_flight_control_setpoints.data.armed)
+         {
+            reset();
+            reset_filters();
+            m_actuator_control.enabled = false;
+            m_actuator_control.setpoints.zero();
+         }
+      }
+      else
+      {
+         if (m_flight_control_setpoints.data.armed)
+         {
+            reset();
+            reset_filters();
+            m_actuator_control.enabled = true;
+         }
+
+         m_actuator_control.setpoints.zero();
+      }
 
       publish_actuator_setpoints();
 
       publish_health();
+
+      print_log();
    }
 
-   aeromight_boundaries::ControlState get_state() const
+   bool is_enabled() const
    {
-      return m_control_health.state;
+      return m_control_health.enabled;
    }
 
 private:
-   void run_state_machine()
-   {
-      switch (m_control_health.state)
-      {
-         case aeromight_boundaries::ControlState::inactive:
-            // do nothing
-            break;
-
-         case aeromight_boundaries::ControlState::disarmed:
-            if (armed())
-            {
-               move_to_armed();
-            }
-            break;
-
-         case aeromight_boundaries::ControlState::armed:
-            if (kill())
-            {
-               move_to_killed();
-               break;
-            }
-
-            if (!armed())
-            {
-               move_to_disarmed();
-               break;
-            }
-
-            run_control();
-            break;
-
-         case aeromight_boundaries::ControlState::emergency_kill:
-            if (!kill())
-            {
-               move_to_disarmed();
-            }
-            break;
-
-         default:
-            error::stop_operation();
-            break;
-      }
-   }
-
    void get_time()
    {
       m_last_execution_time_us = m_current_time_us;
@@ -181,33 +155,6 @@ private:
       // Pilot Command Mapping: perform pitch sign inversion (flight stick pullback -> pitch up)
       data.pitch *= -1.0f;
       data.throttle = std::clamp(data.throttle, m_throttle_min, m_throttle_max);
-   }
-
-   void move_to_killed()
-   {
-      reset();
-      reset_filters();
-      stop_actuator();
-      m_control_health.state = aeromight_boundaries::ControlState::emergency_kill;
-      m_logger.print("killed");
-   }
-
-   void move_to_disarmed()
-   {
-      reset();
-      reset_filters();
-      stop_actuator();
-      m_control_health.state = aeromight_boundaries::ControlState::disarmed;
-      m_logger.print("disarmed");
-   }
-
-   void move_to_armed()
-   {
-      reset();
-      reset_filters();
-      start_actuator();
-      m_control_health.state = aeromight_boundaries::ControlState::armed;
-      m_logger.print("armed");
    }
 
    void get_rate_setpoints()
@@ -234,17 +181,17 @@ private:
 
          m_angular_rate_setpoints = m_attitude_controller.update(angle_setpoints, angle_estimation_rad);
 
-         m_angular_rate_setpoints[Axis::roll]  = std::clamp(m_angular_rate_setpoints[Axis::roll], -m_max_roll_rate_radps, m_max_roll_rate_radps);
-         m_angular_rate_setpoints[Axis::pitch] = std::clamp(m_angular_rate_setpoints[Axis::pitch], -m_max_pitch_rate_radps, m_max_pitch_rate_radps);
+         m_angular_rate_setpoints[Axis::roll]  = std::clamp(m_angular_rate_setpoints[Axis::roll], -m_max_rate_radps[Axis::roll], m_max_rate_radps[Axis::roll]);
+         m_angular_rate_setpoints[Axis::pitch] = std::clamp(m_angular_rate_setpoints[Axis::pitch], -m_max_rate_radps[Axis::pitch], m_max_rate_radps[Axis::pitch]);
       }
       else   // generate rate setpoints from sticks
       {
-         m_angular_rate_setpoints[Axis::roll]  = m_stick_input_lpf[Axis::roll].get().apply(m_flight_control_setpoints.data.roll * m_max_roll_rate_radps, m_dt_s);
-         m_angular_rate_setpoints[Axis::pitch] = m_stick_input_lpf[Axis::pitch].get().apply(m_flight_control_setpoints.data.pitch * m_max_pitch_rate_radps, m_dt_s);
+         m_angular_rate_setpoints[Axis::roll]  = m_stick_input_lpf[Axis::roll].get().apply(m_flight_control_setpoints.data.roll * m_max_rate_radps[Axis::roll], m_dt_s);
+         m_angular_rate_setpoints[Axis::pitch] = m_stick_input_lpf[Axis::pitch].get().apply(m_flight_control_setpoints.data.pitch * m_max_rate_radps[Axis::pitch], m_dt_s);
       }
 
       // yaw rate from manual setpoint
-      m_angular_rate_setpoints[Axis::yaw] = m_stick_input_lpf[Axis::yaw].get().apply(m_flight_control_setpoints.data.yaw * m_max_yaw_rate_radps, m_dt_s);
+      m_angular_rate_setpoints[Axis::yaw] = m_stick_input_lpf[Axis::yaw].get().apply(m_flight_control_setpoints.data.yaw * m_max_rate_radps[Axis::yaw], m_dt_s);
    }
 
    void get_torque_setpoints(const bool run_integrator)
@@ -271,7 +218,7 @@ private:
                                                     run_integrator);
    }
 
-   void get_actuator_setpoints()
+   void update_actuator_setpoints()
    {
       const math::Vector4 control_setpoints{m_torque_setpoints[aeromight_boundaries::ControlAxis::roll],
                                             m_torque_setpoints[aeromight_boundaries::ControlAxis::pitch],
@@ -297,21 +244,6 @@ private:
    {
       get_rate_setpoints();
       get_torque_setpoints(m_flight_control_setpoints.data.throttle > m_throttle_hover);
-      get_actuator_setpoints();
-
-      print_log();
-   }
-
-   void start_actuator()
-   {
-      m_actuator_control.enabled = true;
-      m_actuator_control.setpoints.zero();
-   }
-
-   void stop_actuator()
-   {
-      m_actuator_control.enabled = false;
-      m_actuator_control.setpoints.zero();
    }
 
    void publish_actuator_setpoints()
@@ -374,16 +306,6 @@ private:
       }
    }
 
-   bool armed() const noexcept
-   {
-      return m_flight_control_setpoints.data.armed;
-   }
-
-   bool kill() const noexcept
-   {
-      return m_flight_control_setpoints.data.kill;
-   }
-
    AttitudeController&                                             m_attitude_controller;
    RateController&                                                 m_rate_controller;
    ControlAllocator&                                               m_control_allocator;
@@ -399,9 +321,7 @@ private:
    const float                                                     m_max_dt_s;
    const bool                                                      m_run_attitude_controller;
    const float                                                     m_max_tilt_angle_rad;
-   const float                                                     m_max_roll_rate_radps;
-   const float                                                     m_max_pitch_rate_radps;
-   const float                                                     m_max_yaw_rate_radps;
+   const math::Vector3                                             m_max_rate_radps;
    const float                                                     m_throttle_min;
    const float                                                     m_throttle_max;
    const float                                                     m_actuator_min;

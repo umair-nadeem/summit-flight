@@ -9,8 +9,6 @@ static constexpr uint8_t rc_channel_pitch    = 1u;
 static constexpr uint8_t rc_channel_throttle = 2u;
 static constexpr uint8_t rc_channel_yaw      = 3u;
 
-static constexpr uint8_t rc_channel_arm_state   = 5u;
-static constexpr uint8_t rc_channel_flight_mode = 6u;
-static constexpr uint8_t rc_channel_kill_switch = 7u;
+static constexpr uint8_t rc_channel_arm_state = 5u;
 
 }   // namespace aeromight_link
