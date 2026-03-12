@@ -98,6 +98,8 @@ public:
 
       get_flight_control_setpoints();
 
+      apply_stick_input_transformation();
+
       run_control();
 
       update_actuator_setpoints();
@@ -150,9 +152,12 @@ private:
    void get_flight_control_setpoints()
    {
       m_flight_control_setpoints = m_flight_control_setpoint_storage.get_latest();
-      auto& data                 = m_flight_control_setpoints.data;
+   }
 
+   void apply_stick_input_transformation()
+   {
       // Pilot Command Mapping: perform pitch sign inversion (flight stick pullback -> pitch up)
+      auto& data = m_flight_control_setpoints.data;
       data.pitch *= -1.0f;
       data.throttle = std::clamp(data.throttle, m_throttle_min, m_throttle_max);
    }
