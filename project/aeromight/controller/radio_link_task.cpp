@@ -29,7 +29,8 @@ extern "C"
 
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
-      constexpr float   rc_channel_deadband           = 0.1f;
+      // crsf
+      constexpr float   rc_channel_deadband           = 0.05f;
       constexpr uint8_t good_uplink_quality_threshold = 50u;
 
       // battery
