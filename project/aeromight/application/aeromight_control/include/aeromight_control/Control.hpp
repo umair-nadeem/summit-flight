@@ -204,7 +204,7 @@ private:
       m_angular_rate_setpoints[Axis::yaw] = m_stick_input_lpf[Axis::yaw].get().apply(m_flight_control_setpoints.data.yaw * m_max_rate_radps[Axis::yaw], m_dt_s);
    }
 
-   void get_torque_setpoints(const bool run_integrator)
+   void get_torque_setpoints()
    {
       // gyro LPF
       for (uint8_t i = 0; i < num_axis; i++)
@@ -220,6 +220,9 @@ private:
       }
 
       const math::Vector3 angular_acceleration{(m_dterm_gyro_radps - m_previous_dterm_gyro_radps) / m_dt_s};
+
+      const bool run_integrator{m_flight_control_setpoints.data.armed &&
+                                (m_flight_control_setpoints.data.throttle > m_throttle_hover)};
 
       m_torque_setpoints = m_rate_controller.update(m_angular_rate_setpoints,
                                                     m_gyro_radps,
@@ -253,7 +256,7 @@ private:
    void run_control()
    {
       get_rate_setpoints();
-      get_torque_setpoints(m_flight_control_setpoints.data.armed && (m_flight_control_setpoints.data.throttle > m_throttle_hover));
+      get_torque_setpoints();
    }
 
    void publish_actuator_setpoints()
