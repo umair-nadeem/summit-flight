@@ -246,8 +246,11 @@ private:
       const math::Vector3 gyro_flu  = m_last_imu_sample.data.gyro_radps.value();
 
       // convert sensor axes from FLU body frame to FRD
-      const math::Vector3 accel_mps2{map_imu_sensor_axes_to_frd(accel_flu)};
-      const math::Vector3 gyro_radps{map_imu_sensor_axes_to_frd(gyro_flu)};
+      const math::Vector3 accel_frd{map_imu_sensor_axes_to_frd(accel_flu)};
+      const math::Vector3 gyro_frd{map_imu_sensor_axes_to_frd(gyro_flu)};
+
+      const math::Vector3 accel_mps2{rotate_cw_90(accel_frd)};
+      const math::Vector3 gyro_radps{rotate_cw_90(gyro_frd)};
 
       // update attitude state estimation
       m_attitude_estimator.update(accel_mps2, gyro_radps, m_imu_sample_dt_s);
@@ -288,21 +291,6 @@ private:
    {
       m_local_estimation_data.timestamp_ms = m_current_time_ms;
       m_state_estimation_data_storage      = m_local_estimation_data;
-
-      // m_data_log_counter++;
-      // if ((m_data_log_counter % 50u) == 0)
-      // {
-      //    m_logger.printf("z %.2f | vz %.2f | w %.2f | x %.2f | y %.2f | z %.2f | roll %.2f  |  pitch %.2f  |  y %.2f",
-      //                    m_local_estimation_data.altitude,
-      //                    m_local_estimation_data.vertical_velocity,
-      //                    m_local_estimation_data.attitude.w,
-      //                    m_local_estimation_data.attitude.x,
-      //                    m_local_estimation_data.attitude.y,
-      //                    m_local_estimation_data.attitude.z,
-      //                    m_local_estimation_data.euler.x,
-      //                    m_local_estimation_data.euler.y,
-      //                    m_local_estimation_data.euler.z);
-      // }
    }
 
    void publish_health()
@@ -403,6 +391,11 @@ private:
    static constexpr auto map_imu_sensor_axes_to_frd(const math::Vector3& vector3_flu)
    {
       return math::Vector3{-vector3_flu[1], -vector3_flu[0], -vector3_flu[2]};
+   }
+
+   static constexpr auto rotate_cw_90(const math::Vector3& vec3)
+   {
+      return math::Vector3{-vec3[1], vec3[0], vec3[2]};
    }
 
    AttitudeEstimator&                    m_attitude_estimator;

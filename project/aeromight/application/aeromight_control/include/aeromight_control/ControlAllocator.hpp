@@ -35,6 +35,13 @@ public:
    void set_control_setpoints(const math::Vector4& control_setpoints)
    {
       m_control_setpoints = control_setpoints;
+      for (std::size_t i = 0; i < m_control_setpoints.size; i++)
+      {
+         if (std::fabs(m_control_setpoints[i]) < control_setpoint_min)
+         {
+            m_control_setpoints[i] = 0.0f;
+         }
+      }
    }
 
    void allocate()
@@ -165,8 +172,8 @@ private:
       float torque_max = 0.0f;
       estimate_actuator_min_max(actuator_torque, torque_min, torque_max);
 
-      // make torque zero-centered
-      const float torque_center = 0.5f * (torque_min + torque_max);
+      const float torque_center = (torque_min + torque_max) * 0.5f;
+      // make torque vector zero-centered
       actuator_torque           = actuator_torque - torque_center;
       estimate_actuator_min_max(actuator_torque, torque_min, torque_max);
 
@@ -175,7 +182,7 @@ private:
 
       if (m_actuator_saturation)
       {
-         const float scale = (torque_span > math::constants::epsilon) ? (available_span / torque_span) : 1.0f;   // scale down torque differential
+         const float scale = (torque_span > math::constants::epsilon) ? (available_span / torque_span) : 1.0f;   // scale down torque vector
          actuator_torque   = actuator_torque * scale;                                                            // update actuator torque
       }
    }
@@ -227,6 +234,8 @@ private:
       const float yaw_limit = get_yaw_limit(m_control_setpoints[aeromight_boundaries::ControlAxis::thrust]);
       return std::clamp(yaw_control_sp, -yaw_limit, yaw_limit);
    }
+
+   static constexpr float control_setpoint_min = 1e-3f;
 
    const float     m_actuator_min;
    const float     m_actuator_max;

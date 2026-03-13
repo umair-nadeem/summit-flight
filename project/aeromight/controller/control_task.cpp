@@ -85,7 +85,7 @@ extern "C"
       // p
       constexpr float    rate_controller_roll_kp                        = 0.04f;
       constexpr float    rate_controller_pitch_kp                       = 0.04f;
-      constexpr float    rate_controller_yaw_kp                         = 0.04f;
+      constexpr float    rate_controller_yaw_kp                         = 0.06f;
       // i
       constexpr float    rate_controller_roll_ki                        = 0.0f;
       constexpr float    rate_controller_pitch_ki                       = 0.0f;
