@@ -187,7 +187,7 @@ private:
                                                   m_state_estimation.euler.pitch(),
                                                   m_state_estimation.euler.yaw()};
 
-         const math::Vector3 angle_setpoints{manual_setpoints[0], manual_setpoints[1], 0.0f};
+         const math::Vector3 angle_setpoints{manual_setpoints[Axis::roll], manual_setpoints[Axis::pitch], 0.0f};
 
          m_angular_rate_setpoints = m_attitude_controller.update(angle_setpoints, angle_estimation_rad);
 
