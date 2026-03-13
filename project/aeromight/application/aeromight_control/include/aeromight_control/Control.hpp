@@ -94,6 +94,11 @@ public:
 
    void execute()
    {
+      if (!m_control_health.enabled)
+      {
+         return;
+      }
+
       get_time();
 
       get_flight_control_setpoints();
@@ -248,7 +253,7 @@ private:
    void run_control()
    {
       get_rate_setpoints();
-      get_torque_setpoints(m_flight_control_setpoints.data.throttle > m_throttle_hover);
+      get_torque_setpoints(m_flight_control_setpoints.data.armed && (m_flight_control_setpoints.data.throttle > m_throttle_hover));
    }
 
    void publish_actuator_setpoints()
