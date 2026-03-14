@@ -70,7 +70,7 @@ protected:
    static constexpr uint8_t accel_a_dlpf_config                  = 0x03;
    static constexpr float   gyro_range_plausibility_margin_radps = 6.0f;
    static constexpr float   accel_range_plausibility_margin_mps2 = 20.0f;
-   static constexpr uint8_t num_samples_self_test                = 5u;
+   static constexpr uint8_t num_calibration_samples              = 5u;
    static constexpr float   gyro_tolerance_radps                 = 0.1f;
    static constexpr float   accel_tolerance_mps2                 = 1.5f;
 

@@ -12,7 +12,7 @@ template <typename StateHandler>
 struct SelfTestStateMachine
 {
    // states
-   static constexpr auto s_reset_stats         = boost::sml::state<class StateResetStats>;
+   static constexpr auto s_reset_calib_data    = boost::sml::state<class StateCalibrationData>;
    static constexpr auto s_collect_samples     = boost::sml::state<class StateCollectSamples>;
    static constexpr auto s_sample_wait         = boost::sml::state<class StateSampleWait>;
    static constexpr auto s_verify_sample       = boost::sml::state<class StateVerifySample>;
@@ -28,8 +28,8 @@ struct SelfTestStateMachine
       constexpr auto reset_timer = [](StateHandler& state)
       { state.reset_timer(); };
 
-      constexpr auto reset_stats = [](StateHandler& state)
-      { state.reset_stats(); };
+      constexpr auto reset_calibration_data = [](StateHandler& state)
+      { state.reset_calibration_data(); };
 
       constexpr auto tick_timer = [](StateHandler& state)
       { state.tick_timer(); };
@@ -40,8 +40,8 @@ struct SelfTestStateMachine
       constexpr auto convert_raw_data = [](StateHandler& state)
       { state.convert_raw_data(); };
 
-      constexpr auto update_stats = [](StateHandler& state)
-      { state.update_stats(); };
+      constexpr auto add_sample = [](StateHandler& state)
+      { state.add_sample(); };
 
       constexpr auto calculate_stats_and_bias = [](StateHandler& state)
       { state.calculate_stats_and_bias(); };
@@ -87,7 +87,7 @@ struct SelfTestStateMachine
       // clang-format off
       return make_transition_table(
           // From State     | Event           | Guard                   | Action                                             | To State
-          *s_reset_stats                                                / reset_stats                                        = s_collect_samples,
+          *s_reset_calib_data                                           / reset_calibration_data                             = s_collect_samples,
 
           s_collect_samples + e_tick                                    / (reset_timer, read_data)                           = s_sample_wait,
 
@@ -96,7 +96,7 @@ struct SelfTestStateMachine
           s_sample_wait     + e_tick          [!receive_wait_timeout]   / tick_timer,
           s_sample_wait     + e_tick          [receive_wait_timeout]    / (set_bus_error, mark_self_test_fail)               = X,
 
-          s_verify_sample                     [is_data_valid]           / update_stats                                       = s_check_samples_count,
+          s_verify_sample                     [is_data_valid]           / add_sample                                         = s_check_samples_count,
           s_verify_sample                     [!is_data_valid]          / (set_out_of_range_data_error, mark_self_test_fail) = X,
 
           s_check_samples_count               [!all_samples_collected]                                                       = s_collect_samples,

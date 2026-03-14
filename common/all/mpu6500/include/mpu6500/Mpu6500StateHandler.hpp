@@ -37,7 +37,7 @@ public:
                                 const uint8_t  accel_a_dlpf_config,
                                 const float    gyro_range_plausibility_margin_radps,
                                 const float    accel_range_plausibility_margin_mps2,
-                                const uint16_t num_samples_self_test,
+                                const uint16_t num_calibration_samples,
                                 const float    gyro_tolerance_radps,
                                 const float    accel_tolerance_mps2)
        : m_imu_data_storage{imu_data_storage},
@@ -58,7 +58,7 @@ public:
          m_accel_scale{math::constants::g_to_mps2 / params::accel_sensitivity_scale_factor[m_accel_full_scale]},
          m_gyro_absolute_plausibility_limit_radps{(params::gyro_abs_full_scale_range_dps[m_gyro_full_scale] * math::constants::deg_to_rad) + m_gyro_range_plausibility_margin_radps},
          m_accel_absolute_plausibility_limit_mps2{(params::accel_abs_full_scale_range_g[m_accel_full_scale] * math::constants::g_to_mps2) + m_accel_range_plausibility_margin_mps2},
-         m_num_samples_self_test{num_samples_self_test},
+         m_num_calibration_samples{num_calibration_samples},
          m_gyro_tolerance_radps{gyro_tolerance_radps},
          m_accel_tolerance_mps2{accel_tolerance_mps2}
    {
@@ -86,16 +86,16 @@ public:
       m_local_imu_health.read_failure_count = 0;
    }
 
-   void reset_stats()
+   void reset_calibration_data()
    {
-      m_self_test_stats.mean_accel = Vec3{0, 0, 0};
-      m_self_test_stats.mean_gyro  = Vec3{0, 0, 0};
+      m_calibration_data.mean_accel.zero();
+      m_calibration_data.mean_gyro.zero();
 
-      m_self_test_stats.ssq_accel = Vec3{0, 0, 0};
-      m_self_test_stats.ssq_gyro  = Vec3{0, 0, 0};
+      m_calibration_data.ssq_accel.zero();
+      m_calibration_data.ssq_gyro.zero();
 
-      m_self_test_stats.std_accel = Vec3{0, 0, 0};
-      m_self_test_stats.std_gyro  = Vec3{0, 0, 0};
+      m_calibration_data.std_accel.zero();
+      m_calibration_data.std_gyro.zero();
    }
 
    void power_reset()
@@ -190,26 +190,26 @@ public:
       m_config_registers.accel_config_2  = m_rx_buffer[5];
    }
 
-   void update_stats()
+   void add_sample()
    {
       // update step of welford's algorithm
-      m_self_test_stats.sample_counter++;   // increment counter
+      m_calibration_data.sample_counter++;   // increment counter
 
       const Vec3& new_accel_data = m_local_imu_data.accel_mps2.value();
       const Vec3& new_gyro_data  = m_local_imu_data.gyro_radps.value();
 
-      const Vec3 delta_accel = new_accel_data - m_self_test_stats.mean_accel;
-      const Vec3 delta_gyro  = new_gyro_data - m_self_test_stats.mean_gyro;
+      const Vec3 delta_accel = new_accel_data - m_calibration_data.mean_accel;
+      const Vec3 delta_gyro  = new_gyro_data - m_calibration_data.mean_gyro;
 
-      const float n              = static_cast<float>(m_self_test_stats.sample_counter);
-      const Vec3  new_mean_accel = m_self_test_stats.mean_accel + (delta_accel / n);
-      const Vec3  new_mean_gyro  = m_self_test_stats.mean_gyro + (delta_gyro / n);
+      const float n              = static_cast<float>(m_calibration_data.sample_counter);
+      const Vec3  new_mean_accel = m_calibration_data.mean_accel + (delta_accel / n);
+      const Vec3  new_mean_gyro  = m_calibration_data.mean_gyro + (delta_gyro / n);
 
-      m_self_test_stats.ssq_accel = m_self_test_stats.ssq_accel + (delta_accel.emul(new_accel_data - new_mean_accel));
-      m_self_test_stats.ssq_gyro  = m_self_test_stats.ssq_gyro + (delta_gyro.emul(new_gyro_data - new_mean_gyro));
+      m_calibration_data.ssq_accel = m_calibration_data.ssq_accel + (delta_accel.emul(new_accel_data - new_mean_accel));
+      m_calibration_data.ssq_gyro  = m_calibration_data.ssq_gyro + (delta_gyro.emul(new_gyro_data - new_mean_gyro));
 
-      m_self_test_stats.mean_accel = new_mean_accel;
-      m_self_test_stats.mean_gyro  = new_mean_gyro;
+      m_calibration_data.mean_accel = new_mean_accel;
+      m_calibration_data.mean_gyro  = new_mean_gyro;
    }
 
    void calculate_stats_and_bias()
@@ -478,19 +478,19 @@ public:
 
    bool all_samples_collected() const
    {
-      return (m_self_test_stats.sample_counter >= m_num_samples_self_test);
+      return (m_calibration_data.sample_counter >= m_num_calibration_samples);
    }
 
 private:
    void calculate_standard_deviation()
    {
-      error::verify(m_self_test_stats.sample_counter > 1u);
+      error::verify(m_calibration_data.sample_counter > 1u);
 
       // finalize welford's algorithm
-      const float n_minus_one = static_cast<float>(m_self_test_stats.sample_counter) - 1.0f;
+      const float n_minus_one = static_cast<float>(m_calibration_data.sample_counter) - 1.0f;
 
-      const Vec3 variance_accel = m_self_test_stats.ssq_accel / n_minus_one;
-      const Vec3 variance_gyro  = m_self_test_stats.ssq_gyro / n_minus_one;
+      const Vec3 variance_accel = m_calibration_data.ssq_accel / n_minus_one;
+      const Vec3 variance_gyro  = m_calibration_data.ssq_gyro / n_minus_one;
 
       const float std_accel_x = sqrtf(variance_accel[0]);
       const float std_accel_y = sqrtf(variance_accel[1]);
@@ -499,25 +499,27 @@ private:
       const float std_gyro_y  = sqrtf(variance_gyro[1]);
       const float std_gyro_z  = sqrtf(variance_gyro[2]);
 
-      m_self_test_stats.std_accel = Vec3{std_accel_x, std_accel_y, std_accel_z};
-      m_self_test_stats.std_gyro  = Vec3{std_gyro_x, std_gyro_y, std_gyro_z};
+      m_calibration_data.std_accel = Vec3{std_accel_x, std_accel_y, std_accel_z};
+      m_calibration_data.std_gyro  = Vec3{std_gyro_x, std_gyro_y, std_gyro_z};
    }
 
    void calculate_bias()
    {
-      const float magnitude = m_self_test_stats.mean_accel.norm();
+      const float magnitude = m_calibration_data.mean_accel.norm();
       error::verify(magnitude > 0);
 
       // unit vector -> a^ = a/|a|
       // gravity_body vector -> G_b = G * a^
-      const Vec3 gravity_body = m_self_test_stats.mean_accel * (math::constants::g_to_mps2 / magnitude);
+      const Vec3 gravity_body = m_calibration_data.mean_accel * (math::constants::g_to_mps2 / magnitude);
 
       // bias = a - G_b
       // accel bias is the residual vector after subtracting the G component
-      m_bias.accel = Vec3{0.0f, 0.0f, m_self_test_stats.mean_accel[2] - gravity_body[2]};
+      m_bias.accel = Vec3{m_calibration_data.mean_accel[0],
+                          m_calibration_data.mean_accel[1],
+                          m_calibration_data.mean_accel[2] - gravity_body[2]};
 
       // gyro bias is just mean
-      m_bias.gyro = m_self_test_stats.mean_gyro;
+      m_bias.gyro = m_calibration_data.mean_gyro;
 
       m_logger.printf("bias accel x: %.2f, y: %.2f, z: %.2f | bias gyro x :  %.2f, y: %.2f, z: %.2f",
                       m_bias.accel[0],
@@ -589,22 +591,22 @@ private:
 
    bool is_platform_stationary() const
    {
-      const float magnitude = m_self_test_stats.mean_accel.norm();
+      const float magnitude = m_calibration_data.mean_accel.norm();
       return std::abs(magnitude - math::constants::g_to_mps2) <= m_accel_tolerance_mps2;
    }
 
    bool is_accel_stable() const
    {
-      return ((m_self_test_stats.std_accel[0] <= m_accel_tolerance_mps2) &&
-              (m_self_test_stats.std_accel[1] <= m_accel_tolerance_mps2) &&
-              (m_self_test_stats.std_accel[2] <= m_accel_tolerance_mps2));
+      return ((m_calibration_data.std_accel[0] <= m_accel_tolerance_mps2) &&
+              (m_calibration_data.std_accel[1] <= m_accel_tolerance_mps2) &&
+              (m_calibration_data.std_accel[2] <= m_accel_tolerance_mps2));
    }
 
    bool is_gyro_stable() const
    {
-      return ((m_self_test_stats.std_gyro[0] <= m_gyro_tolerance_radps) &&
-              (m_self_test_stats.std_gyro[1] <= m_gyro_tolerance_radps) &&
-              (m_self_test_stats.std_gyro[2] <= m_gyro_tolerance_radps));
+      return ((m_calibration_data.std_gyro[0] <= m_gyro_tolerance_radps) &&
+              (m_calibration_data.std_gyro[1] <= m_gyro_tolerance_radps) &&
+              (m_calibration_data.std_gyro[2] <= m_gyro_tolerance_radps));
    }
 
    struct Config_registers
@@ -616,7 +618,7 @@ private:
       uint8_t accel_config_2;
    };
 
-   struct SelfTestStats
+   struct CalibrationData
    {
       // mean, (ssq) aggregation of squared distances from the mean and (std) standard deviation
       Vec3     mean_accel, ssq_accel, std_accel;
@@ -651,14 +653,14 @@ private:
    const float                                        m_accel_scale;
    const float                                        m_gyro_absolute_plausibility_limit_radps;
    const float                                        m_accel_absolute_plausibility_limit_mps2;
-   const uint16_t                                     m_num_samples_self_test;
+   const uint16_t                                     m_num_calibration_samples;
    const float                                        m_gyro_tolerance_radps;
    const float                                        m_accel_tolerance_mps2;
    std::array<uint8_t, params::num_bytes_transaction> m_tx_buffer{};
    std::array<uint8_t, params::num_bytes_transaction> m_rx_buffer{};
    imu_sensor::ImuData                                m_local_imu_data{};
    imu_sensor::ImuHealth                              m_local_imu_health{};
-   SelfTestStats                                      m_self_test_stats{};
+   CalibrationData                                    m_calibration_data{};
    Bias                                               m_bias{};
    uint8_t                                            m_device_id{};
    Config_registers                                   m_config_registers{};

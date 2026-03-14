@@ -82,7 +82,7 @@ protected:
          provide_stationary_accel_values();
          provide_stationary_gyro_values();
 
-         for (std::size_t i = 0; i < num_samples_self_test; i++)
+         for (std::size_t i = 0; i < num_calibration_samples; i++)
          {
             mpu6500.execute();                   // read data
             mpu6500.notify_receive_complete();   // wait for rx complete notification
@@ -171,7 +171,7 @@ protected:
                                                                                                          accel_a_dlpf_config,
                                                                                                          gyro_range_plausibility_margin_radps,
                                                                                                          accel_range_plausibility_margin_mps2,
-                                                                                                         num_samples_self_test,
+                                                                                                         num_calibration_samples,
                                                                                                          gyro_tolerance_radps,
                                                                                                          accel_tolerance_mps2};
 };

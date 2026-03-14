@@ -23,7 +23,7 @@ protected:
                                 accel_a_dlpf_config,
                                 gyro_range_plausibility_margin_radps,
                                 accel_range_plausibility_margin_mps2,
-                                num_samples_self_test,
+                                num_calibration_samples,
                                 gyro_tolerance_radps,
                                 accel_tolerance_mps2};
 
@@ -118,7 +118,7 @@ TEST_F(SelfTestSMTest, non_stationary_platform_causes_self_test_failure)
 
    provide_dynamic_accel_values();
 
-   for (std::size_t i = 0; i < num_samples_self_test; i++)
+   for (std::size_t i = 0; i < num_calibration_samples; i++)
    {
       sm.process_event(mpu6500::EventTick{});
       sm.process_event(mpu6500::EventReceiveDone{});
@@ -136,7 +136,7 @@ TEST_F(SelfTestSMTest, unstable_accel_values_cause_self_test_failure)
    rx_buffer.fill(0);
 
    const uint8_t deviation = 4u;   // cause variance in data
-   for (std::size_t i = 0; i < num_samples_self_test; i++)
+   for (std::size_t i = 0; i < num_calibration_samples; i++)
    {
       provide_stationary_accel_values(static_cast<uint8_t>(deviation * i));
       sm.process_event(mpu6500::EventTick{});
@@ -157,7 +157,7 @@ TEST_F(SelfTestSMTest, unstable_gyro_values_cause_self_test_failure)
    provide_stationary_accel_values();
 
    const uint8_t deviation = 4u;   // cause variance in data
-   for (std::size_t i = 0; i < num_samples_self_test; i++)
+   for (std::size_t i = 0; i < num_calibration_samples; i++)
    {
       provide_stationary_gyro_values(static_cast<uint8_t>(deviation * i));
       sm.process_event(mpu6500::EventTick{});
@@ -178,7 +178,7 @@ TEST_F(SelfTestSMTest, sane_sensor_values_for_passing_self_test)
    provide_stationary_accel_values();
    provide_stationary_gyro_values();
 
-   for (std::size_t i = 0; i < num_samples_self_test; i++)
+   for (std::size_t i = 0; i < num_calibration_samples; i++)
    {
       sm.process_event(mpu6500::EventTick{});
       sm.process_event(mpu6500::EventReceiveDone{});
