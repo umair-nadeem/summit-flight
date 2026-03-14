@@ -7,6 +7,7 @@
 #include "aeromight_boundaries/FlightControlSetpoints.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
 #include "boundaries/SharedData.hpp"
+#include "control/AttitudeControl.hpp"
 #include "control/Motor.hpp"
 #include "interfaces/IClockSource.hpp"
 #include "math/Vector2.hpp"
@@ -58,7 +59,7 @@ public:
                     const float                                  actuator_min,
                     const float                                  actuator_max,
                     const float                                  thrust_linearization,
-                    const float                                  throttle_hover)
+                    const float                                  throttle_gate_integrator)
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
          m_control_allocator{control_allocator},
@@ -80,7 +81,7 @@ public:
          m_actuator_min{actuator_min},
          m_actuator_max{actuator_max},
          m_thrust_linearization{thrust_linearization},
-         m_throttle_hover{throttle_hover}
+         m_throttle_gate_integrator{throttle_gate_integrator}
    {
       m_logger.enable();
    }
@@ -222,7 +223,7 @@ private:
       const math::Vector3 angular_acceleration{(m_dterm_gyro_radps - m_previous_dterm_gyro_radps) / m_dt_s};
 
       const bool run_integrator{m_flight_control_setpoints.data.armed &&
-                                (m_flight_control_setpoints.data.throttle > m_throttle_hover)};
+                                (m_flight_control_setpoints.data.throttle > m_throttle_gate_integrator)};
 
       m_torque_setpoints = m_rate_controller.update(m_angular_rate_setpoints,
                                                     m_gyro_radps,
@@ -340,7 +341,7 @@ private:
    const float                                                     m_actuator_min;
    const float                                                     m_actuator_max;
    const float                                                     m_thrust_linearization;
-   const float                                                     m_throttle_hover;
+   const float                                                     m_throttle_gate_integrator;
    aeromight_boundaries::ActuatorControl                           m_actuator_control{};
    aeromight_boundaries::ControlHealth                             m_control_health{};
    FlightControlSetpoints::Sample                                  m_flight_control_setpoints{};

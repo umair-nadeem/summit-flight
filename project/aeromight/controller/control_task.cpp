@@ -70,7 +70,7 @@ extern "C"
       constexpr float    actuator_idle                                  = 0.1f;
       constexpr float    throttle_min                                   = actuator_min;
       constexpr float    throttle_max                                   = actuator_max;
-      constexpr float    throttle_hover                                 = 0.4f;
+      constexpr float    throttle_gate_integrator                       = 0.15f;
       // attitude controller
       constexpr bool     run_attitude_controller                        = false;
       constexpr float    max_tilt_angle_rad                             = 30 * math::constants::deg_to_rad;
@@ -203,7 +203,7 @@ extern "C"
                   actuator_min,
                   actuator_max,
                   thrust_linearization,
-                  throttle_hover};
+                  throttle_gate_integrator};
 
       aeromight_control::EstimationAndControl<decltype(estimation),
                                               decltype(control)>
