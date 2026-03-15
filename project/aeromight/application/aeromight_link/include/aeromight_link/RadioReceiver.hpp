@@ -1,8 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 
-#include "aeromight_boundaries/SystemManagerData.hpp"
+#include "aeromight_boundaries/SystemControlSetpoints.hpp"
 #include "boundaries/BufferWithOwnershipIndex.hpp"
 #include "boundaries/SharedData.hpp"
 #include "channel_mappings.hpp"
@@ -16,20 +17,24 @@ namespace aeromight_link
 template <typename QueueReceiver, typename QueueSender, typename Crsf, interfaces::IClockSource ClockSource, typename Logger>
 class RadioReceiver
 {
-   using SetpointsStorage = boundaries::SharedData<aeromight_boundaries::RadioControlSetpoints>;
-   using LinkStatsStorage = boundaries::SharedData<aeromight_boundaries::RadioLinkStats>;
+
+   using FlightControlSetpointsStorage = boundaries::SharedData<aeromight_boundaries::FlightControlSetpoints>;
+   using SystemControlSetpointsStorage = boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints>;
+   using RadioLinkActualsStorage       = boundaries::SharedData<aeromight_boundaries::RadioLinkActuals>;
 
 public:
-   explicit RadioReceiver(QueueReceiver&    radio_input_queue_receiver,
-                          QueueSender&      free_index_queue_sender,
-                          SetpointsStorage& radio_control_setpoints_storage,
-                          LinkStatsStorage& radio_link_actuals_storage,
-                          Logger&           logger,
-                          const float       rc_channel_deadband,
-                          const uint8_t     good_uplink_quality_threshold)
+   explicit RadioReceiver(QueueReceiver&                 radio_input_queue_receiver,
+                          QueueSender&                   free_index_queue_sender,
+                          FlightControlSetpointsStorage& flight_control_setpoints_storage,
+                          SystemControlSetpointsStorage& system_control_setpoints_storage,
+                          RadioLinkActualsStorage&       radio_link_actuals_storage,
+                          Logger&                        logger,
+                          const float                    rc_channel_deadband,
+                          const uint8_t                  good_uplink_quality_threshold)
        : m_radio_input_queue_receiver{radio_input_queue_receiver},
          m_free_index_queue_sender(free_index_queue_sender),
-         m_radio_control_setpoints_storage(radio_control_setpoints_storage),
+         m_flight_control_setpoints_storage(flight_control_setpoints_storage),
+         m_system_control_setpoints_storage(system_control_setpoints_storage),
          m_radio_link_actuals_storage(radio_link_actuals_storage),
          m_logger(logger),
          m_rc_channel_deadband(rc_channel_deadband),
@@ -87,17 +92,20 @@ private:
 
    void publish_rc_channels(const crsf::CrsfRcChannels& rc_data)
    {
-      // update flight stick input
-      m_radio_control_setpoints.input.roll     = apply_deadband(normalize_channel(rc_data.channels[rc_channel_roll]), m_rc_channel_deadband);
-      m_radio_control_setpoints.input.pitch    = apply_deadband(normalize_channel(rc_data.channels[rc_channel_pitch]), m_rc_channel_deadband);
-      m_radio_control_setpoints.input.yaw      = apply_deadband(normalize_channel(rc_data.channels[rc_channel_yaw]), m_rc_channel_deadband);
-      m_radio_control_setpoints.input.throttle = normalize_throttle(rc_data.channels[rc_channel_throttle]);
+      // update flight stick input setpoints
+      m_flight_control_setpoints.roll     = apply_deadband(normalize_channel(rc_data.channels[rc_channel_roll]), m_rc_channel_deadband);
+      m_flight_control_setpoints.pitch    = apply_deadband(normalize_channel(rc_data.channels[rc_channel_pitch]), m_rc_channel_deadband);
+      m_flight_control_setpoints.yaw      = apply_deadband(normalize_channel(rc_data.channels[rc_channel_yaw]), m_rc_channel_deadband);
+      const float throttle                = normalize_throttle(rc_data.channels[rc_channel_throttle]);
+      m_flight_control_setpoints.throttle = std::clamp(throttle, 0.0f, 1.0f);
 
-      // update armed state
-      m_radio_control_setpoints.state = get_arm_state(normalize_channel(rc_data.channels[rc_channel_arm_state]));
+      // update system control setpoints
+      m_system_control_setpoints.state = get_arm_state(normalize_channel(rc_data.channels[rc_channel_arm_state]));
 
-      // publish to shared buffer
-      m_radio_control_setpoints_storage.update_latest(m_radio_control_setpoints, ClockSource::now_ms());
+      // publish to shared buffers
+      const auto clock_ms = ClockSource::now_ms();
+      m_system_control_setpoints_storage.update_latest(m_system_control_setpoints, clock_ms);
+      m_flight_control_setpoints_storage.update_latest(m_flight_control_setpoints, clock_ms);
    }
 
    void publish_link_stats(const crsf::CrsfLinkStatistics& stats)
@@ -135,24 +143,26 @@ private:
       return ((x > 0 ? (x - deadband) : (x + deadband)) / (1.0f - deadband));
    }
 
-   static constexpr aeromight_boundaries::FlightArmedState get_arm_state(const float switch_value) noexcept
+   static constexpr aeromight_boundaries::SystemArmedState get_arm_state(const float switch_value) noexcept
    {
-      return (switch_value > rc_channel_switch_discrete_threshold) ? aeromight_boundaries::FlightArmedState::arm : aeromight_boundaries::FlightArmedState::disarm;
+      return (switch_value > rc_channel_switch_discrete_threshold) ? aeromight_boundaries::SystemArmedState::arm : aeromight_boundaries::SystemArmedState::disarm;
    }
 
    static constexpr float rc_channel_switch_discrete_threshold = 0.5f;
 
-   QueueReceiver&                              m_radio_input_queue_receiver;
-   QueueSender&                                m_free_index_queue_sender;
-   SetpointsStorage&                           m_radio_control_setpoints_storage;
-   LinkStatsStorage&                           m_radio_link_actuals_storage;
-   Logger&                                     m_logger;
-   const float                                 m_rc_channel_deadband;
-   const uint8_t                               m_good_uplink_quality_threshold;
-   aeromight_boundaries::RadioControlSetpoints m_radio_control_setpoints{};
-   aeromight_boundaries::RadioLinkStats        m_radio_link_actuals{};
-   crsf::CrsfPacket                            m_crsf_packet{};
-   std::size_t                                 m_counter{};
+   QueueReceiver&                               m_radio_input_queue_receiver;
+   QueueSender&                                 m_free_index_queue_sender;
+   FlightControlSetpointsStorage&               m_flight_control_setpoints_storage;
+   SystemControlSetpointsStorage&               m_system_control_setpoints_storage;
+   RadioLinkActualsStorage&                     m_radio_link_actuals_storage;
+   Logger&                                      m_logger;
+   const float                                  m_rc_channel_deadband;
+   const uint8_t                                m_good_uplink_quality_threshold;
+   aeromight_boundaries::FlightControlSetpoints m_flight_control_setpoints{};
+   aeromight_boundaries::SystemControlSetpoints m_system_control_setpoints{};
+   aeromight_boundaries::RadioLinkActuals       m_radio_link_actuals{};
+   crsf::CrsfPacket                             m_crsf_packet{};
+   std::size_t                                  m_counter{};
 };
 
 }   // namespace aeromight_link

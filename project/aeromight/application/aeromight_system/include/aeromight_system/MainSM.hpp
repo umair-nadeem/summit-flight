@@ -49,14 +49,14 @@ struct SystemManagerStateMachine
          state.start_control();
       };
 
-      constexpr auto arm_control = [](StateHandler& state)
+      constexpr auto arm_system = [](StateHandler& state)
       {
-         state.arm_control();
+         state.arm_system();
       };
 
-      constexpr auto disarm_control = [](StateHandler& state)
+      constexpr auto disarm_system = [](StateHandler& state)
       {
-         state.disarm_control();
+         state.disarm_system();
       };
 
       constexpr auto set_wait_sensors_state = [](StateHandler& state)
@@ -141,11 +141,6 @@ struct SystemManagerStateMachine
          return state.disarm();
       };
 
-      constexpr auto throttle_below_limit = [](StateHandler& state)
-      {
-         return state.throttle_below_limit();
-      };
-
       constexpr auto is_health_good = [](StateHandler& state)
       {
          return state.is_health_good();
@@ -182,17 +177,17 @@ struct SystemManagerStateMachine
 
           s_arming            + e_tick                                                                                                            = s_arming_checkpoint,
           s_arming_checkpoint         [disarm || !is_health_good || !is_radio_link_good] / set_disarmed_state                                     = s_disarmed,
-          s_arming_checkpoint         [is_state_change_persistent && is_health_good && is_radio_link_good && throttle_below_limit] / (arm_control, set_armed_state) = s_armed,
+          s_arming_checkpoint         [is_state_change_persistent && is_health_good && is_radio_link_good] / (arm_system, set_armed_state)        = s_armed,
           s_arming_checkpoint                                                                                                                     = s_arming,
 
           s_armed             + e_tick                                                                                                            = s_armed_checkpoint,
           s_armed_checkpoint          [disarm]                                      / (set_disarming_state, set_reference_time)                   = s_disarming,
-          s_armed_checkpoint          [!is_health_good || !is_radio_link_good]      / disarm_control                                              = s_to_fault,
+          s_armed_checkpoint          [!is_health_good || !is_radio_link_good]      / disarm_system                                               = s_to_fault,
           s_armed_checkpoint                                                                                                                      = s_armed,
 
           s_disarming         + e_tick                                                                                                            = s_disarming_checkpoint,
           s_disarming_checkpoint      [arm && is_health_good && is_radio_link_good]                                                               = s_armed,
-          s_disarming_checkpoint      [is_state_change_persistent]                  / (disarm_control, set_disarmed_state)                        = s_disarmed,
+          s_disarming_checkpoint      [is_state_change_persistent]                  / (disarm_system, set_disarmed_state)                         = s_disarmed,
           s_disarming_checkpoint                                                                                                                  = s_disarming,
 
           s_to_fault                                                                / set_fault_state                                             = s_fault

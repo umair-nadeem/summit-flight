@@ -70,6 +70,7 @@ extern "C"
       constexpr float    actuator_idle                                  = 0.1f;
       constexpr float    throttle_min                                   = actuator_min;
       constexpr float    throttle_max                                   = actuator_max;
+      constexpr float    throttle_arming                                = 0.01f;
       constexpr float    throttle_hover                                 = 0.3f;
       constexpr float    throttle_curve_factor                          = 0.5f;
       constexpr float    throttle_gate_integrator                       = 0.15f;
@@ -192,6 +193,7 @@ extern "C"
                   pid_dterm_z_lpf,
                   aeromight_boundaries::aeromight_data.actuator_control,
                   aeromight_boundaries::aeromight_data.control_health_storage,
+                  aeromight_boundaries::aeromight_data.system_state_info,
                   aeromight_boundaries::aeromight_data.flight_control_setpoints,
                   data->state_estimation,
                   logger_control,
@@ -204,6 +206,7 @@ extern "C"
                   actuator_max,
                   throttle_min,
                   throttle_max,
+                  throttle_arming,
                   throttle_hover,
                   throttle_curve_factor,
                   throttle_gate_integrator,

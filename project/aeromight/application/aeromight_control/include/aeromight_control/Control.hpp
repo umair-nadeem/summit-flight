@@ -6,6 +6,7 @@
 #include "aeromight_boundaries/ControlHealth.hpp"
 #include "aeromight_boundaries/FlightControlSetpoints.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
+#include "aeromight_boundaries/SystemStateInfo.hpp"
 #include "boundaries/SharedData.hpp"
 #include "control/AttitudeControl.hpp"
 #include "control/Motor.hpp"
@@ -26,6 +27,7 @@ class Control
 {
    using ActuatorControl        = boundaries::SharedData<aeromight_boundaries::ActuatorControl>;
    using ControlHealth          = boundaries::SharedData<aeromight_boundaries::ControlHealth>;
+   using SystemStateInfo        = boundaries::SharedData<aeromight_boundaries::SystemStateInfo>;
    using FlightControlSetpoints = boundaries::SharedData<aeromight_boundaries::FlightControlSetpoints>;
    using StateEstimation        = aeromight_boundaries::StateEstimation;
 
@@ -46,6 +48,7 @@ public:
                     ButterworthFilter&                           pid_dterm_z_lpf,
                     ActuatorControl&                             actuator_control_storage,
                     ControlHealth&                               control_health_storage,
+                    const SystemStateInfo&                       system_state_info_storage,
                     const FlightControlSetpoints&                flight_control_setpoint_storage,
                     const aeromight_boundaries::StateEstimation& state_estimation_data,
                     Logger&                                      logger,
@@ -58,6 +61,7 @@ public:
                     const float                                  actuator_max,
                     const float                                  throttle_min,
                     const float                                  throttle_max,
+                    const float                                  throttle_arming,
                     const float                                  throttle_hover,
                     const float                                  throttle_curve_factor,
                     const float                                  throttle_gate_integrator,
@@ -70,6 +74,7 @@ public:
          m_pid_dterm_lpf{pid_dterm_x_lpf, pid_dterm_y_lpf, pid_dterm_z_lpf},
          m_actuator_control_storage{actuator_control_storage},
          m_control_health_storage{control_health_storage},
+         m_system_state_info_storage{system_state_info_storage},
          m_flight_control_setpoint_storage{flight_control_setpoint_storage},
          m_state_estimation{state_estimation_data},
          m_logger{logger},
@@ -82,6 +87,7 @@ public:
          m_actuator_max{actuator_max},
          m_throttle_min{throttle_min},
          m_throttle_max{throttle_max},
+         m_throttle_arming{throttle_arming},
          m_throttle_hover{throttle_hover},
          m_throttle_curve_factor{throttle_curve_factor},
          m_throttle_gate_integrator{throttle_gate_integrator},
@@ -107,6 +113,8 @@ public:
 
       get_time();
 
+      get_system_state_info();
+
       get_flight_control_setpoints();
 
       apply_stick_input_transformation();
@@ -117,21 +125,23 @@ public:
 
       if (m_actuator_control.enabled)
       {
-         if (!m_flight_control_setpoints.data.armed)
+         if (!m_system_state_info.data.armed)
          {
             reset();
             reset_filters();
             m_actuator_control.enabled = false;
             m_actuator_control.setpoints.zero();
+            m_logger.print("disarmed");
          }
       }
       else
       {
-         if (m_flight_control_setpoints.data.armed)
+         if (m_system_state_info.data.armed && (m_flight_control_setpoints.data.throttle < m_throttle_arming))
          {
             reset();
             reset_filters();
             m_actuator_control.enabled = true;
+            m_logger.print("armed");
          }
 
          m_actuator_control.setpoints.zero();
@@ -158,6 +168,11 @@ private:
 
       m_dt_s = static_cast<float>(m_current_time_us - m_last_execution_time_us) * 0.000001f;
       m_dt_s = std::clamp(m_dt_s, m_min_dt_s, m_max_dt_s);
+   }
+
+   void get_system_state_info()
+   {
+      m_system_state_info = m_system_state_info_storage.get_latest();
    }
 
    void get_flight_control_setpoints()
@@ -228,7 +243,7 @@ private:
 
       const math::Vector3 angular_acceleration{(m_dterm_gyro_radps - m_previous_dterm_gyro_radps) / m_dt_s};
 
-      const bool run_integrator{m_flight_control_setpoints.data.armed &&
+      const bool run_integrator{m_system_state_info.data.armed &&
                                 (m_flight_control_setpoints.data.throttle > m_throttle_gate_integrator)};
 
       m_torque_setpoints = m_rate_controller.update(m_angular_rate_setpoints,
@@ -334,6 +349,7 @@ private:
    std::array<std::reference_wrapper<ButterworthFilter>, num_axis> m_pid_dterm_lpf;
    ActuatorControl&                                                m_actuator_control_storage;
    ControlHealth&                                                  m_control_health_storage;
+   const SystemStateInfo&                                          m_system_state_info_storage;
    const FlightControlSetpoints&                                   m_flight_control_setpoint_storage;
    const StateEstimation&                                          m_state_estimation;
    Logger&                                                         m_logger;
@@ -346,12 +362,14 @@ private:
    const float                                                     m_actuator_max;
    const float                                                     m_throttle_min;
    const float                                                     m_throttle_max;
+   const float                                                     m_throttle_arming;
    const float                                                     m_throttle_hover;
    const float                                                     m_throttle_curve_factor;
    const float                                                     m_throttle_gate_integrator;
    const float                                                     m_thrust_linearization_factor;
    aeromight_boundaries::ActuatorControl                           m_actuator_control{};
    aeromight_boundaries::ControlHealth                             m_control_health{};
+   SystemStateInfo::Sample                                         m_system_state_info{};
    FlightControlSetpoints::Sample                                  m_flight_control_setpoints{};
    math::Vector3                                                   m_gyro_radps{};
    math::Vector3                                                   m_dterm_gyro_radps{};

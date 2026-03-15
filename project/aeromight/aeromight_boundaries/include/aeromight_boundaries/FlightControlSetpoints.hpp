@@ -12,8 +12,6 @@ struct FlightControlSetpoints
    float roll{};       // -1.0 (left) to +1.0 (right)
    float pitch{};      // -1.0 (nose-down) to +1.0 (nose-up)
    float yaw{};        // -1.0 (CCW) to +1.0 (CW)
-
-   bool armed;
 };
 
 }   // namespace aeromight_boundaries
