@@ -1,9 +1,9 @@
 #pragma once
 
-#include "FlightManagerStateHandler.hpp"
 #include "MainSM.hpp"
+#include "SystemManagerStateHandler.hpp"
 
-namespace aeromight_flight
+namespace aeromight_system
 {
 
 template <interfaces::rtos::IQueueReceiver<aeromight_boundaries::HealthSummary> QueueReceiver,
@@ -11,10 +11,10 @@ template <interfaces::rtos::IQueueReceiver<aeromight_boundaries::HealthSummary> 
           interfaces::pcb_component::ILed                                       Led,
           interfaces::IClockSource                                              ClockSource,
           typename Logger>
-class FlightManager
+class SystemManager
 {
 public:
-   explicit FlightManager(QueueReceiver&                                                             health_summary_queue_receiver,
+   explicit SystemManager(QueueReceiver&                                                             health_summary_queue_receiver,
                           EstimationNotifier&                                                        control_start_notifier,
                           Led&                                                                       led,
                           boundaries::SharedData<aeromight_boundaries::FlightControlSetpoints>&      flight_control_setpoints_storage,
@@ -57,7 +57,7 @@ public:
       m_state_handler.publish_flight_control_setpoints();
    }
 
-   FlightManagerState get_state() const
+   SystemManagerState get_state() const
    {
       return m_state_handler.get_state();
    }
@@ -68,11 +68,11 @@ public:
    }
 
 private:
-   using StateHandler    = FlightManagerStateHandler<QueueReceiver, EstimationNotifier, Led, ClockSource, Logger>;
-   using StateMachineDef = FlightManagerStateMachine<StateHandler>;
+   using StateHandler    = SystemManagerStateHandler<QueueReceiver, EstimationNotifier, Led, ClockSource, Logger>;
+   using StateMachineDef = SystemManagerStateMachine<StateHandler>;
 
    const uint32_t                  m_period_ms;
    StateHandler                    m_state_handler;
    boost::sml::sm<StateMachineDef> m_state_machine{m_state_handler};
 };
-}   // namespace aeromight_flight
+}   // namespace aeromight_system

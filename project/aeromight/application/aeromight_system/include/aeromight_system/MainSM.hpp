@@ -2,13 +2,13 @@
 
 #include <boost/sml.hpp>
 
-#include "FlightManagerState.hpp"
+#include "SystemManagerState.hpp"
 
-namespace aeromight_flight
+namespace aeromight_system
 {
 
 template <typename StateHandler>
-struct FlightManagerStateMachine
+struct SystemManagerStateMachine
 {
 
    // leaf states
@@ -61,37 +61,37 @@ struct FlightManagerStateMachine
 
       constexpr auto set_wait_sensors_state = [](StateHandler& state)
       {
-         state.set_state(FlightManagerState::wait_sensors);
+         state.set_state(SystemManagerState::wait_sensors);
       };
 
       constexpr auto set_wait_control_state = [](StateHandler& state)
       {
-         state.set_state(FlightManagerState::wait_control);
+         state.set_state(SystemManagerState::wait_control);
       };
 
       constexpr auto set_disarming_state = [](StateHandler& state)
       {
-         state.set_state(FlightManagerState::disarming);
+         state.set_state(SystemManagerState::disarming);
       };
 
       constexpr auto set_disarmed_state = [](StateHandler& state)
       {
-         state.set_state(FlightManagerState::disarmed);
+         state.set_state(SystemManagerState::disarmed);
       };
 
       constexpr auto set_arming_state = [](StateHandler& state)
       {
-         state.set_state(FlightManagerState::arming);
+         state.set_state(SystemManagerState::arming);
       };
 
       constexpr auto set_armed_state = [](StateHandler& state)
       {
-         state.set_state(FlightManagerState::armed);
+         state.set_state(SystemManagerState::armed);
       };
 
       constexpr auto set_fault_state = [](StateHandler& state)
       {
-         state.set_state(FlightManagerState::fault);
+         state.set_state(SystemManagerState::fault);
       };
 
       constexpr auto show_disarm_led = [](StateHandler& state)
@@ -202,4 +202,4 @@ struct FlightManagerStateMachine
    }
 };
 
-}   // namespace aeromight_flight
+}   // namespace aeromight_system

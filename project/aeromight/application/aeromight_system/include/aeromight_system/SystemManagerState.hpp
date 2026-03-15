@@ -1,9 +1,9 @@
 #pragma once
 
-namespace aeromight_flight
+namespace aeromight_system
 {
 
-enum class FlightManagerState
+enum class SystemManagerState
 {
    init,
    wait_sensors,
@@ -15,4 +15,4 @@ enum class FlightManagerState
    fault
 };
 
-}   // namespace aeromight_flight
+}   // namespace aeromight_system

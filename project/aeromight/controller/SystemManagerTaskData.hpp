@@ -11,14 +11,14 @@
 extern "C"
 {
 
-   [[noreturn]] void flight_manager_task(void* const params);
+   [[noreturn]] void system_manager_task(void* const params);
 
 }   // extern "C"
 
 namespace controller
 {
 
-struct FlightManagerTaskData
+struct SystemManagerTaskData
 {
    // armed status led
    hw::pcb_component::Led armed_status_led{global_data.gpios.armed_status_led};
@@ -29,6 +29,6 @@ struct FlightManagerTaskData
    rtos::Notifier<aeromight_boundaries::ControlTaskNotificationFlags> control_task_start_notifier{control_task_start_notification};
 };
 
-extern FlightManagerTaskData flight_manager_task_data;
+extern SystemManagerTaskData system_manager_task_data;
 
 }   // namespace controller

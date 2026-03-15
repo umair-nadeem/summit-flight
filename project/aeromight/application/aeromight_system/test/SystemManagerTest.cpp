@@ -1,4 +1,4 @@
-#include "aeromight_flight/FlightManager.hpp"
+#include "aeromight_system/SystemManager.hpp"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -10,7 +10,7 @@
 
 #include "boundaries/SharedData.hpp"
 
-class FlightManagerTest : public ::testing::Test
+class SystemManagerTest : public ::testing::Test
 {
    using Setpoints = boundaries::SharedData<aeromight_boundaries::RadioControlSetpoints>;
    using Actuals   = boundaries::SharedData<aeromight_boundaries::RadioLinkStats>;
@@ -24,7 +24,7 @@ protected:
       {
          current_ms      = current_ms_copy;
          sys_clock.m_sec = current_ms;
-         flight_manager.run_once();
+         system_manager.run_once();
       }
    }
 
@@ -55,7 +55,7 @@ protected:
       setpoints.state = aeromight_boundaries::FlightArmedState::arm;
       radio_control_setpoints_storage.update_latest(setpoints, current_ms);
       provide_ticks(1u);
-      EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::arming);
+      EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::arming);
    }
 
    void give_disarm_command()
@@ -70,7 +70,7 @@ protected:
       setpoints.kill_switch_active = true;
       radio_control_setpoints_storage.update_latest(setpoints, current_ms);
       provide_ticks(1u);
-      EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::killed);
+      EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::killed);
    }
 
    void give_manual_mode_command()
@@ -106,7 +106,7 @@ protected:
       radio_link_actuals_storage.update_latest(actuals, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);
-      flight_manager.run_once();
+      system_manager.run_once();
    }
 
    void move_to_wait_sensors_state()
@@ -117,7 +117,7 @@ protected:
       provide_health_summary(health_summary);
 
       provide_ticks(1u);
-      EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::wait_sensors);
+      EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::wait_sensors);
    }
 
    void make_sensors_ready()
@@ -126,7 +126,7 @@ protected:
       health_summary.timestamp_ms      = current_ms;
       provide_health_summary(health_summary);
       provide_ticks(1u);
-      EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::wait_control);
+      EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::wait_control);
    }
 
    void make_control_ready()
@@ -136,7 +136,7 @@ protected:
       health_summary.timestamp_ms     = current_ms;
       provide_health_summary(health_summary);
       provide_ticks(1u);
-      EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarmed);
+      EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
    }
 
    void move_to_armed()
@@ -158,7 +158,7 @@ protected:
          provide_ticks(1u);
       }
 
-      EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::armed);
+      EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::armed);
    }
 
    static constexpr float    stick_input_deadband_abs       = 0.1f;
@@ -183,10 +183,10 @@ protected:
    aeromight_boundaries::RadioLinkStats        actuals{};
    uint32_t                                    current_ms{0};
 
-   aeromight_flight::FlightManager<decltype(health_summary_queue_mock),
+   aeromight_system::SystemManager<decltype(health_summary_queue_mock),
                                    decltype(control_start_notifer_mock),
                                    decltype(sys_clock), mocks::common::Logger>
-       flight_manager{health_summary_queue_mock,
+       system_manager{health_summary_queue_mock,
                       control_start_notifer_mock,
                       flight_control_setpoints_storage,
                       radio_control_setpoints_storage,
@@ -202,34 +202,34 @@ protected:
                       timeout_auto_land_ms};
 };
 
-TEST_F(FlightManagerTest, initial_state)
+TEST_F(SystemManagerTest, initial_state)
 {
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::init);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::init);
 }
 
-TEST_F(FlightManagerTest, starting_wait_for_sensors)
+TEST_F(SystemManagerTest, starting_wait_for_sensors)
 {
    move_to_wait_sensors_state();
 }
 
-TEST_F(FlightManagerTest, timeout_while_waiting_for_sensors_readiness)
+TEST_F(SystemManagerTest, timeout_while_waiting_for_sensors_readiness)
 {
    move_to_wait_sensors_state();
 
    const uint32_t ticks_required = timeout_sensors_readiness_ms / period_in_ms;
    provide_ticks(ticks_required);
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::fault);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::fault);
 }
 
-TEST_F(FlightManagerTest, sensors_ready)
+TEST_F(SystemManagerTest, sensors_ready)
 {
    move_to_wait_sensors_state();
 
    make_sensors_ready();
 }
 
-TEST_F(FlightManagerTest, timeout_while_waiting_for_control_readiness)
+TEST_F(SystemManagerTest, timeout_while_waiting_for_control_readiness)
 {
    move_to_wait_sensors_state();
 
@@ -238,10 +238,10 @@ TEST_F(FlightManagerTest, timeout_while_waiting_for_control_readiness)
    const uint32_t ticks_required = timeout_control_readiness_ms / period_in_ms;
    provide_ticks(ticks_required);
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::fault);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::fault);
 }
 
-TEST_F(FlightManagerTest, control_ready)
+TEST_F(SystemManagerTest, control_ready)
 {
    move_to_wait_sensors_state();
 
@@ -250,7 +250,7 @@ TEST_F(FlightManagerTest, control_ready)
    make_control_ready();
 }
 
-TEST_F(FlightManagerTest, kill_while_arming)
+TEST_F(SystemManagerTest, kill_while_arming)
 {
    move_to_wait_sensors_state();
 
@@ -271,7 +271,7 @@ TEST_F(FlightManagerTest, kill_while_arming)
    give_kill_command();
 }
 
-TEST_F(FlightManagerTest, disarm_while_arming_due_to_disarm_signal)
+TEST_F(SystemManagerTest, disarm_while_arming_due_to_disarm_signal)
 {
    move_to_wait_sensors_state();
 
@@ -290,10 +290,10 @@ TEST_F(FlightManagerTest, disarm_while_arming_due_to_disarm_signal)
 
    // disarm
    give_disarm_command();
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarmed);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
 }
 
-TEST_F(FlightManagerTest, fault_while_arming_due_to_stale_health)
+TEST_F(SystemManagerTest, fault_while_arming_due_to_stale_health)
 {
    move_to_wait_sensors_state();
 
@@ -326,10 +326,10 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_stale_health)
       provide_ticks(1u);
    }
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarmed);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
 }
 
-TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_health)
+TEST_F(SystemManagerTest, fault_while_arming_due_to_bad_health)
 {
    move_to_wait_sensors_state();
 
@@ -356,7 +356,7 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_health)
       provide_health_summary(health_summary);
       provide_ticks(1u);
 
-      EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarmed);
+      EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
    }
 
    // disarm due to estimation fault
@@ -374,7 +374,7 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_health)
       provide_health_summary(health_summary);
       provide_ticks(1u);
 
-      EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarmed);
+      EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
    }
 
    // disarm due to control fault
@@ -392,7 +392,7 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_health)
       provide_health_summary(health_summary);
       provide_ticks(1u);
 
-      EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarmed);
+      EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
    }
 
    // disarm due to flight critical fault
@@ -410,11 +410,11 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_health)
       provide_health_summary(health_summary);
       provide_ticks(1u);
 
-      EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarmed);
+      EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
    }
 }
 
-TEST_F(FlightManagerTest, fault_while_arming_due_to_stale_radio_input)
+TEST_F(SystemManagerTest, fault_while_arming_due_to_stale_radio_input)
 {
    move_to_wait_sensors_state();
 
@@ -431,7 +431,7 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_stale_radio_input)
    setpoints.state = aeromight_boundaries::FlightArmedState::arm;
    radio_control_setpoints_storage.update_latest(setpoints, current_ms);
    provide_ticks(1u);
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::arming);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::arming);
 
    // good but stale radio input
    set_good_radio_input();
@@ -449,10 +449,10 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_stale_radio_input)
       provide_ticks(1u);
    }
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarmed);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
 }
 
-TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_radio_input)
+TEST_F(SystemManagerTest, fault_while_arming_due_to_bad_radio_input)
 {
    move_to_wait_sensors_state();
 
@@ -478,7 +478,7 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_radio_input)
       provide_health_summary(health_summary);
       provide_ticks(1u);
 
-      EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarmed);
+      EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
    }
 
    // disarm due to low link rssi
@@ -496,11 +496,11 @@ TEST_F(FlightManagerTest, fault_while_arming_due_to_bad_radio_input)
       provide_health_summary(health_summary);
       provide_ticks(1u);
 
-      EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarmed);
+      EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
    }
 }
 
-TEST_F(FlightManagerTest, successfully_armed)
+TEST_F(SystemManagerTest, successfully_armed)
 {
    move_to_wait_sensors_state();
 
@@ -513,7 +513,7 @@ TEST_F(FlightManagerTest, successfully_armed)
    // @TODO: add check that motors are started
 }
 
-TEST_F(FlightManagerTest, kill_while_armed)
+TEST_F(SystemManagerTest, kill_while_armed)
 {
    move_to_wait_sensors_state();
 
@@ -528,7 +528,7 @@ TEST_F(FlightManagerTest, kill_while_armed)
    // @TODO: add check that motors are stopped
 }
 
-TEST_F(FlightManagerTest, disarm_while_armed)
+TEST_F(SystemManagerTest, disarm_while_armed)
 {
    move_to_wait_sensors_state();
 
@@ -539,16 +539,16 @@ TEST_F(FlightManagerTest, disarm_while_armed)
    move_to_armed();
 
    give_disarm_command();
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarming);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarming);
 
    const uint32_t ticks_needed = min_state_debounce_duration_ms / period_in_ms;
    provide_ticks(ticks_needed);
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarmed);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
 
    // @TODO: add check that motors are stopped
 }
 
-TEST_F(FlightManagerTest, fault_while_armed_due_to_bad_health)
+TEST_F(SystemManagerTest, fault_while_armed_due_to_bad_health)
 {
    move_to_wait_sensors_state();
 
@@ -560,12 +560,12 @@ TEST_F(FlightManagerTest, fault_while_armed_due_to_bad_health)
 
    create_bad_health_summary();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::fault);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::fault);
 
    // @TODO: add check that motors are stopped
 }
 
-TEST_F(FlightManagerTest, fault_while_armed_due_to_bad_radio_input)
+TEST_F(SystemManagerTest, fault_while_armed_due_to_bad_radio_input)
 {
    move_to_wait_sensors_state();
 
@@ -577,12 +577,12 @@ TEST_F(FlightManagerTest, fault_while_armed_due_to_bad_radio_input)
 
    create_bad_radio_input();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::fault);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::fault);
 
    // @TODO: add check that motors are stopped
 }
 
-TEST_F(FlightManagerTest, move_to_manual_mode)
+TEST_F(SystemManagerTest, move_to_manual_mode)
 {
    move_to_wait_sensors_state();
 
@@ -594,12 +594,12 @@ TEST_F(FlightManagerTest, move_to_manual_mode)
 
    give_manual_mode_command();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::manual_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::manual_mode);
 
    // @TODO: add check for manual setpoints
 }
 
-TEST_F(FlightManagerTest, kill_while_in_manual_mode)
+TEST_F(SystemManagerTest, kill_while_in_manual_mode)
 {
    move_to_wait_sensors_state();
 
@@ -611,7 +611,7 @@ TEST_F(FlightManagerTest, kill_while_in_manual_mode)
 
    give_manual_mode_command();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::manual_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::manual_mode);
 
    // @TODO: add check for manual setpoints
 
@@ -620,7 +620,7 @@ TEST_F(FlightManagerTest, kill_while_in_manual_mode)
    // @TODO: add check that motors are stopped
 }
 
-TEST_F(FlightManagerTest, disarm_while_in_manual_mode)
+TEST_F(SystemManagerTest, disarm_while_in_manual_mode)
 {
    move_to_wait_sensors_state();
 
@@ -632,20 +632,20 @@ TEST_F(FlightManagerTest, disarm_while_in_manual_mode)
 
    give_manual_mode_command();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::manual_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::manual_mode);
 
    // @TODO: add check for manual setpoints
 
    give_disarm_command();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarming);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarming);
 
    const uint32_t ticks_needed = min_state_debounce_duration_ms / period_in_ms;
    provide_ticks(ticks_needed);
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarmed);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
 }
 
-TEST_F(FlightManagerTest, move_to_hover_while_in_manual_mode)
+TEST_F(SystemManagerTest, move_to_hover_while_in_manual_mode)
 {
    move_to_wait_sensors_state();
 
@@ -657,16 +657,16 @@ TEST_F(FlightManagerTest, move_to_hover_while_in_manual_mode)
 
    give_manual_mode_command();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::manual_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::manual_mode);
 
    give_hover_mode_command();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::hover_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::hover_mode);
 
    // @TODO: add check for hover setpoints
 }
 
-TEST_F(FlightManagerTest, fault_while_in_manual_mode_due_to_bad_health)
+TEST_F(SystemManagerTest, fault_while_in_manual_mode_due_to_bad_health)
 {
    move_to_wait_sensors_state();
 
@@ -678,16 +678,16 @@ TEST_F(FlightManagerTest, fault_while_in_manual_mode_due_to_bad_health)
 
    give_manual_mode_command();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::manual_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::manual_mode);
 
    create_bad_health_summary();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::fault);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::fault);
 
    // @TODO: add check that motors are stopped
 }
 
-TEST_F(FlightManagerTest, auto_land_while_in_manual_mode_due_to_bad_radio_input)
+TEST_F(SystemManagerTest, auto_land_while_in_manual_mode_due_to_bad_radio_input)
 {
    move_to_wait_sensors_state();
 
@@ -699,14 +699,14 @@ TEST_F(FlightManagerTest, auto_land_while_in_manual_mode_due_to_bad_radio_input)
 
    give_manual_mode_command();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::manual_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::manual_mode);
 
    create_bad_radio_input();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::auto_land);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::auto_land);
 }
 
-TEST_F(FlightManagerTest, move_to_hover_mode)
+TEST_F(SystemManagerTest, move_to_hover_mode)
 {
    move_to_wait_sensors_state();
 
@@ -718,12 +718,12 @@ TEST_F(FlightManagerTest, move_to_hover_mode)
 
    give_hover_mode_command();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::hover_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::hover_mode);
 
    // @TODO: add check for hover setpoints
 }
 
-TEST_F(FlightManagerTest, kill_while_in_hover_mode)
+TEST_F(SystemManagerTest, kill_while_in_hover_mode)
 {
    move_to_wait_sensors_state();
 
@@ -735,7 +735,7 @@ TEST_F(FlightManagerTest, kill_while_in_hover_mode)
 
    give_hover_mode_command();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::hover_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::hover_mode);
 
    // @TODO: add check for hover setpoints
 
@@ -744,7 +744,7 @@ TEST_F(FlightManagerTest, kill_while_in_hover_mode)
    // @TODO: add check that motors are stopped
 }
 
-TEST_F(FlightManagerTest, disarm_while_in_hover_mode)
+TEST_F(SystemManagerTest, disarm_while_in_hover_mode)
 {
    move_to_wait_sensors_state();
 
@@ -756,20 +756,20 @@ TEST_F(FlightManagerTest, disarm_while_in_hover_mode)
 
    give_hover_mode_command();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::hover_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::hover_mode);
 
    // @TODO: add check for hover setpoints
 
    give_disarm_command();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarming);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarming);
 
    const uint32_t ticks_needed = min_state_debounce_duration_ms / period_in_ms;
    provide_ticks(ticks_needed);
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::disarmed);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
 }
 
-TEST_F(FlightManagerTest, move_to_manual_mode_while_in_hover_mode)
+TEST_F(SystemManagerTest, move_to_manual_mode_while_in_hover_mode)
 {
    move_to_wait_sensors_state();
 
@@ -781,16 +781,16 @@ TEST_F(FlightManagerTest, move_to_manual_mode_while_in_hover_mode)
 
    give_hover_mode_command();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::hover_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::hover_mode);
 
    give_manual_mode_command();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::manual_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::manual_mode);
 
    // @TODO: add check for manual setpoints
 }
 
-TEST_F(FlightManagerTest, fault_while_in_hover_mode_due_to_bad_health)
+TEST_F(SystemManagerTest, fault_while_in_hover_mode_due_to_bad_health)
 {
    move_to_wait_sensors_state();
 
@@ -802,16 +802,16 @@ TEST_F(FlightManagerTest, fault_while_in_hover_mode_due_to_bad_health)
 
    give_hover_mode_command();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::hover_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::hover_mode);
 
    create_bad_health_summary();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::fault);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::fault);
 
    // @TODO: add check that motors are stopped
 }
 
-TEST_F(FlightManagerTest, auto_land_while_in_hover_mode_due_to_bad_radio_input)
+TEST_F(SystemManagerTest, auto_land_while_in_hover_mode_due_to_bad_radio_input)
 {
    move_to_wait_sensors_state();
 
@@ -823,9 +823,9 @@ TEST_F(FlightManagerTest, auto_land_while_in_hover_mode_due_to_bad_radio_input)
 
    give_hover_mode_command();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::hover_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::hover_mode);
 
    create_bad_radio_input();
 
-   EXPECT_EQ(flight_manager.get_state(), aeromight_flight::FlightManagerState::auto_land);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::auto_land);
 }

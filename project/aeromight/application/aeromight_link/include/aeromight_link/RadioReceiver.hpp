@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include "aeromight_boundaries/FlightManagerData.hpp"
+#include "aeromight_boundaries/SystemManagerData.hpp"
 #include "boundaries/BufferWithOwnershipIndex.hpp"
 #include "boundaries/SharedData.hpp"
 #include "channel_mappings.hpp"

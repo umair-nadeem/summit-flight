@@ -2,10 +2,10 @@
 
 #include <algorithm>
 
-#include "FlightManagerState.hpp"
+#include "SystemManagerState.hpp"
 #include "aeromight_boundaries/FlightControlSetpoints.hpp"
-#include "aeromight_boundaries/FlightManagerData.hpp"
 #include "aeromight_boundaries/HealthSummary.hpp"
+#include "aeromight_boundaries/SystemManagerData.hpp"
 #include "boundaries/SharedData.hpp"
 #include "error/error_handler.hpp"
 #include "interfaces/IClockSource.hpp"
@@ -13,7 +13,7 @@
 #include "interfaces/rtos/INotifier.hpp"
 #include "interfaces/rtos/IQueueReceiver.hpp"
 
-namespace aeromight_flight
+namespace aeromight_system
 {
 
 template <interfaces::rtos::IQueueReceiver<aeromight_boundaries::HealthSummary> QueueReceiver,
@@ -21,14 +21,14 @@ template <interfaces::rtos::IQueueReceiver<aeromight_boundaries::HealthSummary> 
           interfaces::pcb_component::ILed                                       Led,
           interfaces::IClockSource                                              ClockSource,
           typename Logger>
-class FlightManagerStateHandler
+class SystemManagerStateHandler
 {
    using FlightControlSetpoints = boundaries::SharedData<aeromight_boundaries::FlightControlSetpoints>;
    using RadioControlSetpoints  = boundaries::SharedData<aeromight_boundaries::RadioControlSetpoints>;
    using RadioActuals           = boundaries::SharedData<aeromight_boundaries::RadioLinkStats>;
 
 public:
-   explicit FlightManagerStateHandler(QueueReceiver&               health_summary_queue_receiver,
+   explicit SystemManagerStateHandler(QueueReceiver&               health_summary_queue_receiver,
                                       EstimationNotifier&          control_start_notifier,
                                       Led&                         led,
                                       FlightControlSetpoints&      flight_control_setpoints_storage,
@@ -109,44 +109,44 @@ public:
       m_local_flight_control_setpoints.armed = false;
    }
 
-   void set_state(const FlightManagerState state)
+   void set_state(const SystemManagerState state)
    {
       m_state = state;
 
       switch (m_state)
       {
-         case FlightManagerState::init:
+         case SystemManagerState::init:
             // do nothing
             break;
 
-         case FlightManagerState::wait_sensors:
+         case SystemManagerState::wait_sensors:
             m_logger.print("entered state->wait_sensors");
             break;
 
-         case FlightManagerState::wait_control:
+         case SystemManagerState::wait_control:
             m_logger.print("entered state->wait_control");
             break;
 
-         case FlightManagerState::disarming:
+         case SystemManagerState::disarming:
             turn_off_status_led();
             m_logger.print("entered state->disarming");
             break;
 
-         case FlightManagerState::disarmed:
+         case SystemManagerState::disarmed:
             m_logger.print("entered state->disarmed");
             break;
 
-         case FlightManagerState::arming:
+         case SystemManagerState::arming:
             turn_off_status_led();
             m_logger.print("entered state->arming");
             break;
 
-         case FlightManagerState::armed:
+         case SystemManagerState::armed:
             turn_on_status_led();
             m_logger.print("entered state->armed");
             break;
 
-         case FlightManagerState::fault:
+         case SystemManagerState::fault:
             turn_off_status_led();
             m_logger.print("entered state->fault");
             break;
@@ -162,7 +162,7 @@ public:
       toggle_status_led();
    }
 
-   FlightManagerState get_state() const
+   SystemManagerState get_state() const
    {
       return m_state;
    }
@@ -353,11 +353,11 @@ private:
    aeromight_boundaries::HealthSummary          m_last_health_summary{};
    RadioControlSetpoints::Sample                m_last_radio_control_setpoints{};
    RadioActuals::Sample                         m_last_radio_link_actuals{};
-   FlightManagerState                           m_state{FlightManagerState::init};
+   SystemManagerState                           m_state{SystemManagerState::init};
    uint32_t                                     m_current_time_ms{0};
    uint32_t                                     m_reference_time_ms{0};
    uint32_t                                     m_status_led_timer{0};
    bool                                         m_status_led_on{false};
 };
 
-}   // namespace aeromight_flight
+}   // namespace aeromight_system

@@ -21,12 +21,12 @@ static constexpr uint32_t          control_task_stack_depth_in_words{control_tas
 static constexpr uint32_t          control_task_priority{8u};
 static constexpr uint32_t          control_task_period_in_ms{4u};
 
-// Flight Manager Task
-static constexpr const char* const flight_manager_task_name{"flight_mngr"};
-static constexpr uint32_t          flight_manager_task_stack_size_in_bytes{4096u};
-static constexpr uint32_t          flight_manager_task_stack_depth_in_words{flight_manager_task_stack_size_in_bytes / sizeof(uint32_t)};
-static constexpr uint32_t          flight_manager_task_priority{6u};
-static constexpr uint32_t          flight_manager_task_period_in_ms{20u};
+// System Manager Task
+static constexpr const char* const system_manager_task_name{"sys_manager"};
+static constexpr uint32_t          system_manager_task_stack_size_in_bytes{4096u};
+static constexpr uint32_t          system_manager_task_stack_depth_in_words{system_manager_task_stack_size_in_bytes / sizeof(uint32_t)};
+static constexpr uint32_t          system_manager_task_priority{6u};
+static constexpr uint32_t          system_manager_task_period_in_ms{20u};
 
 // Radio Link Task
 static constexpr const char* const radio_link_task_name{"radio_link"};

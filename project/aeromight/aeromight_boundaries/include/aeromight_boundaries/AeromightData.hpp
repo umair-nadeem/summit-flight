@@ -4,7 +4,7 @@
 #include "ControlHealth.hpp"
 #include "EstimatorHealth.hpp"
 #include "FlightControlSetpoints.hpp"
-#include "FlightManagerData.hpp"
+#include "SystemManagerData.hpp"
 #include "barometer_sensor/BarometerData.hpp"
 #include "barometer_sensor/BarometerHealth.hpp"
 #include "boundaries/SharedData.hpp"
@@ -32,7 +32,7 @@ struct AeromightData
    boundaries::SharedData<ControlHealth>          control_health_storage{};
    boundaries::SharedData<FlightControlSetpoints> flight_control_setpoints{};
 
-   // Radio Control / Flight Manager
+   // Radio Control / System Manager
    boundaries::SharedData<RadioControlSetpoints> radio_control_setpoints{};
    boundaries::SharedData<RadioLinkStats>        radio_link_actuals{};
 };

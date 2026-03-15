@@ -16,7 +16,7 @@ target_sources(aeromight_lib INTERFACE
    imu_task.cpp
    control_task.cpp
    barometer_task.cpp
-   flight_manager_task.cpp
+   system_manager_task.cpp
    health_monitoring_task.cpp
    radio_link_task.cpp
 )
@@ -33,7 +33,7 @@ target_link_libraries(aeromight_lib INTERFACE
    aeromight_battery
    aeromight_control
    aeromight_estimation
-   aeromight_flight
+   aeromight_system
    aeromight_health
    aeromight_imu
    aeromight_link
