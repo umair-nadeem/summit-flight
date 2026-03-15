@@ -48,8 +48,8 @@ public:
                     ButterworthFilter&                           pid_dterm_z_lpf,
                     ActuatorControl&                             actuator_control_storage,
                     ControlHealth&                               control_health_storage,
+                    const FlightControlSetpoints&                flight_control_setpoints_storage,
                     const SystemStateInfo&                       system_state_info_storage,
-                    const FlightControlSetpoints&                flight_control_setpoint_storage,
                     const aeromight_boundaries::StateEstimation& state_estimation_data,
                     Logger&                                      logger,
                     const float                                  min_dt_s,
@@ -74,8 +74,8 @@ public:
          m_pid_dterm_lpf{pid_dterm_x_lpf, pid_dterm_y_lpf, pid_dterm_z_lpf},
          m_actuator_control_storage{actuator_control_storage},
          m_control_health_storage{control_health_storage},
+         m_flight_control_setpoints_storage{flight_control_setpoints_storage},
          m_system_state_info_storage{system_state_info_storage},
-         m_flight_control_setpoint_storage{flight_control_setpoint_storage},
          m_state_estimation{state_estimation_data},
          m_logger{logger},
          m_min_dt_s{min_dt_s},
@@ -177,7 +177,7 @@ private:
 
    void get_flight_control_setpoints()
    {
-      m_flight_control_setpoints = m_flight_control_setpoint_storage.get_latest();
+      m_flight_control_setpoints = m_flight_control_setpoints_storage.get_latest();
    }
 
    void apply_stick_input_transformation()
@@ -349,8 +349,8 @@ private:
    std::array<std::reference_wrapper<ButterworthFilter>, num_axis> m_pid_dterm_lpf;
    ActuatorControl&                                                m_actuator_control_storage;
    ControlHealth&                                                  m_control_health_storage;
+   const FlightControlSetpoints&                                   m_flight_control_setpoints_storage;
    const SystemStateInfo&                                          m_system_state_info_storage;
-   const FlightControlSetpoints&                                   m_flight_control_setpoint_storage;
    const StateEstimation&                                          m_state_estimation;
    Logger&                                                         m_logger;
    const float                                                     m_min_dt_s;
@@ -369,8 +369,8 @@ private:
    const float                                                     m_thrust_linearization_factor;
    aeromight_boundaries::ActuatorControl                           m_actuator_control{};
    aeromight_boundaries::ControlHealth                             m_control_health{};
-   SystemStateInfo::Sample                                         m_system_state_info{};
    FlightControlSetpoints::Sample                                  m_flight_control_setpoints{};
+   SystemStateInfo::Sample                                         m_system_state_info{};
    math::Vector3                                                   m_gyro_radps{};
    math::Vector3                                                   m_dterm_gyro_radps{};
    math::Vector3                                                   m_previous_dterm_gyro_radps{};
