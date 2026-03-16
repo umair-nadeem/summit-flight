@@ -1,8 +1,8 @@
 #pragma once
 
-#include <algorithm>
 #include <cmath>
 
+#include "aeromight_boundaries/FlightControlSetpoints.hpp"
 #include "aeromight_boundaries/SystemControlSetpoints.hpp"
 #include "boundaries/BufferWithOwnershipIndex.hpp"
 #include "boundaries/SharedData.hpp"
@@ -96,8 +96,7 @@ private:
       m_flight_control_setpoints.roll     = apply_deadband(normalize_channel(rc_data.channels[rc_channel_roll]), m_rc_channel_deadband);
       m_flight_control_setpoints.pitch    = apply_deadband(normalize_channel(rc_data.channels[rc_channel_pitch]), m_rc_channel_deadband);
       m_flight_control_setpoints.yaw      = apply_deadband(normalize_channel(rc_data.channels[rc_channel_yaw]), m_rc_channel_deadband);
-      const float throttle                = normalize_throttle(rc_data.channels[rc_channel_throttle]);
-      m_flight_control_setpoints.throttle = std::clamp(throttle, 0.0f, 1.0f);
+      m_flight_control_setpoints.throttle = normalize_throttle(rc_data.channels[rc_channel_throttle]);
 
       // update system control setpoints
       m_system_control_setpoints.state = get_arm_state(normalize_channel(rc_data.channels[rc_channel_arm_state]));

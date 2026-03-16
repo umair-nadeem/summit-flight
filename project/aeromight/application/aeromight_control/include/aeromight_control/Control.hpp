@@ -8,7 +8,6 @@
 #include "aeromight_boundaries/StateEstimation.hpp"
 #include "aeromight_boundaries/SystemStateInfo.hpp"
 #include "boundaries/SharedData.hpp"
-#include "control/AttitudeControl.hpp"
 #include "control/Motor.hpp"
 #include "interfaces/IClockSource.hpp"
 #include "math/Vector2.hpp"
@@ -19,17 +18,17 @@ namespace aeromight_control
 template <typename AttitudeController,
           typename RateController,
           typename ControlAllocator,
+          typename ControlInput,
           typename FirstOrderLpf,
           typename ButterworthFilter,
           interfaces::IClockSource ClockSource,
           typename Logger>
 class Control
 {
-   using ActuatorControl        = boundaries::SharedData<aeromight_boundaries::ActuatorControl>;
-   using ControlHealth          = boundaries::SharedData<aeromight_boundaries::ControlHealth>;
-   using SystemStateInfo        = boundaries::SharedData<aeromight_boundaries::SystemStateInfo>;
-   using FlightControlSetpoints = boundaries::SharedData<aeromight_boundaries::FlightControlSetpoints>;
-   using StateEstimation        = aeromight_boundaries::StateEstimation;
+   using ActuatorControl = boundaries::SharedData<aeromight_boundaries::ActuatorControl>;
+   using ControlHealth   = boundaries::SharedData<aeromight_boundaries::ControlHealth>;
+   using SystemStateInfo = boundaries::SharedData<aeromight_boundaries::SystemStateInfo>;
+   using StateEstimation = aeromight_boundaries::StateEstimation;
 
 public:
    static constexpr std::size_t num_axis = 3u;
@@ -37,6 +36,7 @@ public:
    explicit Control(AttitudeController&                          attitude_controller,
                     RateController&                              rate_controller,
                     ControlAllocator&                            control_allocator,
+                    ControlInput&                                control_input,
                     FirstOrderLpf&                               gyro_x_lpf,
                     FirstOrderLpf&                               gyro_y_lpf,
                     FirstOrderLpf&                               gyro_z_lpf,
@@ -48,7 +48,6 @@ public:
                     ButterworthFilter&                           pid_dterm_z_lpf,
                     ActuatorControl&                             actuator_control_storage,
                     ControlHealth&                               control_health_storage,
-                    const FlightControlSetpoints&                flight_control_setpoints_storage,
                     const SystemStateInfo&                       system_state_info_storage,
                     const aeromight_boundaries::StateEstimation& state_estimation_data,
                     Logger&                                      logger,
@@ -59,22 +58,18 @@ public:
                     const math::Vector3                          max_rate_radps,
                     const float                                  actuator_min,
                     const float                                  actuator_max,
-                    const float                                  throttle_min,
-                    const float                                  throttle_max,
                     const float                                  throttle_arming,
-                    const float                                  throttle_hover,
-                    const float                                  throttle_curve_factor,
                     const float                                  throttle_gate_integrator,
                     const float                                  thrust_linearization_factor)
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
          m_control_allocator{control_allocator},
+         m_control_input{control_input},
          m_gyro_lpf{gyro_x_lpf, gyro_y_lpf, gyro_z_lpf},
          m_stick_input_lpf{roll_input_lpf, pitch_input_lpf, yaw_input_lpf},
          m_pid_dterm_lpf{pid_dterm_x_lpf, pid_dterm_y_lpf, pid_dterm_z_lpf},
          m_actuator_control_storage{actuator_control_storage},
          m_control_health_storage{control_health_storage},
-         m_flight_control_setpoints_storage{flight_control_setpoints_storage},
          m_system_state_info_storage{system_state_info_storage},
          m_state_estimation{state_estimation_data},
          m_logger{logger},
@@ -85,16 +80,11 @@ public:
          m_max_rate_radps{max_rate_radps},
          m_actuator_min{actuator_min},
          m_actuator_max{actuator_max},
-         m_throttle_min{throttle_min},
-         m_throttle_max{throttle_max},
          m_throttle_arming{throttle_arming},
-         m_throttle_hover{throttle_hover},
-         m_throttle_curve_factor{throttle_curve_factor},
          m_throttle_gate_integrator{throttle_gate_integrator},
          m_thrust_linearization_factor{thrust_linearization_factor}
    {
       m_logger.enable();
-      control::AttitudeControl::init(m_throttle_hover, m_throttle_curve_factor);
    }
 
    void start()
@@ -117,8 +107,6 @@ public:
 
       get_flight_control_setpoints();
 
-      apply_stick_input_transformation();
-
       run_control();
 
       update_actuator_setpoints();
@@ -136,7 +124,7 @@ public:
       }
       else
       {
-         if (m_system_state_info.data.armed && (m_flight_control_setpoints.data.throttle < m_throttle_arming))
+         if (m_system_state_info.data.armed && (m_flight_control_setpoints.throttle < m_throttle_arming))
          {
             reset();
             reset_filters();
@@ -177,16 +165,7 @@ private:
 
    void get_flight_control_setpoints()
    {
-      m_flight_control_setpoints = m_flight_control_setpoints_storage.get_latest();
-   }
-
-   void apply_stick_input_transformation()
-   {
-      // Pilot Command Mapping: perform pitch sign inversion (flight stick pullback -> pitch up)
-      auto& data = m_flight_control_setpoints.data;
-      data.pitch *= -1.0f;
-      data.throttle = control::AttitudeControl::throttle_curve(data.throttle, m_throttle_hover, m_throttle_curve_factor);
-      data.throttle = std::clamp(data.throttle, m_throttle_min, m_throttle_max);
+      m_flight_control_setpoints = m_control_input.get_flight_control_setpoints();
    }
 
    void get_rate_setpoints()
@@ -195,8 +174,8 @@ private:
 
       if (m_run_attitude_controller)
       {
-         math::Vector2 manual_setpoints{m_stick_input_lpf[Axis::roll].get().apply(m_flight_control_setpoints.data.roll * m_max_tilt_angle_rad, m_dt_s),
-                                        m_stick_input_lpf[Axis::pitch].get().apply(m_flight_control_setpoints.data.pitch * m_max_tilt_angle_rad, m_dt_s)};
+         math::Vector2 manual_setpoints{m_stick_input_lpf[Axis::roll].get().apply(m_flight_control_setpoints.roll * m_max_tilt_angle_rad, m_dt_s),
+                                        m_stick_input_lpf[Axis::pitch].get().apply(m_flight_control_setpoints.pitch * m_max_tilt_angle_rad, m_dt_s)};
 
          const float tilt_norm = manual_setpoints.norm();
 
@@ -218,12 +197,12 @@ private:
       }
       else   // generate rate setpoints from sticks
       {
-         m_angular_rate_setpoints[Axis::roll]  = m_stick_input_lpf[Axis::roll].get().apply(m_flight_control_setpoints.data.roll * m_max_rate_radps[Axis::roll], m_dt_s);
-         m_angular_rate_setpoints[Axis::pitch] = m_stick_input_lpf[Axis::pitch].get().apply(m_flight_control_setpoints.data.pitch * m_max_rate_radps[Axis::pitch], m_dt_s);
+         m_angular_rate_setpoints[Axis::roll]  = m_stick_input_lpf[Axis::roll].get().apply(m_flight_control_setpoints.roll * m_max_rate_radps[Axis::roll], m_dt_s);
+         m_angular_rate_setpoints[Axis::pitch] = m_stick_input_lpf[Axis::pitch].get().apply(m_flight_control_setpoints.pitch * m_max_rate_radps[Axis::pitch], m_dt_s);
       }
 
       // yaw rate from manual setpoint
-      m_angular_rate_setpoints[Axis::yaw] = m_stick_input_lpf[Axis::yaw].get().apply(m_flight_control_setpoints.data.yaw * m_max_rate_radps[Axis::yaw], m_dt_s);
+      m_angular_rate_setpoints[Axis::yaw] = m_stick_input_lpf[Axis::yaw].get().apply(m_flight_control_setpoints.yaw * m_max_rate_radps[Axis::yaw], m_dt_s);
    }
 
    void get_torque_setpoints()
@@ -244,7 +223,7 @@ private:
       const math::Vector3 angular_acceleration{(m_dterm_gyro_radps - m_previous_dterm_gyro_radps) / m_dt_s};
 
       const bool run_integrator{m_system_state_info.data.armed &&
-                                (m_flight_control_setpoints.data.throttle > m_throttle_gate_integrator)};
+                                (m_flight_control_setpoints.throttle > m_throttle_gate_integrator)};
 
       m_torque_setpoints = m_rate_controller.update(m_angular_rate_setpoints,
                                                     m_gyro_radps,
@@ -258,7 +237,7 @@ private:
       const math::Vector4 control_setpoints{m_torque_setpoints[aeromight_boundaries::ControlAxis::roll],
                                             m_torque_setpoints[aeromight_boundaries::ControlAxis::pitch],
                                             m_torque_setpoints[aeromight_boundaries::ControlAxis::yaw],
-                                            m_flight_control_setpoints.data.throttle};
+                                            m_flight_control_setpoints.throttle};
 
       m_control_allocator.set_control_setpoints(control_setpoints);
 
@@ -333,7 +312,7 @@ private:
                          m_torque_setpoints[0],
                          m_torque_setpoints[1],
                          m_torque_setpoints[2],
-                         m_flight_control_setpoints.data.throttle,
+                         m_flight_control_setpoints.throttle,
                          m_actuator_control.setpoints[0],
                          m_actuator_control.setpoints[1],
                          m_actuator_control.setpoints[2],
@@ -344,12 +323,12 @@ private:
    AttitudeController&                                             m_attitude_controller;
    RateController&                                                 m_rate_controller;
    ControlAllocator&                                               m_control_allocator;
+   ControlInput&                                                   m_control_input;
    std::array<std::reference_wrapper<FirstOrderLpf>, num_axis>     m_gyro_lpf;
    std::array<std::reference_wrapper<FirstOrderLpf>, num_axis>     m_stick_input_lpf;
    std::array<std::reference_wrapper<ButterworthFilter>, num_axis> m_pid_dterm_lpf;
    ActuatorControl&                                                m_actuator_control_storage;
    ControlHealth&                                                  m_control_health_storage;
-   const FlightControlSetpoints&                                   m_flight_control_setpoints_storage;
    const SystemStateInfo&                                          m_system_state_info_storage;
    const StateEstimation&                                          m_state_estimation;
    Logger&                                                         m_logger;
@@ -360,16 +339,12 @@ private:
    const math::Vector3                                             m_max_rate_radps;
    const float                                                     m_actuator_min;
    const float                                                     m_actuator_max;
-   const float                                                     m_throttle_min;
-   const float                                                     m_throttle_max;
    const float                                                     m_throttle_arming;
-   const float                                                     m_throttle_hover;
-   const float                                                     m_throttle_curve_factor;
    const float                                                     m_throttle_gate_integrator;
    const float                                                     m_thrust_linearization_factor;
    aeromight_boundaries::ActuatorControl                           m_actuator_control{};
    aeromight_boundaries::ControlHealth                             m_control_health{};
-   FlightControlSetpoints::Sample                                  m_flight_control_setpoints{};
+   aeromight_boundaries::FlightControlSetpoints                    m_flight_control_setpoints{};
    SystemStateInfo::Sample                                         m_system_state_info{};
    math::Vector3                                                   m_gyro_radps{};
    math::Vector3                                                   m_dterm_gyro_radps{};

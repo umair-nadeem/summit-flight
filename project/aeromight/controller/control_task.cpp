@@ -3,6 +3,7 @@
 #include "aeromight_control/AttitudeController.hpp"
 #include "aeromight_control/Control.hpp"
 #include "aeromight_control/ControlAllocator.hpp"
+#include "aeromight_control/ControlInput.hpp"
 #include "aeromight_control/EstimationAndControl.hpp"
 #include "aeromight_control/RateController.hpp"
 #include "aeromight_estimation/AltitudeEkf.hpp"
@@ -13,6 +14,7 @@
 #include "math/ButterworthFilter.hpp"
 #include "math/FirstOrderLpf.hpp"
 #include "math/constants.hpp"
+#include "radio_control/ThrottleCurve.hpp"
 #include "rtos/QueueSender.hpp"
 #include "rtos/periodic_task.hpp"
 #include "rtos/utilities.hpp"
@@ -160,6 +162,13 @@ extern "C"
                                                             yaw_saturation_limit_factor,
                                                             slew_rate_limit_s};
 
+      radio_control::ThrottleCurve throttle_curve{throttle_hover, throttle_curve_factor};
+
+      aeromight_control::ControlInput<decltype(throttle_curve)> control_input{throttle_curve,
+                                                                              aeromight_boundaries::aeromight_data.flight_control_setpoints,
+                                                                              throttle_min,
+                                                                              throttle_max};
+
       math::FirstOrderLpf gyro_x_lpf{gyro_lpf_cutoff_hz};
       math::FirstOrderLpf gyro_y_lpf{gyro_lpf_cutoff_hz};
       math::FirstOrderLpf gyro_z_lpf{gyro_lpf_cutoff_hz};
@@ -175,6 +184,7 @@ extern "C"
       aeromight_control::Control<decltype(attitude_controller),
                                  decltype(rate_controller),
                                  decltype(control_allocator),
+                                 decltype(control_input),
                                  decltype(roll_input_lpf),
                                  decltype(pid_dterm_x_lpf),
                                  sys_time::ClockSource,
@@ -182,6 +192,7 @@ extern "C"
           control{attitude_controller,
                   rate_controller,
                   control_allocator,
+                  control_input,
                   gyro_x_lpf,
                   gyro_y_lpf,
                   gyro_z_lpf,
@@ -193,7 +204,6 @@ extern "C"
                   pid_dterm_z_lpf,
                   aeromight_boundaries::aeromight_data.actuator_control,
                   aeromight_boundaries::aeromight_data.control_health_storage,
-                  aeromight_boundaries::aeromight_data.flight_control_setpoints,
                   aeromight_boundaries::aeromight_data.system_state_info,
                   data->state_estimation,
                   logger_control,
@@ -204,11 +214,7 @@ extern "C"
                   math::Vector3{max_roll_rate_radps, max_pitch_rate_radps, max_yaw_rate_radps},
                   actuator_min,
                   actuator_max,
-                  throttle_min,
-                  throttle_max,
                   throttle_arming,
-                  throttle_hover,
-                  throttle_curve_factor,
                   throttle_gate_integrator,
                   thrust_linearization_factor};
 

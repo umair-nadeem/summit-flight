@@ -41,6 +41,7 @@ target_link_libraries(aeromight_lib INTERFACE
    error
    interfaces
    mpu6500
+   radio_control
    logging
 )
 
