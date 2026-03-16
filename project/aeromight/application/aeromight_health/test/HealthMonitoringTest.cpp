@@ -37,7 +37,7 @@ protected:
    void make_sensors_ready()
    {
       // set imu & barometer operational
-      imu_sensor::ImuHealth imu_health{0, imu_sensor::ImuSensorState::operational, 0, true, true, true};
+      mpu6500::SensorHealth imu_health{0, mpu6500::SensorState::operational, 0, true, true, true};
       imu_health_storage.update_latest(imu_health, current_ms);
 
       barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 0, 0, true};
@@ -72,7 +72,7 @@ protected:
 
    mocks::rtos::QueueSender<aeromight_boundaries::HealthSummary> queue_sender_mock{};
    mocks::common::ClockSource                                    sys_clock{};
-   boundaries::SharedData<imu_sensor::ImuHealth>                 imu_health_storage{};
+   boundaries::SharedData<mpu6500::SensorHealth>                 imu_health_storage{};
    boundaries::SharedData<barometer_sensor::BarometerHealth>     barometer_health_storage{};
    boundaries::SharedData<aeromight_boundaries::EstimatorHealth> estimation_health_storage{};
    boundaries::SharedData<aeromight_boundaries::ControlHealth>   control_health_storage{};
@@ -137,7 +137,7 @@ TEST_F(HealthMonitoringTest, timeout_occurs_while_waiting_for_sensor_readiness_i
    wait_startup();
 
    // set imu operational
-   imu_sensor::ImuHealth imu_health{0, imu_sensor::ImuSensorState::operational, 0, true, true, true};
+   mpu6500::SensorHealth imu_health{0, mpu6500::SensorState::operational, 0, true, true, true};
    imu_health_storage.update_latest(imu_health, current_ms);
 
    const uint32_t ticks_required = max_wait_sensors_readiness_ms / period_in_ms;
@@ -181,7 +181,7 @@ TEST_F(HealthMonitoringTest, timeout_occurs_while_waiting_for_sensor_readiness_n
    wait_startup();
 
    // set imu & barometer operational
-   imu_sensor::ImuHealth imu_health{0, imu_sensor::ImuSensorState::operational, 0, true, true, false};                   // self-test failed
+   mpu6500::SensorHealth imu_health{0, mpu6500::SensorState::operational, 0, true, true, false};                         // self-test failed
    imu_health_storage.update_latest(imu_health, current_ms);
 
    barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 0, 0, false};   // setup failed
@@ -345,7 +345,7 @@ TEST_F(HealthMonitoringTest, stale_baro_data_does_not_cause_degraded_health)
    // update imu, estimation and control health status
    current_ms += max_age_stale_imu_sensor_health_ms;
 
-   imu_sensor::ImuHealth imu_health{0, imu_sensor::ImuSensorState::operational, 0, true, true, true};
+   mpu6500::SensorHealth imu_health{0, mpu6500::SensorState::operational, 0, true, true, true};
    imu_health_storage.update_latest(imu_health, current_ms);
 
    aeromight_boundaries::EstimatorHealth estimation_health{0, aeromight_boundaries::EstimatorState::running, 0, true};
@@ -380,7 +380,7 @@ TEST_F(HealthMonitoringTest, stale_estimation_data_causes_degraded_health)
    // update imu and baro health status
    current_ms += max_age_stale_imu_sensor_health_ms;
 
-   imu_sensor::ImuHealth imu_health{0, imu_sensor::ImuSensorState::operational, 0, true, true, true};
+   mpu6500::SensorHealth imu_health{0, mpu6500::SensorState::operational, 0, true, true, true};
    imu_health_storage.update_latest(imu_health, current_ms);
 
    barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 0, 0, true};
@@ -412,7 +412,7 @@ TEST_F(HealthMonitoringTest, imu_non_zero_read_failures_cause_degraded_health)
 
    make_estimation_and_control_ready();
 
-   imu_sensor::ImuHealth imu_health{0, imu_sensor::ImuSensorState::operational, 1u, true, true, true};   // 1 read failure
+   mpu6500::SensorHealth imu_health{0, mpu6500::SensorState::operational, 1u, true, true, true};   // 1 read failure
    imu_health_storage.update_latest(imu_health, current_ms);
 
    sys_clock.m_sec = current_ms;
@@ -464,15 +464,15 @@ TEST_F(HealthMonitoringTest, imu_failure_causes_flight_critical_fault)
 
    make_estimation_and_control_ready();
 
-   const auto error_types = std::array{imu_sensor::ImuSensorError::bus_error,
-                                       imu_sensor::ImuSensorError::bus_error,
-                                       imu_sensor::ImuSensorError::id_mismatch_error,
-                                       imu_sensor::ImuSensorError::config_mismatch_error,
-                                       imu_sensor::ImuSensorError::data_pattern_error,
-                                       imu_sensor::ImuSensorError::out_of_range_data_error,
-                                       imu_sensor::ImuSensorError::non_stationary_calibration_error,
-                                       imu_sensor::ImuSensorError::unstable_accel_error,
-                                       imu_sensor::ImuSensorError::unstable_gyro_error};
+   const auto error_types = std::array{mpu6500::SensorError::bus_error,
+                                       mpu6500::SensorError::bus_error,
+                                       mpu6500::SensorError::id_mismatch_error,
+                                       mpu6500::SensorError::config_mismatch_error,
+                                       mpu6500::SensorError::data_pattern_error,
+                                       mpu6500::SensorError::out_of_range_data_error,
+                                       mpu6500::SensorError::non_stationary_calibration_error,
+                                       mpu6500::SensorError::unstable_accel_error,
+                                       mpu6500::SensorError::unstable_gyro_error};
 
    // good health for baro
    barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 0, 0, true};
@@ -482,7 +482,7 @@ TEST_F(HealthMonitoringTest, imu_failure_causes_flight_critical_fault)
    aeromight_boundaries::ControlHealth   control_health{0, aeromight_boundaries::ControlState::disarmed};
 
    // degraded health for imu
-   imu_sensor::ImuHealth imu_health{0, imu_sensor::ImuSensorState::operational, 1u, true, true, true};   // 1 read failure
+   mpu6500::SensorHealth imu_health{0, mpu6500::SensorState::operational, 1u, true, true, true};   // 1 read failure
 
    aeromight_boundaries::HealthSummary health{};
 
@@ -513,7 +513,7 @@ TEST_F(HealthMonitoringTest, imu_failure_causes_flight_critical_fault)
 
    // error is gone but state is failure -> state is fault
    imu_health.error.reset();
-   imu_health.state = imu_sensor::ImuSensorState::failure;
+   imu_health.state = mpu6500::SensorState::failure;
    imu_health_storage.update_latest(imu_health, current_ms);
    barometer_health_storage.update_latest(baro_health, current_ms);          // keep providing good baro health status
    estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
@@ -534,7 +534,7 @@ TEST_F(HealthMonitoringTest, imu_failure_causes_flight_critical_fault)
    EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::operational);
 
    // removing causes of fault -> switches health state to degraded due to 1 read failure
-   imu_health.state = imu_sensor::ImuSensorState::operational;
+   imu_health.state = mpu6500::SensorState::operational;
    imu_health_storage.update_latest(imu_health, current_ms);
    barometer_health_storage.update_latest(baro_health, current_ms);          // keep providing good baro health status
    estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
@@ -593,7 +593,7 @@ TEST_F(HealthMonitoringTest, baro_failure_does_not_cause_flight_critical_fault)
                                        barometer_sensor::BarometerSensorError::out_of_range_data_error};
 
    // good health for imu
-   imu_sensor::ImuHealth imu_health{0, imu_sensor::ImuSensorState::operational, 0u, true, true, true};
+   mpu6500::SensorHealth imu_health{0, mpu6500::SensorState::operational, 0u, true, true, true};
 
    // good health for estimation
    aeromight_boundaries::EstimatorHealth estimation_health{0, aeromight_boundaries::EstimatorState::running, 0, true};
@@ -703,11 +703,11 @@ TEST_F(HealthMonitoringTest, estimation_failure_causes_flight_critical_fault)
 
    const auto error_types = std::array{aeromight_boundaries::EstimatorHealth::Error::reference_pressure_estimate_timeout,   // non-critical errors only
                                        aeromight_boundaries::EstimatorHealth::Error::reference_pressure_implausible,
-                                       aeromight_boundaries::EstimatorHealth::Error::stale_imu_sensor_data,
+                                       aeromight_boundaries::EstimatorHealth::Error::stale_imu_data,
                                        aeromight_boundaries::EstimatorHealth::Error::missing_valid_imu_data};
 
    // good health for imu
-   imu_sensor::ImuHealth imu_health{0, imu_sensor::ImuSensorState::operational, 0u, true, true, true};
+   mpu6500::SensorHealth imu_health{0, mpu6500::SensorState::operational, 0u, true, true, true};
 
    // good health for baro
    barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 0, 0, true};
@@ -795,7 +795,7 @@ TEST_F(HealthMonitoringTest, control_failure_causes_flight_critical_fault)
    make_estimation_and_control_ready();
 
    // good health for imu
-   imu_sensor::ImuHealth imu_health{0, imu_sensor::ImuSensorState::operational, 0u, true, true, true};
+   mpu6500::SensorHealth imu_health{0, mpu6500::SensorState::operational, 0u, true, true, true};
 
    // good health for baro
    barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 0, 0, true};

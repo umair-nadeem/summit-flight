@@ -3,7 +3,7 @@
 #include <boost/sml.hpp>
 
 #include "Events.hpp"
-#include "imu_sensor/ImuSensorError.hpp"
+#include "mpu6500/SensorError.hpp"
 
 namespace mpu6500
 {
@@ -53,13 +53,13 @@ struct SelfTestStateMachine
       { state.mark_self_test_pass(); };
 
       constexpr auto set_bus_error = [](StateHandler& state)
-      { state.set_error(imu_sensor::ImuSensorError::bus_error); };
+      { state.set_error(mpu6500::SensorError::bus_error); };
 
       constexpr auto set_data_pattern_error = [](StateHandler& state)
-      { state.set_error(imu_sensor::ImuSensorError::data_pattern_error); };
+      { state.set_error(mpu6500::SensorError::data_pattern_error); };
 
       constexpr auto set_out_of_range_data_error = [](StateHandler& state)
-      { state.set_error(imu_sensor::ImuSensorError::out_of_range_data_error); };
+      { state.set_error(mpu6500::SensorError::out_of_range_data_error); };
 
       constexpr auto set_abnormal_samples_error = [](StateHandler& state)
       { state.set_abnormal_samples_error(); };

@@ -4,5 +4,5 @@ add_module(
       aeromight_boundaries
       barometer_sensor
       error
-      imu_sensor
+      imu
 )

@@ -6,7 +6,7 @@
 #include "bmp390/params.hpp"
 #include "boundaries/SharedData.hpp"
 #include "error/error_handler.hpp"
-#include "imu_sensor/ImuData.hpp"
+#include "imu/ImuData.hpp"
 #include "interfaces/IClockSource.hpp"
 #include "math/utility.hpp"
 #include "utilities/Barometric.hpp"
@@ -17,7 +17,7 @@ namespace aeromight_estimation
 template <typename AttitudeEstimator, typename AltitudeEkf, interfaces::IClockSource ClockSource, typename Logger>
 class Estimation
 {
-   using ImuData         = ::boundaries::SharedData<imu_sensor::ImuData>;
+   using ImuData         = ::boundaries::SharedData<imu::ImuData>;
    using BarometerData   = ::boundaries::SharedData<barometer_sensor::BarometerData>;
    using EstimatorHealth = ::boundaries::SharedData<aeromight_boundaries::EstimatorHealth>;
    using StateEstimation = aeromight_boundaries::StateEstimation;

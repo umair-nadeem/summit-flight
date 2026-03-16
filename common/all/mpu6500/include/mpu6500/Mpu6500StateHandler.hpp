@@ -6,10 +6,10 @@
 
 #include "boundaries/SharedData.hpp"
 #include "error/error_handler.hpp"
-#include "imu_sensor/ImuData.hpp"
-#include "imu_sensor/ImuHealth.hpp"
+#include "imu/ImuData.hpp"
 #include "interfaces/IClockSource.hpp"
 #include "math/constants.hpp"
+#include "mpu6500/SensorHealth.hpp"
 #include "params.hpp"
 
 namespace mpu6500
@@ -18,13 +18,13 @@ namespace mpu6500
 template <interfaces::IClockSource ClockSource, typename SpiMaster, typename Logger>
 class Mpu6500StateHandler
 {
-   using ImuData   = ::boundaries::SharedData<imu_sensor::ImuData>;
-   using ImuHealth = ::boundaries::SharedData<imu_sensor::ImuHealth>;
-   using Vec3      = math::Vector3;
+   using ImuData      = ::boundaries::SharedData<imu::ImuData>;
+   using SensorHealth = ::boundaries::SharedData<mpu6500::SensorHealth>;
+   using Vec3         = math::Vector3;
 
 public:
    explicit Mpu6500StateHandler(ImuData&       imu_data_storage,
-                                ImuHealth&     imu_health_storage,
+                                SensorHealth&  imu_health_storage,
                                 SpiMaster&     spi_master,
                                 Logger&        logger,
                                 const uint8_t  read_failures_limit,
@@ -295,37 +295,37 @@ public:
       m_logger.print("config successful");
    }
 
-   void set_state(const imu_sensor::ImuSensorState& state)
+   void set_state(const mpu6500::SensorState& state)
    {
       m_local_imu_health.state = state;
 
       switch (m_local_imu_health.state)
       {
-         case imu_sensor::ImuSensorState::stopped:
+         case mpu6500::SensorState::stopped:
             m_logger.print("entered state->stopped");
             break;
-         case imu_sensor::ImuSensorState::reset:
+         case mpu6500::SensorState::reset:
             m_logger.print("entered state->reset");
             break;
-         case imu_sensor::ImuSensorState::validation:
+         case mpu6500::SensorState::validation:
             m_logger.print("entered state->validation");
             break;
-         case imu_sensor::ImuSensorState::self_test:
+         case mpu6500::SensorState::self_test:
             m_logger.print("entered state->self_test");
             break;
-         case imu_sensor::ImuSensorState::config:
+         case mpu6500::SensorState::config:
             m_logger.print("entered state->config");
             break;
-         case imu_sensor::ImuSensorState::operational:
+         case mpu6500::SensorState::operational:
             m_logger.print("entered state->operational");
             break;
-         case imu_sensor::ImuSensorState::soft_recovery:
+         case mpu6500::SensorState::soft_recovery:
             m_logger.print("entered state->soft_recovery");
             break;
-         case imu_sensor::ImuSensorState::hard_recovery:
+         case mpu6500::SensorState::hard_recovery:
             m_logger.print("entered state->hard_recovery");
             break;
-         case imu_sensor::ImuSensorState::failure:
+         case mpu6500::SensorState::failure:
             m_logger.print("entered state->failure");
             break;
          default:
@@ -335,37 +335,37 @@ public:
       }
    }
 
-   void set_error(const imu_sensor::ImuSensorError& error)
+   void set_error(const mpu6500::SensorError& error)
    {
       m_local_imu_health.error.set(static_cast<uint8_t>(error));
 
       switch (error)
       {
-         case imu_sensor::ImuSensorError::bus_error:
+         case mpu6500::SensorError::bus_error:
             m_logger.print("encountered error->bus_error");
             break;
-         case imu_sensor::ImuSensorError::id_mismatch_error:
+         case mpu6500::SensorError::id_mismatch_error:
             m_logger.print("encountered error->id_mismatch_error");
             break;
-         case imu_sensor::ImuSensorError::config_mismatch_error:
+         case mpu6500::SensorError::config_mismatch_error:
             m_logger.print("encountered error->config_mismatch_error");
             break;
-         case imu_sensor::ImuSensorError::data_pattern_error:
+         case mpu6500::SensorError::data_pattern_error:
             m_logger.print("encountered error->data_pattern_error");
             break;
-         case imu_sensor::ImuSensorError::out_of_range_data_error:
+         case mpu6500::SensorError::out_of_range_data_error:
             m_logger.print("encountered error->out_of_range_data_error");
             break;
-         case imu_sensor::ImuSensorError::non_stationary_calibration_error:
+         case mpu6500::SensorError::non_stationary_calibration_error:
             m_logger.print("encountered error->non_stationary_calibration_error");
             break;
-         case imu_sensor::ImuSensorError::unstable_gyro_error:
+         case mpu6500::SensorError::unstable_gyro_error:
             m_logger.print("encountered error->unstable_gyro_error");
             break;
-         case imu_sensor::ImuSensorError::unstable_accel_error:
+         case mpu6500::SensorError::unstable_accel_error:
             m_logger.print("encountered error->unstable_accel_error");
             break;
-         case imu_sensor::ImuSensorError::max_error:
+         case mpu6500::SensorError::max_error:
          default:
             m_logger.print("encountered unexpected error");
             error::stop_operation();
@@ -377,26 +377,26 @@ public:
    {
       if (!is_platform_stationary())
       {
-         set_error(imu_sensor::ImuSensorError::non_stationary_calibration_error);
+         set_error(mpu6500::SensorError::non_stationary_calibration_error);
       }
 
       if (!is_accel_stable())
       {
-         set_error(imu_sensor::ImuSensorError::unstable_accel_error);
+         set_error(mpu6500::SensorError::unstable_accel_error);
       }
 
       if (!is_gyro_stable())
       {
-         set_error(imu_sensor::ImuSensorError::unstable_gyro_error);
+         set_error(mpu6500::SensorError::unstable_gyro_error);
       }
    }
 
-   imu_sensor::ImuSensorState get_state() const
+   mpu6500::SensorState get_state() const
    {
       return m_local_imu_health.state;
    }
 
-   imu_sensor::ErrorBits get_error() const
+   mpu6500::ErrorBits get_error() const
    {
       return m_local_imu_health.error;
    }
@@ -636,7 +636,7 @@ private:
    static constexpr uint8_t three_bit_shift = 3u;
 
    ImuData&                                           m_imu_data_storage;
-   ImuHealth&                                         m_imu_health_storage;
+   SensorHealth&                                      m_imu_health_storage;
    SpiMaster&                                         m_spi_master;
    Logger&                                            m_logger;
    const uint8_t                                      m_read_failures_limit;
@@ -658,8 +658,8 @@ private:
    const float                                        m_accel_tolerance_mps2;
    std::array<uint8_t, params::num_bytes_transaction> m_tx_buffer{};
    std::array<uint8_t, params::num_bytes_transaction> m_rx_buffer{};
-   imu_sensor::ImuData                                m_local_imu_data{};
-   imu_sensor::ImuHealth                              m_local_imu_health{};
+   imu::ImuData                                       m_local_imu_data{};
+   mpu6500::SensorHealth                              m_local_imu_health{};
    CalibrationData                                    m_calibration_data{};
    Bias                                               m_bias{};
    uint8_t                                            m_device_id{};

@@ -5,7 +5,7 @@ add_module(
       barometer_sensor
       bmp390
       estimation
-      imu_sensor
+      imu
       math
       utilities
 )

@@ -10,12 +10,12 @@ namespace mpu6500
 template <interfaces::IClockSource ClockSource, typename SpiMaster, typename Logger>
 class Mpu6500
 {
-   using ImuData   = ::boundaries::SharedData<imu_sensor::ImuData>;
-   using ImuHealth = ::boundaries::SharedData<imu_sensor::ImuHealth>;
+   using ImuData      = ::boundaries::SharedData<imu::ImuData>;
+   using SensorHealth = ::boundaries::SharedData<mpu6500::SensorHealth>;
 
 public:
    explicit Mpu6500(ImuData&       imu_data_storage,
-                    ImuHealth&     imu_health_storage,
+                    SensorHealth&  imu_health_storage,
                     SpiMaster&     spi_master,
                     Logger&        logger,
                     const uint8_t  read_failures_limit,
@@ -71,12 +71,12 @@ public:
       m_state_machine.process_event(EventReceiveDone{});
    }
 
-   imu_sensor::ImuSensorState get_state() const
+   mpu6500::SensorState get_state() const
    {
       return m_state_handler.get_state();
    }
 
-   imu_sensor::ErrorBits get_error() const
+   mpu6500::ErrorBits get_error() const
    {
       return m_state_handler.get_error();
    }

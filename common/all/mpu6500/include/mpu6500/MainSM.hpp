@@ -4,7 +4,7 @@
 #include "ResetSM.hpp"
 #include "SelfTestSM.hpp"
 #include "ValidationSM.hpp"
-#include "imu_sensor/ImuSensorState.hpp"
+#include "mpu6500/SensorState.hpp"
 
 namespace mpu6500
 {
@@ -111,40 +111,40 @@ struct MainStateMachine
       { state.reset_data(); };
 
       constexpr auto set_reset_state = [](StateHandler& state)
-      { state.set_state(imu_sensor::ImuSensorState::reset); };
+      { state.set_state(mpu6500::SensorState::reset); };
 
       constexpr auto set_validation_state = [](StateHandler& state)
-      { state.set_state(imu_sensor::ImuSensorState::validation); };
+      { state.set_state(mpu6500::SensorState::validation); };
 
       constexpr auto set_self_test_state = [](StateHandler& state)
-      { state.set_state(imu_sensor::ImuSensorState::self_test); };
+      { state.set_state(mpu6500::SensorState::self_test); };
 
       constexpr auto set_config_state = [](StateHandler& state)
-      { state.set_state(imu_sensor::ImuSensorState::config); };
+      { state.set_state(mpu6500::SensorState::config); };
 
       constexpr auto set_operational_state = [](StateHandler& state)
-      { state.set_state(imu_sensor::ImuSensorState::operational); };
+      { state.set_state(mpu6500::SensorState::operational); };
 
       constexpr auto set_soft_recovery_state = [](StateHandler& state)
-      { state.set_state(imu_sensor::ImuSensorState::soft_recovery); };
+      { state.set_state(mpu6500::SensorState::soft_recovery); };
 
       constexpr auto set_hard_recovery_state = [](StateHandler& state)
-      { state.set_state(imu_sensor::ImuSensorState::hard_recovery); };
+      { state.set_state(mpu6500::SensorState::hard_recovery); };
 
       constexpr auto set_failure_state = [](StateHandler& state)
-      { state.set_state(imu_sensor::ImuSensorState::failure); };
+      { state.set_state(mpu6500::SensorState::failure); };
 
       constexpr auto set_stopped_state = [](StateHandler& state)
-      { state.set_state(imu_sensor::ImuSensorState::stopped); };
+      { state.set_state(mpu6500::SensorState::stopped); };
 
       constexpr auto set_bus_error = [](StateHandler& state)
-      { state.set_error(imu_sensor::ImuSensorError::bus_error); };
+      { state.set_error(mpu6500::SensorError::bus_error); };
 
       constexpr auto set_data_pattern_error = [](StateHandler& state)
-      { state.set_error(imu_sensor::ImuSensorError::data_pattern_error); };
+      { state.set_error(mpu6500::SensorError::data_pattern_error); };
 
       constexpr auto set_out_of_range_data_error = [](StateHandler& state)
-      { state.set_error(imu_sensor::ImuSensorError::out_of_range_data_error); };
+      { state.set_error(mpu6500::SensorError::out_of_range_data_error); };
 
       // guards
       constexpr auto validation_successful = [](StateHandler& state)

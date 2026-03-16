@@ -1,9 +1,9 @@
 #pragma once
 
-namespace imu_sensor
+namespace mpu6500
 {
 
-enum class ImuSensorState
+enum class SensorState
 {
    stopped,
    reset,
@@ -16,4 +16,4 @@ enum class ImuSensorState
    failure
 };
 
-}   // namespace imu_sensor
+}   // namespace mpu6500

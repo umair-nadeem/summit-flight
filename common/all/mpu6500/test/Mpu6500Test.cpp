@@ -74,7 +74,7 @@ protected:
    void run_through_self_test_state(const bool self_test_success)
    {
       // adds accel bias of {−1.01,0.0,+0.70} m/s2
-      EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::self_test);
+      EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::self_test);
       rx_buffer.fill(0);
 
       if (self_test_success)
@@ -100,7 +100,7 @@ protected:
 
    void cause_bus_and_data_errors_to_soft_recovery()
    {
-      EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
+      EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::operational);
 
       rx_buffer.fill(0);
 
@@ -108,28 +108,28 @@ protected:
       mpu6500.execute();   // causes timer to increment
       mpu6500.execute();   // causes timeout
 
-      imu_sensor::ErrorBits ref_error{};
-      ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::bus_error));
+      mpu6500::ErrorBits ref_error{};
+      ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::bus_error));
       EXPECT_EQ(mpu6500.get_error().to_ulong(), ref_error.to_ulong());
 
       mpu6500.execute();                   // triggers read command
       mpu6500.notify_receive_complete();   // trigger data validation
-      ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::data_pattern_error));
+      ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::data_pattern_error));
       EXPECT_EQ(mpu6500.get_error().to_ulong(), ref_error.to_ulong());
 
       rx_buffer[7] = 0x54;                 // temperature->+86 degC
       rx_buffer[8] = 0xc6;
       mpu6500.execute();                   // triggers read command
       mpu6500.notify_receive_complete();   // trigger data validation
-      ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::out_of_range_data_error));
+      ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::out_of_range_data_error));
       EXPECT_EQ(mpu6500.get_error().to_ulong(), ref_error.to_ulong());
 
-      EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::soft_recovery);
+      EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::soft_recovery);
    }
 
    void perform_valid_measurement()
    {
-      EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
+      EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::operational);
 
       rx_buffer.fill(0);
 
@@ -140,7 +140,7 @@ protected:
       mpu6500.execute();                   // triggers read command
       mpu6500.notify_receive_complete();   // trigger data validation
 
-      EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
+      EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::operational);
 
       const auto imu_data = imu_data_storage.get_latest().data;
 
@@ -178,44 +178,44 @@ protected:
 
 TEST_F(Mpu6500Test, check_reset_process)
 {
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::stopped);
 
    // move to reset state
    mpu6500.start();
 
    // run through reset sub-state machine
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::reset);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::reset);
    run_through_reset_state();
 
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::validation);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::validation);
 }
 
 TEST_F(Mpu6500Test, check_failed_validation)
 {
    // run through reset sub-state machine
    mpu6500.start();
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::reset);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::reset);
    run_through_reset_state();
 
    // run through validation sub-state machine with failure
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::validation);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::validation);
    run_through_validation_state(false);
 
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::failure);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::failure);
 }
 
 TEST_F(Mpu6500Test, check_successful_validation)
 {
    // run through reset sub-state machine
    mpu6500.start();
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::reset);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::reset);
    run_through_reset_state();
 
    // run through validation sub-state machine with failure
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::validation);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::validation);
    run_through_validation_state(true);
 
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::config);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::config);
 }
 
 TEST_F(Mpu6500Test, check_failed_config)
@@ -225,13 +225,13 @@ TEST_F(Mpu6500Test, check_failed_config)
    run_through_reset_state();
    run_through_validation_state(true);
 
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::config);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::config);
    run_through_config_state(false);   // timeout/bus error
 
-   imu_sensor::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::bus_error));
+   mpu6500::ErrorBits ref_error{};
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::bus_error));
    EXPECT_EQ(mpu6500.get_error().to_ulong(), ref_error.to_ulong());
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::failure);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::failure);
 }
 
 TEST_F(Mpu6500Test, check_successful_config)
@@ -241,13 +241,13 @@ TEST_F(Mpu6500Test, check_successful_config)
    run_through_reset_state();
    run_through_validation_state(true);
 
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::config);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::config);
    run_through_config_state(true);
 
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::self_test);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::self_test);
 
    const auto imu_health = imu_health_storage.get_latest().data;
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::self_test);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::self_test);
    EXPECT_TRUE(imu_health.error.none());
    EXPECT_EQ(imu_health.read_failure_count, 0);
    EXPECT_TRUE(imu_health.validation_ok);
@@ -265,10 +265,10 @@ TEST_F(Mpu6500Test, check_failed_self_test)
 
    run_through_self_test_state(false);
 
-   imu_sensor::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::bus_error));
+   mpu6500::ErrorBits ref_error{};
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::bus_error));
    EXPECT_EQ(mpu6500.get_error().to_ulong(), ref_error.to_ulong());
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::failure);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::failure);
 }
 
 TEST_F(Mpu6500Test, check_successful_self_test)
@@ -281,10 +281,10 @@ TEST_F(Mpu6500Test, check_successful_self_test)
 
    run_through_self_test_state(true);
 
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::operational);
 
    const auto imu_health = imu_health_storage.get_latest().data;
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::operational);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::operational);
    EXPECT_TRUE(imu_health.error.none());
    EXPECT_EQ(imu_health.read_failure_count, 0);
    EXPECT_TRUE(imu_health.validation_ok);
@@ -300,7 +300,7 @@ TEST_F(Mpu6500Test, check_read_data_command)
    run_through_validation_state(true);
    run_through_config_state(true);
    run_through_self_test_state(true);
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::operational);
 
    mpu6500.execute();
 
@@ -316,23 +316,23 @@ TEST_F(Mpu6500Test, check_read_data_timeout_causing_soft_rec)
    run_through_validation_state(true);
    run_through_config_state(true);
    run_through_self_test_state(true);
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::operational);
 
    for (size_t i = 0; i < read_failures_limit; i++)
    {
       mpu6500.execute();   // triggers read command
       mpu6500.execute();   // causes timer to increment
       mpu6500.execute();   // causes timeout
-      EXPECT_TRUE(mpu6500.get_error().test(static_cast<uint8_t>(imu_sensor::ImuSensorError::bus_error)));
+      EXPECT_TRUE(mpu6500.get_error().test(static_cast<uint8_t>(mpu6500::SensorError::bus_error)));
    }
 
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::soft_recovery);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::soft_recovery);
 
-   const auto            imu_health = imu_health_storage.get_latest().data;
-   imu_sensor::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::bus_error));
+   const auto         imu_health = imu_health_storage.get_latest().data;
+   mpu6500::ErrorBits ref_error{};
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::bus_error));
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::soft_recovery);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::soft_recovery);
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 }
 
@@ -344,23 +344,23 @@ TEST_F(Mpu6500Test, check_all_zeros_data_causing_soft_rec)
    run_through_validation_state(true);
    run_through_config_state(true);
    run_through_self_test_state(true);
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::operational);
 
    rx_buffer.fill(0);
    for (size_t i = 0; i < read_failures_limit; i++)
    {
       mpu6500.execute();                   // triggers read command
       mpu6500.notify_receive_complete();   // trigger data validation
-      EXPECT_TRUE(mpu6500.get_error().test(static_cast<uint8_t>(imu_sensor::ImuSensorError::data_pattern_error)));
+      EXPECT_TRUE(mpu6500.get_error().test(static_cast<uint8_t>(mpu6500::SensorError::data_pattern_error)));
    }
 
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::soft_recovery);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::soft_recovery);
 
-   const auto            imu_health = imu_health_storage.get_latest().data;
-   imu_sensor::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::data_pattern_error));
+   const auto         imu_health = imu_health_storage.get_latest().data;
+   mpu6500::ErrorBits ref_error{};
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::data_pattern_error));
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::soft_recovery);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::soft_recovery);
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 }
 
@@ -372,23 +372,23 @@ TEST_F(Mpu6500Test, check_all_ones_data_causing_soft_rec)
    run_through_validation_state(true);
    run_through_config_state(true);
    run_through_self_test_state(true);
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::operational);
 
    rx_buffer.fill(0xff);
    for (size_t i = 0; i < read_failures_limit; i++)
    {
       mpu6500.execute();                   // triggers read command
       mpu6500.notify_receive_complete();   // trigger data validation
-      EXPECT_TRUE(mpu6500.get_error().test(static_cast<uint8_t>(imu_sensor::ImuSensorError::data_pattern_error)));
+      EXPECT_TRUE(mpu6500.get_error().test(static_cast<uint8_t>(mpu6500::SensorError::data_pattern_error)));
    }
 
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::soft_recovery);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::soft_recovery);
 
-   const auto            imu_health = imu_health_storage.get_latest().data;
-   imu_sensor::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::data_pattern_error));
+   const auto         imu_health = imu_health_storage.get_latest().data;
+   mpu6500::ErrorBits ref_error{};
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::data_pattern_error));
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::soft_recovery);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::soft_recovery);
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 }
 
@@ -400,7 +400,7 @@ TEST_F(Mpu6500Test, check_temp_implausibility_causing_soft_rec)
    run_through_validation_state(true);
    run_through_config_state(true);
    run_through_self_test_state(true);
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::operational);
 
    rx_buffer.fill(0);
    // read_failures_limit = 3
@@ -409,27 +409,27 @@ TEST_F(Mpu6500Test, check_temp_implausibility_causing_soft_rec)
    rx_buffer[8] = 0xb4;
    mpu6500.execute();                   // triggers read command
    mpu6500.notify_receive_complete();   // trigger data validation
-   EXPECT_TRUE(mpu6500.get_error().test(static_cast<uint8_t>(imu_sensor::ImuSensorError::out_of_range_data_error)));
+   EXPECT_TRUE(mpu6500.get_error().test(static_cast<uint8_t>(mpu6500::SensorError::out_of_range_data_error)));
 
    rx_buffer[7] = 0x54;                 // temperature->+86 degC
    rx_buffer[8] = 0xc6;
    mpu6500.execute();                   // triggers read command
    mpu6500.notify_receive_complete();   // trigger data validation
-   EXPECT_TRUE(mpu6500.get_error().test(static_cast<uint8_t>(imu_sensor::ImuSensorError::out_of_range_data_error)));
+   EXPECT_TRUE(mpu6500.get_error().test(static_cast<uint8_t>(mpu6500::SensorError::out_of_range_data_error)));
 
    rx_buffer[7] = 0xc2;                 // temperature->+86 degC
    rx_buffer[8] = 0xb4;
    mpu6500.execute();                   // triggers read command
    mpu6500.notify_receive_complete();   // trigger data validation
-   EXPECT_TRUE(mpu6500.get_error().test(static_cast<uint8_t>(imu_sensor::ImuSensorError::out_of_range_data_error)));
+   EXPECT_TRUE(mpu6500.get_error().test(static_cast<uint8_t>(mpu6500::SensorError::out_of_range_data_error)));
 
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::soft_recovery);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::soft_recovery);
 
-   const auto            imu_health = imu_health_storage.get_latest().data;
-   imu_sensor::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::out_of_range_data_error));
+   const auto         imu_health = imu_health_storage.get_latest().data;
+   mpu6500::ErrorBits ref_error{};
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::out_of_range_data_error));
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::soft_recovery);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::soft_recovery);
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 }
 
@@ -446,7 +446,7 @@ TEST_F(Mpu6500Test, check_valid_data_readout)
    EXPECT_TRUE(mpu6500.get_error().none());
 
    const auto imu_health = imu_health_storage.get_latest().data;
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::operational);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::operational);
    EXPECT_TRUE(imu_health.error.none());
    EXPECT_EQ(imu_health.read_failure_count, 0);
 }
@@ -462,21 +462,21 @@ TEST_F(Mpu6500Test, check_failing_validation_in_soft_rec_causing_hard_rec)
 
    cause_bus_and_data_errors_to_soft_recovery();
 
-   auto                  imu_health = imu_health_storage.get_latest().data;
-   imu_sensor::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::bus_error));
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::data_pattern_error));
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::out_of_range_data_error));
+   auto               imu_health = imu_health_storage.get_latest().data;
+   mpu6500::ErrorBits ref_error{};
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::bus_error));
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::data_pattern_error));
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::out_of_range_data_error));
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::soft_recovery);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::soft_recovery);
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 
    mpu6500.execute();                     // move into validation submachine
    run_through_validation_state(false);   // validation fails with timeout/bus error
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::hard_recovery);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::hard_recovery);
 
    imu_health = imu_health_storage.get_latest().data;
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::hard_recovery);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::hard_recovery);
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 }
@@ -493,21 +493,21 @@ TEST_F(Mpu6500Test, check_failing_config_in_soft_rec_causing_hard_rec)
    cause_bus_and_data_errors_to_soft_recovery();
 
    auto imu_health = imu_health_storage.get_latest().data;
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::soft_recovery);
-   imu_sensor::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::bus_error));
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::data_pattern_error));
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::out_of_range_data_error));
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::soft_recovery);
+   mpu6500::ErrorBits ref_error{};
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::bus_error));
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::data_pattern_error));
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::out_of_range_data_error));
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 
    mpu6500.execute();                    // move into validation submachine
    run_through_validation_state(true);   // validation successful
    run_through_config_state(false);      // config fails with timeout/bus error
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::hard_recovery);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::hard_recovery);
 
    imu_health = imu_health_storage.get_latest().data;
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::hard_recovery);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::hard_recovery);
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 }
@@ -523,25 +523,25 @@ TEST_F(Mpu6500Test, check_successful_soft_recovery)
 
    cause_bus_and_data_errors_to_soft_recovery();
 
-   auto                  imu_health = imu_health_storage.get_latest().data;
-   imu_sensor::ErrorBits ref_error{};
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::soft_recovery);
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::bus_error));
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::data_pattern_error));
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::out_of_range_data_error));
+   auto               imu_health = imu_health_storage.get_latest().data;
+   mpu6500::ErrorBits ref_error{};
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::soft_recovery);
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::bus_error));
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::data_pattern_error));
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::out_of_range_data_error));
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 
    mpu6500.execute();                    // move into validation submachine
    run_through_validation_state(true);   // validation successful
    run_through_config_state(true);       // config successful
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::operational);
 
    perform_valid_measurement();
-   EXPECT_TRUE(mpu6500.get_error().test(static_cast<uint8_t>(imu_sensor::ImuSensorError::out_of_range_data_error)));
+   EXPECT_TRUE(mpu6500.get_error().test(static_cast<uint8_t>(mpu6500::SensorError::out_of_range_data_error)));
 
    imu_health = imu_health_storage.get_latest().data;
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::operational);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::operational);
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
    EXPECT_EQ(imu_health.read_failure_count, 0);   // read failures are reset
 }
@@ -558,20 +558,20 @@ TEST_F(Mpu6500Test, check_failing_validation_in_hard_rec_causing_failure)
    cause_bus_and_data_errors_to_soft_recovery();
 
    auto imu_health = imu_health_storage.get_latest().data;
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::soft_recovery);
-   imu_sensor::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::bus_error));
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::data_pattern_error));
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::out_of_range_data_error));
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::soft_recovery);
+   mpu6500::ErrorBits ref_error{};
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::bus_error));
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::data_pattern_error));
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::out_of_range_data_error));
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 
    mpu6500.execute();                     // move into validation submachine
    run_through_validation_state(false);   // validation fails with timeout/bus error
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::hard_recovery);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::hard_recovery);
 
    imu_health = imu_health_storage.get_latest().data;
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::hard_recovery);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::hard_recovery);
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 
@@ -579,10 +579,10 @@ TEST_F(Mpu6500Test, check_failing_validation_in_hard_rec_causing_failure)
    run_through_reset_state();
    run_through_validation_state(false);
 
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::failure);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::failure);
 
    imu_health = imu_health_storage.get_latest().data;
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::failure);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::failure);
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 }
@@ -598,21 +598,21 @@ TEST_F(Mpu6500Test, check_failing_config_in_hard_rec_causing_failure)
 
    cause_bus_and_data_errors_to_soft_recovery();
 
-   auto                  imu_health = imu_health_storage.get_latest().data;
-   imu_sensor::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::bus_error));
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::data_pattern_error));
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::out_of_range_data_error));
+   auto               imu_health = imu_health_storage.get_latest().data;
+   mpu6500::ErrorBits ref_error{};
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::bus_error));
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::data_pattern_error));
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::out_of_range_data_error));
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::soft_recovery);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::soft_recovery);
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 
    mpu6500.execute();                     // move into validation submachine
    run_through_validation_state(false);   // validation fails with timeout/bus error
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::hard_recovery);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::hard_recovery);
 
    imu_health = imu_health_storage.get_latest().data;
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::hard_recovery);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::hard_recovery);
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 
@@ -621,10 +621,10 @@ TEST_F(Mpu6500Test, check_failing_config_in_hard_rec_causing_failure)
    run_through_validation_state(true);   // validation successful
    run_through_config_state(false);      // config fails with timeout/bus error
 
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::failure);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::failure);
 
    imu_health = imu_health_storage.get_latest().data;
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::failure);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::failure);
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 }
@@ -640,22 +640,22 @@ TEST_F(Mpu6500Test, check_successful_hard_recovery)
 
    cause_bus_and_data_errors_to_soft_recovery();
 
-   auto                  imu_health = imu_health_storage.get_latest().data;
-   imu_sensor::ErrorBits ref_error{};
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::soft_recovery);
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::bus_error));
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::data_pattern_error));
-   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::out_of_range_data_error));
+   auto               imu_health = imu_health_storage.get_latest().data;
+   mpu6500::ErrorBits ref_error{};
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::soft_recovery);
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::bus_error));
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::data_pattern_error));
+   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::out_of_range_data_error));
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 
    mpu6500.execute();                     // move into validation submachine
    run_through_validation_state(false);   // validation fails with timeout/bus error
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::hard_recovery);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::hard_recovery);
 
    imu_health = imu_health_storage.get_latest().data;
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::hard_recovery);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::hard_recovery);
    EXPECT_EQ(imu_health.read_failure_count, read_failures_limit);
 
    mpu6500.execute();                    // move into reset submachine
@@ -667,82 +667,82 @@ TEST_F(Mpu6500Test, check_successful_hard_recovery)
 
    imu_health = imu_health_storage.get_latest().data;
    EXPECT_EQ(imu_health.error.to_ulong(), ref_error.to_ulong());
-   EXPECT_EQ(imu_health.state, imu_sensor::ImuSensorState::operational);
+   EXPECT_EQ(imu_health.state, mpu6500::SensorState::operational);
    EXPECT_EQ(imu_health.read_failure_count, 0);   // read failures are reset
 }
 
 TEST_F(Mpu6500Test, stop_in_reset)
 {
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::stopped);
    mpu6500.start();
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::reset);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::reset);
    mpu6500.stop();
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::stopped);
 }
 
 TEST_F(Mpu6500Test, stop_in_validation)
 {
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::stopped);
    mpu6500.start();
    run_through_reset_state();
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::validation);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::validation);
    mpu6500.stop();
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::stopped);
 }
 
 TEST_F(Mpu6500Test, stop_in_config)
 {
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::stopped);
    mpu6500.start();
    run_through_reset_state();
    run_through_validation_state(true);
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::config);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::config);
    mpu6500.stop();
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::stopped);
 }
 
 TEST_F(Mpu6500Test, stop_in_self_test)
 {
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::stopped);
    mpu6500.start();
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::self_test);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::self_test);
    mpu6500.stop();
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::stopped);
 }
 
 TEST_F(Mpu6500Test, stop_in_operational)
 {
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::stopped);
    mpu6500.start();
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
    run_through_self_test_state(true);
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::operational);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::operational);
    mpu6500.stop();
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::stopped);
 }
 
 TEST_F(Mpu6500Test, stop_in_soft_recovery)
 {
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::stopped);
    mpu6500.start();
    run_through_reset_state();
    run_through_validation_state(true);
    run_through_config_state(true);
    run_through_self_test_state(true);
    cause_bus_and_data_errors_to_soft_recovery();
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::soft_recovery);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::soft_recovery);
    mpu6500.stop();
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::stopped);
 }
 
 TEST_F(Mpu6500Test, stop_in_hard_recovery)
 {
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::stopped);
    mpu6500.start();
    run_through_reset_state();
    run_through_validation_state(true);
@@ -751,14 +751,14 @@ TEST_F(Mpu6500Test, stop_in_hard_recovery)
    cause_bus_and_data_errors_to_soft_recovery();
    mpu6500.execute();   // enter validation within soft recovery phase
    run_through_validation_state(false);
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::hard_recovery);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::hard_recovery);
    mpu6500.stop();
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::stopped);
 }
 
 TEST_F(Mpu6500Test, stop_in_failure)
 {
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::stopped);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::stopped);
    mpu6500.start();
    run_through_reset_state();
    run_through_validation_state(true);
@@ -770,7 +770,7 @@ TEST_F(Mpu6500Test, stop_in_failure)
    mpu6500.execute();   // enter validation within hard recovery phase
    run_through_reset_state();
    run_through_validation_state(false);
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::failure);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::failure);
    mpu6500.stop();   // do nothing
-   EXPECT_EQ(mpu6500.get_state(), imu_sensor::ImuSensorState::failure);
+   EXPECT_EQ(mpu6500.get_state(), mpu6500::SensorState::failure);
 }

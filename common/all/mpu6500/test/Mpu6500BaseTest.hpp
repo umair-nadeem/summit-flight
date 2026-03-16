@@ -2,10 +2,10 @@
 #include <gtest/gtest.h>
 
 #include "boundaries/SharedData.hpp"
-#include "imu_sensor/ImuData.hpp"
-#include "imu_sensor/ImuHealth.hpp"
+#include "imu/ImuData.hpp"
 #include "mocks/common/Logger.hpp"
 #include "mocks/hw/SpiMasterWithDma.hpp"
+#include "mpu6500/SensorHealth.hpp"
 #include "mpu6500/params.hpp"
 #include "sys_time/ClockSource.hpp"
 
@@ -74,8 +74,8 @@ protected:
    static constexpr float   gyro_tolerance_radps                 = 0.1f;
    static constexpr float   accel_tolerance_mps2                 = 1.5f;
 
-   boundaries::SharedData<imu_sensor::ImuData>                 imu_data_storage{};
-   boundaries::SharedData<imu_sensor::ImuHealth>               imu_health_storage{};
+   boundaries::SharedData<imu::ImuData>                        imu_data_storage{};
+   boundaries::SharedData<mpu6500::SensorHealth>               imu_health_storage{};
    std::array<uint8_t, mpu6500::params::num_bytes_transaction> tx_buffer{};
    std::array<uint8_t, mpu6500::params::num_bytes_transaction> rx_buffer{};
    std::array<uint8_t, mpu6500::params::num_bytes_transaction> test_buffer{};

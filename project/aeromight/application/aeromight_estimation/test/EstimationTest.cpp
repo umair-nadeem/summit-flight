@@ -43,7 +43,7 @@ protected:
 
    void prepare_imu_sample(const std::optional<math::Vector3> accel_mps2, std::optional<math::Vector3> gyro_radps, const uint32_t timestamp_ms)
    {
-      imu_sensor::ImuData data{accel_mps2, gyro_radps, std::nullopt};
+      imu::ImuData data{accel_mps2, gyro_radps, std::nullopt};
       imu_data.update_latest(data, timestamp_ms);
    }
 
@@ -88,7 +88,7 @@ protected:
    mocks::common::ClockSource                                      sys_clock{};
    ::boundaries::SharedData<aeromight_boundaries::EstimatorHealth> estimator_health_storage{};
    aeromight_boundaries::StateEstimation                           state_estimation_storage{};
-   ::boundaries::SharedData<imu_sensor::ImuData>                   imu_data{};
+   ::boundaries::SharedData<imu::ImuData>                          imu_data{};
    ::boundaries::SharedData<barometer_sensor::BarometerData>       baro_data{};
    mocks::common::Logger                                           logger{"estmation"};
    uint32_t                                                        current_ms{0};

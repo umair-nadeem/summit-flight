@@ -4,7 +4,7 @@
 
 #include "math/Vector3.hpp"
 
-namespace imu_sensor
+namespace imu
 {
 
 struct ImuData
@@ -14,4 +14,4 @@ struct ImuData
    std::optional<float>         temperature_c;   // Temperature [°C]
 };
 
-}   // namespace imu_sensor
+}   // namespace imu
