@@ -169,13 +169,13 @@ extern "C"
                                                                               throttle_min,
                                                                               throttle_max};
 
-      math::FirstOrderLpf gyro_x_lpf{gyro_lpf_cutoff_hz};
-      math::FirstOrderLpf gyro_y_lpf{gyro_lpf_cutoff_hz};
-      math::FirstOrderLpf gyro_z_lpf{gyro_lpf_cutoff_hz};
-
       math::FirstOrderLpf roll_input_lpf{stick_input_lpf_cutoff_hz};
       math::FirstOrderLpf pitch_input_lpf{stick_input_lpf_cutoff_hz};
       math::FirstOrderLpf yaw_input_lpf{stick_input_lpf_cutoff_hz};
+
+      math::FirstOrderLpf gyro_x_lpf{gyro_lpf_cutoff_hz};
+      math::FirstOrderLpf gyro_y_lpf{gyro_lpf_cutoff_hz};
+      math::FirstOrderLpf gyro_z_lpf{gyro_lpf_cutoff_hz};
 
       math::ButterworthFilter pid_dterm_x_lpf{pid_dterm_filter_cutoff_frequency_hz, controller::task::control_task_period_in_ms / 1000.0f};
       math::ButterworthFilter pid_dterm_y_lpf{pid_dterm_filter_cutoff_frequency_hz, controller::task::control_task_period_in_ms / 1000.0f};
@@ -185,20 +185,20 @@ extern "C"
                                  decltype(rate_controller),
                                  decltype(control_allocator),
                                  decltype(control_input),
-                                 decltype(roll_input_lpf),
-                                 decltype(pid_dterm_x_lpf),
+                                 math::FirstOrderLpf,
+                                 math::ButterworthFilter,
                                  sys_time::ClockSource,
                                  LogClient>
           control{attitude_controller,
                   rate_controller,
                   control_allocator,
                   control_input,
-                  gyro_x_lpf,
-                  gyro_y_lpf,
-                  gyro_z_lpf,
                   roll_input_lpf,
                   pitch_input_lpf,
                   yaw_input_lpf,
+                  gyro_x_lpf,
+                  gyro_y_lpf,
+                  gyro_z_lpf,
                   pid_dterm_x_lpf,
                   pid_dterm_y_lpf,
                   pid_dterm_z_lpf,

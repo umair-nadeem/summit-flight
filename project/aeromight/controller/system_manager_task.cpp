@@ -32,7 +32,7 @@ extern "C"
       constexpr uint32_t timeout_sensors_readiness_ms   = 10'000u;
       constexpr uint32_t timeout_control_readiness_ms   = 2000u;
 
-      LogClient logger_system_manager_task{logging::logging_queue_sender, "flight"};
+      LogClient logger_system_manager_task{logging::logging_queue_sender, "system"};
 
       aeromight_system::SystemManager<decltype(data->health_summary_queue_receiver),
                                       decltype(data->control_task_start_notifier),
