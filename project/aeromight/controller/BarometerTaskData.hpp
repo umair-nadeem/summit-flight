@@ -5,7 +5,7 @@
 #include "hw/i2c/I2c.hpp"
 #include "rtos/NotificationWaiter.hpp"
 #include "rtos/Notifier.hpp"
-#include "utilities/pos_to_value.hpp"
+#include "utilities/enum_to_bit_mask.hpp"
 
 void i2c1_receive_complete_callback(void*);
 extern "C"
@@ -22,10 +22,11 @@ struct BarometerTaskData
    hw::i2c::I2c i2c_driver{global_data.i2c.i2c1_config};
 
    // task notification
-   aeromight_boundaries::BarometerNotificationFlags barometer_rx_complete_notification{utilities::pos_to_value(aeromight_boundaries::BarometerTaskEvents::rx_complete)};
-
-   rtos::NotificationWaiter<aeromight_boundaries::BarometerNotificationFlags> barometer_task_notification_waiter{};
-   rtos::Notifier<aeromight_boundaries::BarometerNotificationFlags>           barometer_task_rx_complete_notifier_from_isr{barometer_rx_complete_notification};
+   static constexpr auto    event_tick_bit_mask        = utilities::enum_to_bit_mask<aeromight_boundaries::BarometerTaskEvents::tick>();
+   static constexpr auto    event_rx_complete_bit_mask = utilities::enum_to_bit_mask<aeromight_boundaries::BarometerTaskEvents::rx_complete>();
+   rtos::NotificationWaiter barometer_task_notification_waiter{};
+   rtos::Notifier           barometer_task_tick_notifier_from_task{event_tick_bit_mask};
+   rtos::Notifier           barometer_task_rx_complete_notifier_from_isr{event_rx_complete_bit_mask};
 };
 
 extern BarometerTaskData barometer_task_data;

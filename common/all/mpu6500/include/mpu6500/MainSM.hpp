@@ -2,7 +2,6 @@
 
 #include "ConfigSM.hpp"
 #include "ResetSM.hpp"
-#include "SelfTestSM.hpp"
 #include "ValidationSM.hpp"
 #include "mpu6500/SensorState.hpp"
 
@@ -51,8 +50,6 @@ struct MainStateMachine
    };
 
    // composite state machines
-   static constexpr auto s_self_test = boost::sml::state<SelfTestStateMachine<StateHandler>>;
-
    static constexpr auto s_init_reset = boost::sml::state<InitResetSM<StateHandler>>;
    static constexpr auto s_hard_reset = boost::sml::state<HardRecoveryResetSM<StateHandler>>;
 
@@ -72,8 +69,8 @@ struct MainStateMachine
    static constexpr auto s_data_read_fail    = boost::sml::state<class StateDataReadFailure>;
    static constexpr auto s_soft_recovery     = boost::sml::state<class StateSoftRecovery>;
    static constexpr auto s_hard_recovery     = boost::sml::state<class StateHardRecovery>;
-   static constexpr auto s_to_failure        = boost::sml::state<class StateToFailure>;
-   static constexpr auto s_failure           = boost::sml::state<class StateFailure>;
+   static constexpr auto s_to_fault          = boost::sml::state<class StateToFault>;
+   static constexpr auto s_fault             = boost::sml::state<class StateFault>;
 
    auto operator()() const
    {
@@ -98,14 +95,8 @@ struct MainStateMachine
       constexpr auto convert_raw_data = [](StateHandler& state)
       { state.convert_raw_data(); };
 
-      constexpr auto adjust_bias = [](StateHandler& state)
-      { state.adjust_bias(); };
-
-      constexpr auto publish_data = [](StateHandler& state)
-      { state.publish_data(); };
-
-      constexpr auto publish_health = [](StateHandler& state)
-      { state.publish_health(); };
+      constexpr auto update = [](StateHandler& state)
+      { state.update(); };
 
       constexpr auto reset_data = [](StateHandler& state)
       { state.reset_data(); };
@@ -115,9 +106,6 @@ struct MainStateMachine
 
       constexpr auto set_validation_state = [](StateHandler& state)
       { state.set_state(mpu6500::SensorState::validation); };
-
-      constexpr auto set_self_test_state = [](StateHandler& state)
-      { state.set_state(mpu6500::SensorState::self_test); };
 
       constexpr auto set_config_state = [](StateHandler& state)
       { state.set_state(mpu6500::SensorState::config); };
@@ -131,27 +119,24 @@ struct MainStateMachine
       constexpr auto set_hard_recovery_state = [](StateHandler& state)
       { state.set_state(mpu6500::SensorState::hard_recovery); };
 
-      constexpr auto set_failure_state = [](StateHandler& state)
-      { state.set_state(mpu6500::SensorState::failure); };
+      constexpr auto set_fault = [](StateHandler& state)
+      { state.set_fault(); };
 
       constexpr auto set_stopped_state = [](StateHandler& state)
       { state.set_state(mpu6500::SensorState::stopped); };
 
       constexpr auto set_bus_error = [](StateHandler& state)
-      { state.set_error(mpu6500::SensorError::bus_error); };
+      { state.set_error(imu_sensor::ImuSensorError::bus_error); };
 
       constexpr auto set_data_pattern_error = [](StateHandler& state)
-      { state.set_error(mpu6500::SensorError::data_pattern_error); };
+      { state.set_error(imu_sensor::ImuSensorError::data_pattern_error); };
 
       constexpr auto set_out_of_range_data_error = [](StateHandler& state)
-      { state.set_error(mpu6500::SensorError::out_of_range_data_error); };
+      { state.set_error(imu_sensor::ImuSensorError::out_of_range_data_error); };
 
       // guards
       constexpr auto validation_successful = [](StateHandler& state)
       { return state.validation_successful(); };
-
-      constexpr auto self_test_successful = [](StateHandler& state)
-      { return state.self_test_successful(); };
 
       constexpr auto config_successful = [](StateHandler& state)
       { return state.config_successful(); };
@@ -178,18 +163,15 @@ struct MainStateMachine
       return make_transition_table(
           // From State          | Event          | Guard                      | Action                                        | To State
           // init orchestrates reset, valiation, and config composite SMs to bring sensor up
-          *s_stopped             + e_start                                     / (set_reset_state, publish_health)             = s_init_reset,
+          *s_stopped             + e_start                                     / set_reset_state                               = s_init_reset,
 
-          s_init_reset                                                         / (set_validation_state, publish_health)        = s_init_validation,
+          s_init_reset                                                         / set_validation_state                          = s_init_validation,
 
-          s_init_validation                       [validation_successful]      / (set_config_state, publish_health)            = s_init_config,
-          s_init_validation                       [!validation_successful]                                                     = s_to_failure,
+          s_init_validation                       [validation_successful]      / set_config_state                              = s_init_config,
+          s_init_validation                       [!validation_successful]                                                     = s_to_fault,
           
-          s_init_config                           [config_successful]          / (set_self_test_state, publish_health)         = s_self_test,
-          s_init_config                           [!config_successful]                                                         = s_to_failure,
-
-          s_self_test                             [self_test_successful]       / (set_operational_state, publish_health)       = s_measurement,
-          s_self_test                             [!self_test_successful]                                                      = s_to_failure,
+          s_init_config                           [config_successful]          / set_operational_state                         = s_measurement,
+          s_init_config                           [!config_successful]                                                         = s_to_fault,
 
           // operational
           s_measurement         + e_tick                                       / (reset_timer, read_data)                      = s_data_read_wait,
@@ -199,20 +181,20 @@ struct MainStateMachine
           s_data_read_wait      + e_tick          [!receive_wait_timeout]      / tick_timer,
           s_data_read_wait      + e_tick          [receive_wait_timeout]       / (set_bus_error, count_read_failure)           = s_data_read_fail,
 
-          s_data_verification                     [is_data_valid]              / (reset_read_failures, adjust_bias, publish_data, publish_health) = s_measurement,
-          s_data_verification                     [!is_data_valid]             / (set_out_of_range_data_error, count_read_failure)   = s_data_read_fail,
+          s_data_verification                     [is_data_valid]              / (update, reset_read_failures)                 = s_measurement,
+          s_data_verification                     [!is_data_valid]             / (set_out_of_range_data_error, count_read_failure) = s_data_read_fail,
 
           s_data_read_fail                        [read_failures_below_limit]                                                  = s_measurement,
-          s_data_read_fail                        [!read_failures_below_limit] / (set_soft_recovery_state, publish_health)     = s_soft_recovery,
+          s_data_read_fail                        [!read_failures_below_limit] / set_soft_recovery_state                       = s_soft_recovery,
 
           // soft recovery re-orchestrates validation and config composite SMs
           s_soft_recovery       + e_tick                                                                                       = s_soft_validation,
 
           s_soft_validation                       [validation_successful]                                                      = s_soft_config,
-          s_soft_validation                       [!validation_successful]     / (set_hard_recovery_state, publish_health)     = s_hard_recovery,
+          s_soft_validation                       [!validation_successful]     / set_hard_recovery_state                       = s_hard_recovery,
 
-          s_soft_config                           [config_successful]          / (set_operational_state, publish_health)       = s_measurement,
-          s_soft_config                           [!config_successful]         / (set_hard_recovery_state, publish_health)     = s_hard_recovery,
+          s_soft_config                           [config_successful]          / set_operational_state                         = s_measurement,
+          s_soft_config                           [!config_successful]         / set_hard_recovery_state                       = s_hard_recovery,
 
           // hard recovery re-orchestrates reset, validation and config composite SMs
           s_hard_recovery       + e_tick                                                                                       = s_hard_reset,
@@ -220,15 +202,14 @@ struct MainStateMachine
           s_hard_reset                                                                                                         = s_hard_validation,
 
           s_hard_validation                       [validation_successful]                                                      = s_hard_config,
-          s_hard_validation                       [!validation_successful]                                                     = s_to_failure,
+          s_hard_validation                       [!validation_successful]                                                     = s_to_fault,
 
-          s_hard_config                           [config_successful]          / (set_operational_state, publish_health)       = s_measurement,
-          s_hard_config                           [!config_successful]                                                         = s_to_failure,
+          s_hard_config                           [config_successful]          / set_operational_state                         = s_measurement,
+          s_hard_config                           [!config_successful]                                                         = s_to_fault,
 
           // failure
-          s_to_failure                                                         / (set_failure_state, publish_health, reset_data) = s_failure,
+          s_to_fault                                                           / (set_fault, reset_data)                       = s_fault,
 
-          s_self_test           + e_stop                                       / set_stopped_state                             = s_stopped,
           s_init_reset          + e_stop                                       / set_stopped_state                             = s_stopped,
           s_hard_reset          + e_stop                                       / set_stopped_state                             = s_stopped,
           s_init_validation     + e_stop                                       / set_stopped_state                             = s_stopped,

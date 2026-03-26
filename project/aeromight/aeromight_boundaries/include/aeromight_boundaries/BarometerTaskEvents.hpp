@@ -1,16 +1,14 @@
 #pragma once
 
-#include <bitset>
-#include <cstdint>
+#include "types/types.hpp"
 
 namespace aeromight_boundaries
 {
 
-enum class BarometerTaskEvents : uint8_t
+enum class BarometerTaskEvents : types::EventBitsType
 {
-   rx_complete = 0,   // bit position 0
+   tick        = 0,    // bit position 0
+   rx_complete = 1u,   // bit position 1
 };
-
-using BarometerNotificationFlags = std::bitset<4u>;
 
 }   // namespace aeromight_boundaries

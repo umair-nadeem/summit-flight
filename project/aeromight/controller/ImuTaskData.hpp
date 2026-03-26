@@ -9,9 +9,11 @@
 #include "hw/pcb_component/Led.hpp"
 #include "hw/spi/SpiMasterWithDma.hpp"
 #include "hw/timer/Timer.hpp"
+#include "imu_sensor/ImuSensorStatus.hpp"
+#include "imu_sensor/RawImuSensorData.hpp"
 #include "rtos/NotificationWaiter.hpp"
 #include "rtos/Notifier.hpp"
-#include "utilities/pos_to_value.hpp"
+#include "utilities/enum_to_bit_mask.hpp"
 
 extern "C"
 {
@@ -34,12 +36,17 @@ struct ImuTaskData
    hw::spi::SpiMasterWithDma<decltype(spi1_chip_select)>       spi1_master{global_data.spi.spi1_config, spi1_chip_select};
 
    // task notification
-   aeromight_boundaries::ImuNotificationFlags imu_task_tick_notification{utilities::pos_to_value(aeromight_boundaries::ImuTaskEvents::tick)};
-   aeromight_boundaries::ImuNotificationFlags imu_rx_complete_notification{utilities::pos_to_value(aeromight_boundaries::ImuTaskEvents::rx_complete)};
+   static constexpr auto event_tick_bit_mask        = utilities::enum_to_bit_mask<aeromight_boundaries::ImuTaskEvents::tick>();
+   static constexpr auto event_rx_complete_bit_mask = utilities::enum_to_bit_mask<aeromight_boundaries::ImuTaskEvents::rx_complete>();
+   static constexpr auto event_calibrate_bit_mask   = utilities::enum_to_bit_mask<aeromight_boundaries::ImuTaskEvents::calibrate>();
 
-   rtos::NotificationWaiter<aeromight_boundaries::ImuNotificationFlags> imu_task_notification_waiter{};
-   rtos::Notifier<aeromight_boundaries::ImuNotificationFlags>           imu_task_tick_notifier_from_isr{imu_task_tick_notification};
-   rtos::Notifier<aeromight_boundaries::ImuNotificationFlags>           imu_task_rx_complete_notifier_from_isr{imu_rx_complete_notification};
+   rtos::NotificationWaiter imu_task_notification_waiter{};
+   rtos::Notifier           imu_task_tick_notifier_from_isr{event_tick_bit_mask};
+   rtos::Notifier           imu_task_rx_complete_notifier_from_isr{event_rx_complete_bit_mask};
+
+   // sensors
+   imu_sensor::RawImuSensorData mpu6500_data{};
+   imu_sensor::ImuSensorStatus  mpu6500_status{};
 };
 
 extern ImuTaskData imu_task_data;

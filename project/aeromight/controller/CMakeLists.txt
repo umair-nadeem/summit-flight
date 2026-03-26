@@ -29,16 +29,16 @@ target_link_libraries(aeromight_lib INTERFACE
    stm32f411
 
    aeromight_boundaries
-   aeromight_barometer
    aeromight_battery
    aeromight_control
    aeromight_estimation
    aeromight_system
    aeromight_health
-   aeromight_imu
    aeromight_link
    bmp390
+   event_handling
    error
+   imu
    interfaces
    mpu6500
    radio_control

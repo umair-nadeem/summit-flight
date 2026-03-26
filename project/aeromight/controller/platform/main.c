@@ -110,8 +110,16 @@ int main(void)
   DWT->CYCCNT = 0;                       // reset
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;   // enable
 
-  // freeze TIM2 clock when debugging
+  // freeze timers
+  DBGMCU->APB2FZ |= DBGMCU_APB2_FZ_DBG_TIM1_STOP;
   DBGMCU->APB1FZ |= DBGMCU_APB1_FZ_DBG_TIM2_STOP;
+  DBGMCU->APB1FZ |= DBGMCU_APB1_FZ_DBG_TIM3_STOP;
+  DBGMCU->APB1FZ |= DBGMCU_APB1_FZ_DBG_TIM4_STOP;
+  DBGMCU->APB1FZ |= DBGMCU_APB1_FZ_DBG_TIM5_STOP;
+
+  // Freeze watchdogs (avoid reset while debugging)
+  DBGMCU->APB1FZ |= DBGMCU_APB1_FZ_DBG_IWDG_STOP;
+  DBGMCU->APB1FZ |= DBGMCU_APB1_FZ_DBG_WWDG_STOP;
 
   /* USER CODE END SysInit */
 

@@ -3,7 +3,7 @@
 #include <boost/sml.hpp>
 
 #include "Events.hpp"
-#include "mpu6500/SensorError.hpp"
+#include "imu_sensor/ImuSensorError.hpp"
 
 namespace mpu6500
 {
@@ -42,10 +42,10 @@ struct ValidationStateMachine
       { state.store_id(); };
 
       constexpr auto set_bus_error = [](StateHandler& state)
-      { state.set_error(mpu6500::SensorError::bus_error); };
+      { state.set_error(imu_sensor::ImuSensorError::bus_error); };
 
       constexpr auto set_id_mismatch_error = [](StateHandler& state)
-      { state.set_error(mpu6500::SensorError::id_mismatch_error); };
+      { state.set_error(imu_sensor::ImuSensorError::id_mismatch_error); };
 
       constexpr auto mark_validation_fail = [](StateHandler& state)
       { state.mark_validation_fail(); };

@@ -5,7 +5,7 @@
 #include "imu/ImuData.hpp"
 #include "mocks/common/Logger.hpp"
 #include "mocks/hw/SpiMasterWithDma.hpp"
-#include "mpu6500/SensorHealth.hpp"
+#include "mpu6500/ImuSensorStatus.hpp"
 #include "mpu6500/params.hpp"
 #include "sys_time/ClockSource.hpp"
 
@@ -75,7 +75,7 @@ protected:
    static constexpr float   accel_tolerance_mps2                 = 1.5f;
 
    boundaries::SharedData<imu::ImuData>                        imu_data_storage{};
-   boundaries::SharedData<mpu6500::SensorHealth>               imu_health_storage{};
+   boundaries::SharedData<mpu6500::ImuSensorStatus>            imu_health_storage{};
    std::array<uint8_t, mpu6500::params::num_bytes_transaction> tx_buffer{};
    std::array<uint8_t, mpu6500::params::num_bytes_transaction> rx_buffer{};
    std::array<uint8_t, mpu6500::params::num_bytes_transaction> test_buffer{};

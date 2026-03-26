@@ -1,5 +1,5 @@
 add_module(
    SOURCES
    LIBS
-      math
+      imu_sensor
 )

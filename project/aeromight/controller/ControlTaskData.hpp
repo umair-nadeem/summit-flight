@@ -5,7 +5,7 @@
 #include "hardware_bindings.hpp"
 #include "hw/timer/Timer.hpp"
 #include "rtos/NotificationWaiter.hpp"
-#include "utilities/pos_to_value.hpp"
+#include "utilities/enum_to_bit_mask.hpp"
 
 extern "C"
 {
@@ -26,11 +26,11 @@ struct ControlTaskData
    // TIM4
    hw::timer::Timer slave_pwm_timer{global_data.timer.tim4_config};
 
-   hw::timer::ChannelType master_pwm_timer_channels{utilities::pos_to_value(Channel::channel1) |
-                                                    utilities::pos_to_value(Channel::channel2) |
-                                                    utilities::pos_to_value(Channel::channel3)};
+   hw::timer::ChannelType master_pwm_timer_channels{utilities::enum_to_bit_mask<Channel::channel1>() |
+                                                    utilities::enum_to_bit_mask<Channel::channel2>() |
+                                                    utilities::enum_to_bit_mask<Channel::channel3>()};
 
-   hw::timer::ChannelType slave_pwm_timer_channels{utilities::pos_to_value(Channel::channel3)};
+   hw::timer::ChannelType slave_pwm_timer_channels{utilities::enum_to_bit_mask<Channel::channel3>()};
 
    struct MotorOutput
    {
@@ -47,7 +47,7 @@ struct ControlTaskData
 
    aeromight_boundaries::StateEstimation state_estimation{};
 
-   rtos::NotificationWaiter<aeromight_boundaries::ControlTaskNotificationFlags> control_task_notification_waiter{};
+   rtos::NotificationWaiter control_task_notification_waiter{};
 };
 
 extern ControlTaskData control_task_data;

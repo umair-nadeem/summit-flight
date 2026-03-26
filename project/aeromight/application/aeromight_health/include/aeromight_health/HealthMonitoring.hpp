@@ -6,9 +6,9 @@
 #include "aeromight_boundaries/HealthSummary.hpp"
 #include "barometer_sensor/BarometerHealth.hpp"
 #include "boundaries/SharedData.hpp"
+#include "imu/ImuStatus.hpp"
 #include "interfaces/IClockSource.hpp"
 #include "interfaces/rtos/IQueueSender.hpp"
-#include "mpu6500/SensorHealth.hpp"
 
 namespace aeromight_health
 {
@@ -20,8 +20,8 @@ class HealthMonitoring
 {
 public:
    explicit HealthMonitoring(QueueSender&                                                         queue_sender,
-                             const boundaries::SharedData<mpu6500::SensorHealth>&                 imu_sensor_health,
-                             const boundaries::SharedData<barometer_sensor::BarometerHealth>&     barometer_sensor_health,
+                             const boundaries::SharedData<imu::ImuStatus>&                        imu_health,
+                             const boundaries::SharedData<barometer_sensor::BarometerHealth>&     barometer_health,
                              const boundaries::SharedData<aeromight_boundaries::EstimatorHealth>& estimation_health,
                              const boundaries::SharedData<aeromight_boundaries::ControlHealth>&   control_health,
                              Logger&                                                              logger,
@@ -29,13 +29,13 @@ public:
                              const uint32_t                                                       startup_wait_ms,
                              const uint32_t                                                       max_wait_sensors_readiness_ms,
                              const uint32_t                                                       max_wait_estimation_control_readiness_ms,
-                             const uint32_t                                                       max_age_imu_sensor_health_ms,
-                             const uint32_t                                                       max_age_barometer_sensor_health_ms,
+                             const uint32_t                                                       max_age_imu_health_ms,
+                             const uint32_t                                                       max_age_barometer_health_ms,
                              const uint32_t                                                       max_age_estimation_health_ms,
                              const uint32_t                                                       max_age_control_health_ms)
        : m_queue_sender{queue_sender},
-         m_imu_sensor_health{imu_sensor_health},
-         m_barometer_sensor_health{barometer_sensor_health},
+         m_imu_health{imu_health},
+         m_barometer_health{barometer_health},
          m_estimation_health{estimation_health},
          m_control_health{control_health},
          m_logger{logger},
@@ -43,8 +43,8 @@ public:
          m_startup_wait_ms{startup_wait_ms},
          m_max_wait_sensors_readiness_ms{max_wait_sensors_readiness_ms},
          m_max_wait_estimation_control_readiness_ms{max_wait_estimation_control_readiness_ms},
-         m_max_age_imu_sensor_health_ms{max_age_imu_sensor_health_ms},
-         m_max_age_barometer_sensor_health_ms{max_age_barometer_sensor_health_ms},
+         m_max_age_imu_health_ms{max_age_imu_health_ms},
+         m_max_age_barometer_health_ms{max_age_barometer_health_ms},
          m_max_age_estimation_health_ms{max_age_estimation_health_ms},
          m_max_age_control_health_ms{max_age_control_health_ms}
    {
@@ -187,8 +187,8 @@ private:
 
    void get_latest_health_snapshots()
    {
-      m_imu_sensor_health_snapshot = m_imu_sensor_health.get_latest();
-      m_barometer_health_snapshot  = m_barometer_sensor_health.get_latest();
+      m_imu_health_snapshot        = m_imu_health.get_latest();
+      m_barometer_health_snapshot  = m_barometer_health.get_latest();
       m_estimation_health_snapshot = m_estimation_health.get_latest();
       m_control_health_snapshot    = m_control_health.get_latest();
    }
@@ -232,18 +232,16 @@ private:
 
    aeromight_boundaries::SubsystemHealth get_imu_health() const
    {
-      const bool imu_stale = (((m_current_time_ms - m_imu_sensor_health_snapshot.timestamp_ms) > m_max_age_imu_sensor_health_ms));
+      const bool imu_stale = (((m_current_time_ms - m_imu_health_snapshot.timestamp_ms) > m_max_age_imu_health_ms));
 
-      const bool imu_read_failures = m_imu_sensor_health_snapshot.data.read_failure_count > 0;
-
-      const bool imu_fault = ((m_imu_sensor_health_snapshot.data.state == mpu6500::SensorState::failure) ||
-                              (m_imu_sensor_health_snapshot.data.error.to_ulong() != 0));
+      const bool imu_fault = (!m_imu_health_snapshot.data.available ||
+                              (m_imu_health_snapshot.data.error.to_ulong() != 0));
 
       if (imu_fault)
       {
          return aeromight_boundaries::SubsystemHealth::fault;
       }
-      else if (imu_stale || imu_read_failures)
+      else if (imu_stale)
       {
          return aeromight_boundaries::SubsystemHealth::degraded;
       }
@@ -253,7 +251,7 @@ private:
 
    aeromight_boundaries::SubsystemHealth get_barometer_health() const
    {
-      const bool barometer_stale = (((m_current_time_ms - m_barometer_health_snapshot.timestamp_ms) > m_max_age_barometer_sensor_health_ms));
+      const bool barometer_stale = (((m_current_time_ms - m_barometer_health_snapshot.timestamp_ms) > m_max_age_barometer_health_ms));
 
       const bool barometer_read_failures = m_barometer_health_snapshot.data.read_failure_count > 0;
 
@@ -328,13 +326,10 @@ private:
 
    bool imu_is_ready() const
    {
-      const auto& imu_sensor_health = m_imu_sensor_health_snapshot.data;
+      const auto& imu_health = m_imu_health_snapshot.data;
 
-      return (imu_sensor_health.validation_ok &&
-              imu_sensor_health.config_ok &&
-              imu_sensor_health.self_test_ok &&
-              (imu_sensor_health.error.to_ulong() == 0) &&
-              (imu_sensor_health.state == mpu6500::SensorState::operational));
+      return (imu_health.available &&
+              (imu_health.error.to_ulong() == 0));
    }
 
    bool barometer_is_ready() const
@@ -357,8 +352,8 @@ private:
    }
 
    QueueSender&                                                          m_queue_sender;
-   const boundaries::SharedData<mpu6500::SensorHealth>&                  m_imu_sensor_health;
-   const boundaries::SharedData<barometer_sensor::BarometerHealth>&      m_barometer_sensor_health;
+   const boundaries::SharedData<imu::ImuStatus>&                         m_imu_health;
+   const boundaries::SharedData<barometer_sensor::BarometerHealth>&      m_barometer_health;
    const boundaries::SharedData<aeromight_boundaries::EstimatorHealth>&  m_estimation_health;
    const boundaries::SharedData<aeromight_boundaries::ControlHealth>&    m_control_health;
    Logger&                                                               m_logger;
@@ -366,12 +361,12 @@ private:
    const uint32_t                                                        m_startup_wait_ms;
    const uint32_t                                                        m_max_wait_sensors_readiness_ms;
    const uint32_t                                                        m_max_wait_estimation_control_readiness_ms;
-   const uint32_t                                                        m_max_age_imu_sensor_health_ms;
-   const uint32_t                                                        m_max_age_barometer_sensor_health_ms;
+   const uint32_t                                                        m_max_age_imu_health_ms;
+   const uint32_t                                                        m_max_age_barometer_health_ms;
    const uint32_t                                                        m_max_age_estimation_health_ms;
    const uint32_t                                                        m_max_age_control_health_ms;
    aeromight_boundaries::HealthSummary                                   m_health_summary{};
-   boundaries::SharedData<mpu6500::SensorHealth>::Sample                 m_imu_sensor_health_snapshot{};
+   boundaries::SharedData<imu::ImuStatus>::Sample                        m_imu_health_snapshot{};
    boundaries::SharedData<barometer_sensor::BarometerHealth>::Sample     m_barometer_health_snapshot{};
    boundaries::SharedData<aeromight_boundaries::EstimatorHealth>::Sample m_estimation_health_snapshot{};
    boundaries::SharedData<aeromight_boundaries::ControlHealth>::Sample   m_control_health_snapshot{};

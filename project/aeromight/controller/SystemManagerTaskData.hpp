@@ -6,7 +6,7 @@
 #include "hw/pcb_component/Led.hpp"
 #include "rtos/Notifier.hpp"
 #include "rtos/QueueReceiver.hpp"
-#include "utilities/pos_to_value.hpp"
+#include "utilities/enum_to_bit_mask.hpp"
 
 extern "C"
 {
@@ -25,8 +25,8 @@ struct SystemManagerTaskData
 
    rtos::QueueReceiver<aeromight_boundaries::HealthSummary> health_summary_queue_receiver{};
 
-   aeromight_boundaries::ControlTaskNotificationFlags                 control_task_start_notification{utilities::pos_to_value(aeromight_boundaries::ControlTaskEvents::start)};
-   rtos::Notifier<aeromight_boundaries::ControlTaskNotificationFlags> control_task_start_notifier{control_task_start_notification};
+   // task notifications
+   rtos::Notifier control_task_start_notifier{utilities::enum_to_bit_mask<aeromight_boundaries::ControlTaskEvents::start>()};
 };
 
 extern SystemManagerTaskData system_manager_task_data;

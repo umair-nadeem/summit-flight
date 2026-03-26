@@ -11,7 +11,7 @@
 #include "barometer_sensor/BarometerHealth.hpp"
 #include "boundaries/SharedData.hpp"
 #include "imu/ImuData.hpp"
-#include "mpu6500/SensorHealth.hpp"
+#include "imu/ImuStatus.hpp"
 
 namespace aeromight_boundaries
 {
@@ -19,12 +19,12 @@ namespace aeromight_boundaries
 struct AeromightData
 {
    // IMU
-   boundaries::SharedData<imu::ImuData>          imu_sensor_data_storage{};
-   boundaries::SharedData<mpu6500::SensorHealth> imu_sensor_health_storage{};
+   boundaries::SharedData<imu::ImuData>   imu_data_storage{};
+   boundaries::SharedData<imu::ImuStatus> imu_health_storage{};
 
    // Barometer
-   boundaries::SharedData<barometer_sensor::BarometerData>   barometer_sensor_data_storage{};
-   boundaries::SharedData<barometer_sensor::BarometerHealth> barometer_sensor_health_storage{};
+   boundaries::SharedData<barometer_sensor::BarometerData>   barometer_data_storage{};
+   boundaries::SharedData<barometer_sensor::BarometerHealth> barometer_health_storage{};
 
    // Estimator
    boundaries::SharedData<EstimatorHealth> estimator_health_storage{};

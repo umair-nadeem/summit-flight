@@ -1,7 +1,0 @@
-add_module_test(
-   SOURCES
-      ImuDriverExecutorTest.cpp
-   LIBS
-      mocks
-      aeromight_boundaries
-)

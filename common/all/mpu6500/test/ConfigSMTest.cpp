@@ -100,7 +100,7 @@ TEST_F(ConfigSMTest, check_read_burst_wait_timeout)
 
    sm.process_event(mpu6500::EventTick{});
 
-   EXPECT_TRUE(mpu6500_handler.get_error().test(static_cast<uint8_t>(mpu6500::SensorError::bus_error)));
+   EXPECT_TRUE(mpu6500_handler.get_error().test(static_cast<uint8_t>(imu_sensor::ImuSensorError::bus_error)));
    EXPECT_FALSE(mpu6500_handler.config_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
 }
@@ -130,7 +130,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_smplrt_mismatch)
    sm.process_event(mpu6500::EventTick{});
 
    mpu6500::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::config_mismatch_error));
+   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::config_mismatch_error));
 
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
    EXPECT_FALSE(mpu6500_handler.config_successful());
@@ -162,7 +162,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_config_mismatch)
    sm.process_event(mpu6500::EventTick{});
 
    mpu6500::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::config_mismatch_error));
+   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::config_mismatch_error));
 
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
    EXPECT_FALSE(mpu6500_handler.config_successful());
@@ -194,7 +194,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_gyro_config_mismatch)
    sm.process_event(mpu6500::EventTick{});
 
    mpu6500::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::config_mismatch_error));
+   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::config_mismatch_error));
 
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
    EXPECT_FALSE(mpu6500_handler.config_successful());
@@ -226,7 +226,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_accel_config_mismatch)
    sm.process_event(mpu6500::EventTick{});
 
    mpu6500::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::config_mismatch_error));
+   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::config_mismatch_error));
 
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
    EXPECT_FALSE(mpu6500_handler.config_successful());
@@ -258,7 +258,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_accel_config_2_mismatch)
    sm.process_event(mpu6500::EventTick{});
 
    mpu6500::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::config_mismatch_error));
+   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::config_mismatch_error));
 
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
    EXPECT_FALSE(mpu6500_handler.config_successful());

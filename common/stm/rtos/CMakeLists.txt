@@ -6,4 +6,5 @@ add_module(
    LIBS
       error
       freertos
+      types
 )

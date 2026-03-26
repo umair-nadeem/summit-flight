@@ -1,7 +1,8 @@
 #include "BarometerTaskData.hpp"
-#include "aeromight_barometer/BarometerDriverExecutor.hpp"
 #include "aeromight_boundaries/AeromightData.hpp"
 #include "bmp390/Bmp390.hpp"
+#include "event_handling/EventBinding.hpp"
+#include "event_handling/EventDispatcher.hpp"
 #include "logging/LogClient.hpp"
 #include "rtos/QueueSender.hpp"
 #include "rtos/periodic_task.hpp"
@@ -35,8 +36,8 @@ extern "C"
       bmp390::Bmp390<sys_time::ClockSource,
                      decltype(data->i2c_driver),
                      LogClient>
-          bmp390{aeromight_boundaries::aeromight_data.barometer_sensor_data_storage,
-                 aeromight_boundaries::aeromight_data.barometer_sensor_health_storage,
+          bmp390{aeromight_boundaries::aeromight_data.barometer_data_storage,
+                 aeromight_boundaries::aeromight_data.barometer_health_storage,
                  data->i2c_driver,
                  logger_bmp390,
                  bmp390_read_failures_limit,
@@ -44,16 +45,21 @@ extern "C"
                  controller::task::barometer_task_period_in_ms,
                  bmp390_receive_wait_timeout_ms};
 
-      aeromight_barometer::BarometerDriverExecutor<decltype(bmp390),
-                                                   decltype(data->barometer_task_notification_waiter)>
-          barometer_driver_executor{bmp390,
-                                    data->barometer_task_notification_waiter,
-                                    controller::task::barometer_task_period_in_ms,
-                                    notification_wait_period_in_ms};
+      using TickBinding       = event_handling::EventBinding<decltype(bmp390), &decltype(bmp390)::execute>;
+      using RxCompleteBinding = event_handling::EventBinding<decltype(bmp390), &decltype(bmp390)::notify_receive_complete>;
+
+      event_handling::EventDispatcher bmp390_event_dispatcher{data->barometer_task_notification_waiter,
+                                                              notification_wait_period_in_ms,
+                                                              TickBinding{bmp390, data->event_tick_bit_mask},
+                                                              RxCompleteBinding{bmp390, data->event_rx_complete_bit_mask}};
 
       data->i2c_driver.register_receive_complete_callback(&i2c1_receive_complete_callback, nullptr);
-      barometer_driver_executor.start();
-      rtos::run_periodic_task(barometer_driver_executor);
+      bmp390.start();
+
+      while (true)
+      {
+         bmp390_event_dispatcher.execute();
+      }
    }
 }
 

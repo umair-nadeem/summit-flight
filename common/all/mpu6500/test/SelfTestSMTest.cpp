@@ -44,7 +44,7 @@ TEST_F(SelfTestSMTest, read_data_timeout_causes_self_test_failure)
    sm.process_event(mpu6500::EventTick{});
 
    mpu6500::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::bus_error));
+   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::bus_error));
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
    EXPECT_FALSE(mpu6500_handler.self_test_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
@@ -62,7 +62,7 @@ TEST_F(SelfTestSMTest, all_zero_data_causes_self_test_failure)
    sm.process_event(mpu6500::EventReceiveDone{});
 
    mpu6500::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::data_pattern_error));
+   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::data_pattern_error));
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
    EXPECT_FALSE(mpu6500_handler.self_test_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
@@ -80,7 +80,7 @@ TEST_F(SelfTestSMTest, all_ones_data_causes_self_test_failure)
    sm.process_event(mpu6500::EventReceiveDone{});
 
    mpu6500::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::data_pattern_error));
+   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::data_pattern_error));
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
    EXPECT_FALSE(mpu6500_handler.self_test_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
@@ -106,7 +106,7 @@ TEST_F(SelfTestSMTest, implausible_temp_values_causes_self_test_failure)
    sm.process_event(mpu6500::EventReceiveDone{});
 
    mpu6500::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::out_of_range_data_error));
+   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::out_of_range_data_error));
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
    EXPECT_FALSE(mpu6500_handler.self_test_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
@@ -125,7 +125,7 @@ TEST_F(SelfTestSMTest, non_stationary_platform_causes_self_test_failure)
    }
 
    mpu6500::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::non_stationary_calibration_error));
+   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::non_stationary_calibration_error));
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
    EXPECT_FALSE(mpu6500_handler.self_test_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
@@ -144,7 +144,7 @@ TEST_F(SelfTestSMTest, unstable_accel_values_cause_self_test_failure)
    }
 
    mpu6500::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::unstable_accel_error));
+   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::unstable_accel_error));
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
    EXPECT_FALSE(mpu6500_handler.self_test_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));
@@ -165,7 +165,7 @@ TEST_F(SelfTestSMTest, unstable_gyro_values_cause_self_test_failure)
    }
 
    mpu6500::ErrorBits ref_error{};
-   ref_error.set(static_cast<uint32_t>(mpu6500::SensorError::unstable_gyro_error));
+   ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::unstable_gyro_error));
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
    EXPECT_FALSE(mpu6500_handler.self_test_successful());
    EXPECT_TRUE(sm.is(boost::sml::X));

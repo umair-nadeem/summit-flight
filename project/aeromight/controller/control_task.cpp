@@ -10,14 +10,15 @@
 #include "aeromight_estimation/Estimation.hpp"
 #include "error/error_handler.hpp"
 #include "estimation/AttitudeEstimator.hpp"
+#include "event_handling/event_check.hpp"
 #include "logging/LogClient.hpp"
 #include "math/ButterworthFilter.hpp"
 #include "math/FirstOrderLpf.hpp"
 #include "math/constants.hpp"
 #include "radio_control/ThrottleCurve.hpp"
 #include "rtos/QueueSender.hpp"
+#include "rtos/constants.hpp"
 #include "rtos/periodic_task.hpp"
-#include "rtos/utilities.hpp"
 #include "sys_time/ClockSource.hpp"
 #include "task_params.hpp"
 
@@ -127,8 +128,8 @@ extern "C"
                      altitude_ekf,
                      aeromight_boundaries::aeromight_data.estimator_health_storage,
                      data->state_estimation,
-                     aeromight_boundaries::aeromight_data.imu_sensor_data_storage,
-                     aeromight_boundaries::aeromight_data.barometer_sensor_data_storage,
+                     aeromight_boundaries::aeromight_data.imu_data_storage,
+                     aeromight_boundaries::aeromight_data.barometer_data_storage,
                      logger_estimation,
                      max_recovery_attempts,
                      num_samples_reference_pressure,
@@ -224,32 +225,29 @@ extern "C"
                                  control,
                                  controller::task::control_task_period_in_ms};
 
-      const auto flags = data->control_task_notification_waiter.wait(rtos::utilities::max_delay);
-      if (flags.has_value())
+      const auto event_bits = data->control_task_notification_waiter.wait(rtos::constants::max_delay);
+      if ((event_bits != 0) &&
+          (event_handling::has_event(event_bits, aeromight_boundaries::ControlTaskEvents::start)))
       {
-         if (flags.value().test(static_cast<uint8_t>(aeromight_boundaries::ControlTaskEvents::start)))
-         {
-            // start pwm
-            data->master_pwm_timer.enable_interrupt();
+         // start pwm
+         data->master_pwm_timer.enable_interrupt();
 
-            data->slave_pwm_timer.enable_channel(data->slave_pwm_timer_channels);
-            data->master_pwm_timer.enable_channel(data->master_pwm_timer_channels);
+         data->slave_pwm_timer.enable_channel(data->slave_pwm_timer_channels);
+         data->master_pwm_timer.enable_channel(data->master_pwm_timer_channels);
 
-            data->master_pwm_timer.enable_all_outputs();
+         data->master_pwm_timer.enable_all_outputs();
 
-            data->slave_pwm_timer.enable_counter();
-            data->master_pwm_timer.enable_counter();
+         data->slave_pwm_timer.enable_counter();
+         data->master_pwm_timer.enable_counter();
 
-            estimation_and_control.start();
-            rtos::run_periodic_task(estimation_and_control);
-         }
+         estimation_and_control.start();
       }
-
-      // Won't reach here
-      while (true)
+      else
       {
          error::stop_operation();
       }
+
+      rtos::run_periodic_task(estimation_and_control);
    }
 
 }   // extern "C"

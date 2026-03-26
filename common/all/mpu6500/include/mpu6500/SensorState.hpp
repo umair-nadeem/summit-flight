@@ -8,12 +8,11 @@ enum class SensorState
    stopped,
    reset,
    validation,
-   self_test,
    config,
    operational,
    soft_recovery,
    hard_recovery,
-   failure
+   fault
 };
 
 }   // namespace mpu6500

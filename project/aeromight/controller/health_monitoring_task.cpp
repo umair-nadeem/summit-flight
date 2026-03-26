@@ -37,8 +37,8 @@ extern "C"
                                          sys_time::ClockSource,
                                          LogClient>
           health_monitoring{data->health_summary_queue_sender,
-                            aeromight_boundaries::aeromight_data.imu_sensor_health_storage,
-                            aeromight_boundaries::aeromight_data.barometer_sensor_health_storage,
+                            aeromight_boundaries::aeromight_data.imu_health_storage,
+                            aeromight_boundaries::aeromight_data.barometer_health_storage,
                             aeromight_boundaries::aeromight_data.estimator_health_storage,
                             aeromight_boundaries::aeromight_data.control_health_storage,
                             logger_health_monitoring,

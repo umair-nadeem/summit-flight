@@ -1,17 +1,17 @@
 #pragma once
 
 #include <concepts>
-#include <optional>
+#include <cstdint>
 
 namespace interfaces::rtos
 {
 
-template <typename C, typename T>
-concept INotificationWaiter = requires(C c, T t, const uint32_t s) {
+template <typename C>
+concept INotificationWaiter = requires(C c, const uint32_t timeout_ms) {
    {
-      c.wait(s)
+      c.wait(timeout_ms)
    }
-   -> std::same_as<std::optional<T>>;
+   -> std::same_as<uint32_t>;
 };
 
 }   // namespace interfaces::rtos

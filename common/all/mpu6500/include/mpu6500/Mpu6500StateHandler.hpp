@@ -4,46 +4,41 @@
 #include <cmath>
 #include <span>
 
-#include "boundaries/SharedData.hpp"
+#include "SensorState.hpp"
 #include "error/error_handler.hpp"
-#include "imu/ImuData.hpp"
-#include "interfaces/IClockSource.hpp"
+#include "imu_sensor/ImuSensorStatus.hpp"
+#include "imu_sensor/RawImuSensorData.hpp"
+#include "math/Vector3.hpp"
 #include "math/constants.hpp"
-#include "mpu6500/SensorHealth.hpp"
 #include "params.hpp"
 
 namespace mpu6500
 {
 
-template <interfaces::IClockSource ClockSource, typename SpiMaster, typename Logger>
+template <typename SpiMaster, typename Logger>
 class Mpu6500StateHandler
 {
-   using ImuData      = ::boundaries::SharedData<imu::ImuData>;
-   using SensorHealth = ::boundaries::SharedData<mpu6500::SensorHealth>;
-   using Vec3         = math::Vector3;
+   using Vec3 = math::Vector3;
 
 public:
-   explicit Mpu6500StateHandler(ImuData&       imu_data_storage,
-                                SensorHealth&  imu_health_storage,
-                                SpiMaster&     spi_master,
-                                Logger&        logger,
-                                const uint8_t  read_failures_limit,
-                                const uint32_t execution_period_ms,
-                                const uint32_t receive_wait_timeout_ms,
-                                const uint8_t  sample_rate_divider,
-                                const uint8_t  dlpf_config,
-                                const uint8_t  gyro_full_scale,
-                                const uint8_t  accel_full_scale,
-                                const uint8_t  accel_a_dlpf_config,
-                                const float    gyro_range_plausibility_margin_radps,
-                                const float    accel_range_plausibility_margin_mps2,
-                                const uint16_t num_calibration_samples,
-                                const float    gyro_tolerance_radps,
-                                const float    accel_tolerance_mps2)
-       : m_imu_data_storage{imu_data_storage},
-         m_imu_health_storage{imu_health_storage},
-         m_spi_master{spi_master},
+   explicit Mpu6500StateHandler(SpiMaster&                    spi_master,
+                                Logger&                       logger,
+                                imu_sensor::RawImuSensorData& raw_sensor_data_out,
+                                imu_sensor::ImuSensorStatus&  sensor_status_out,
+                                const uint8_t                 read_failures_limit,
+                                const uint32_t                execution_period_ms,
+                                const uint32_t                receive_wait_timeout_ms,
+                                const uint8_t                 sample_rate_divider,
+                                const uint8_t                 dlpf_config,
+                                const uint8_t                 gyro_full_scale,
+                                const uint8_t                 accel_full_scale,
+                                const uint8_t                 accel_a_dlpf_config,
+                                const float                   gyro_range_plausibility_margin_radps,
+                                const float                   accel_range_plausibility_margin_mps2)
+       : m_spi_master{spi_master},
          m_logger{logger},
+         m_raw_sensor_data_out{raw_sensor_data_out},
+         m_sensor_status_out{sensor_status_out},
          m_read_failures_limit{read_failures_limit},
          m_execution_period_ms{execution_period_ms},
          m_receive_wait_timeout_ms{receive_wait_timeout_ms},
@@ -57,10 +52,7 @@ public:
          m_gyro_scale{math::constants::deg_to_rad / params::gyro_sensitivity_scale_factor[m_gyro_full_scale]},
          m_accel_scale{math::constants::g_to_mps2 / params::accel_sensitivity_scale_factor[m_accel_full_scale]},
          m_gyro_absolute_plausibility_limit_radps{(params::gyro_abs_full_scale_range_dps[m_gyro_full_scale] * math::constants::deg_to_rad) + m_gyro_range_plausibility_margin_radps},
-         m_accel_absolute_plausibility_limit_mps2{(params::accel_abs_full_scale_range_g[m_accel_full_scale] * math::constants::g_to_mps2) + m_accel_range_plausibility_margin_mps2},
-         m_num_calibration_samples{num_calibration_samples},
-         m_gyro_tolerance_radps{gyro_tolerance_radps},
-         m_accel_tolerance_mps2{accel_tolerance_mps2}
+         m_accel_absolute_plausibility_limit_mps2{(params::accel_abs_full_scale_range_g[m_accel_full_scale] * math::constants::g_to_mps2) + m_accel_range_plausibility_margin_mps2}
    {
       m_logger.enable();
    }
@@ -77,25 +69,13 @@ public:
 
    void count_read_failure()
    {
-      m_local_imu_health.read_failure_count++;
+      m_sensor_status.read_failure_count++;
       m_logger.print("read failure");
    }
 
    void reset_read_failures()
    {
-      m_local_imu_health.read_failure_count = 0;
-   }
-
-   void reset_calibration_data()
-   {
-      m_calibration_data.mean_accel.zero();
-      m_calibration_data.mean_gyro.zero();
-
-      m_calibration_data.ssq_accel.zero();
-      m_calibration_data.ssq_gyro.zero();
-
-      m_calibration_data.std_accel.zero();
-      m_calibration_data.std_gyro.zero();
+      m_sensor_status.read_failure_count = 0;
    }
 
    void power_reset()
@@ -190,116 +170,69 @@ public:
       m_config_registers.accel_config_2  = m_rx_buffer[5];
    }
 
-   void add_sample()
-   {
-      // update step of welford's algorithm
-      m_calibration_data.sample_counter++;   // increment counter
-
-      const Vec3& new_accel_data = m_local_imu_data.accel_mps2.value();
-      const Vec3& new_gyro_data  = m_local_imu_data.gyro_radps.value();
-
-      const Vec3 delta_accel = new_accel_data - m_calibration_data.mean_accel;
-      const Vec3 delta_gyro  = new_gyro_data - m_calibration_data.mean_gyro;
-
-      const float n              = static_cast<float>(m_calibration_data.sample_counter);
-      const Vec3  new_mean_accel = m_calibration_data.mean_accel + (delta_accel / n);
-      const Vec3  new_mean_gyro  = m_calibration_data.mean_gyro + (delta_gyro / n);
-
-      m_calibration_data.ssq_accel = m_calibration_data.ssq_accel + (delta_accel.emul(new_accel_data - new_mean_accel));
-      m_calibration_data.ssq_gyro  = m_calibration_data.ssq_gyro + (delta_gyro.emul(new_gyro_data - new_mean_gyro));
-
-      m_calibration_data.mean_accel = new_mean_accel;
-      m_calibration_data.mean_gyro  = new_mean_gyro;
-   }
-
-   void calculate_stats_and_bias()
-   {
-      calculate_standard_deviation();
-
-      calculate_bias();
-   }
-
    void convert_raw_data()
    {
-      m_local_imu_data.accel_mps2 = Vec3{to_int16(m_rx_buffer[1], m_rx_buffer[2]) * m_accel_scale,
-                                         to_int16(m_rx_buffer[3], m_rx_buffer[4]) * m_accel_scale,
-                                         to_int16(m_rx_buffer[5], m_rx_buffer[6]) * m_accel_scale};
+      m_raw_sensor_data.accel_mps2 = Vec3{to_int16(m_rx_buffer[1], m_rx_buffer[2]) * m_accel_scale,
+                                          to_int16(m_rx_buffer[3], m_rx_buffer[4]) * m_accel_scale,
+                                          to_int16(m_rx_buffer[5], m_rx_buffer[6]) * m_accel_scale};
 
-      m_local_imu_data.temperature_c = (to_int16(m_rx_buffer[7], m_rx_buffer[8]) / params::temp_sensitivity) + params::temp_offset;
+      m_raw_sensor_data.temperature_c = (to_int16(m_rx_buffer[7], m_rx_buffer[8]) / params::temp_sensitivity) + params::temp_offset;
 
-      m_local_imu_data.gyro_radps = Vec3{to_int16(m_rx_buffer[9], m_rx_buffer[10]) * m_gyro_scale,
-                                         to_int16(m_rx_buffer[11], m_rx_buffer[12]) * m_gyro_scale,
-                                         to_int16(m_rx_buffer[13], m_rx_buffer[14]) * m_gyro_scale};
+      m_raw_sensor_data.gyro_radps = Vec3{to_int16(m_rx_buffer[9], m_rx_buffer[10]) * m_gyro_scale,
+                                          to_int16(m_rx_buffer[11], m_rx_buffer[12]) * m_gyro_scale,
+                                          to_int16(m_rx_buffer[13], m_rx_buffer[14]) * m_gyro_scale};
    }
 
-   void adjust_bias()
+   void update()
    {
-      // subtract bias from gyro and accel data
-      m_local_imu_data.accel_mps2 = Vec3{m_local_imu_data.accel_mps2.value() - m_bias.accel};
-      m_local_imu_data.gyro_radps = Vec3{m_local_imu_data.gyro_radps.value() - m_bias.gyro};
-   }
-
-   void publish_data()
-   {
-      const volatile uint32_t clock = ClockSource::now_ms();
-      m_imu_data_storage.update_latest(m_local_imu_data, clock);
-   }
-
-   void publish_health()
-   {
-      m_imu_health_storage.update_latest(m_local_imu_health, ClockSource::now_ms());
+      // atomically update output
+      m_raw_sensor_data.count++;
+      m_raw_sensor_data_out = m_raw_sensor_data;
+      m_sensor_status_out   = m_sensor_status;
    }
 
    void reset_data()
    {
-      m_local_imu_data.accel_mps2.reset();
-      m_local_imu_data.gyro_radps.reset();
-      m_local_imu_data.temperature_c.reset();
-
-      m_imu_data_storage.update_latest(m_local_imu_data, ClockSource::now_ms());
+      m_raw_sensor_data.accel_mps2.zero();
+      m_raw_sensor_data.gyro_radps.zero();
+      m_raw_sensor_data.temperature_c.reset();
    }
 
    void mark_validation_fail()
    {
-      m_local_imu_health.validation_ok = false;
+      m_sensor_status.validation_ok = false;
       m_logger.print("validation failed");
    }
 
    void mark_validation_success()
    {
-      m_local_imu_health.validation_ok = true;
+      m_sensor_status.validation_ok = true;
       m_logger.print("validation successful");
-   }
-
-   void mark_self_test_fail()
-   {
-      m_local_imu_health.self_test_ok = false;
-      m_logger.print("self-test failed");
-   }
-
-   void mark_self_test_pass()
-   {
-      m_local_imu_health.self_test_ok = true;
-      m_logger.print("self-test successful");
    }
 
    void mark_config_fail()
    {
-      m_local_imu_health.config_ok = false;
+      m_sensor_status.config_ok = false;
       m_logger.print("config failed");
    }
 
    void mark_config_success()
    {
-      m_local_imu_health.config_ok = true;
+      m_sensor_status.config_ok = true;
       m_logger.print("config successful");
+   }
+
+   void set_fault()
+   {
+      m_sensor_status.fault = true;
+      set_state(mpu6500::SensorState::fault);
    }
 
    void set_state(const mpu6500::SensorState& state)
    {
-      m_local_imu_health.state = state;
+      m_state = state;
 
-      switch (m_local_imu_health.state)
+      switch (m_state)
       {
          case mpu6500::SensorState::stopped:
             m_logger.print("entered state->stopped");
@@ -309,9 +242,6 @@ public:
             break;
          case mpu6500::SensorState::validation:
             m_logger.print("entered state->validation");
-            break;
-         case mpu6500::SensorState::self_test:
-            m_logger.print("entered state->self_test");
             break;
          case mpu6500::SensorState::config:
             m_logger.print("entered state->config");
@@ -325,8 +255,8 @@ public:
          case mpu6500::SensorState::hard_recovery:
             m_logger.print("entered state->hard_recovery");
             break;
-         case mpu6500::SensorState::failure:
-            m_logger.print("entered state->failure");
+         case mpu6500::SensorState::fault:
+            m_logger.print("entered state->fault");
             break;
          default:
             m_logger.print("entered unexpected state");
@@ -335,37 +265,28 @@ public:
       }
    }
 
-   void set_error(const mpu6500::SensorError& error)
+   void set_error(const imu_sensor::ImuSensorError& error)
    {
-      m_local_imu_health.error.set(static_cast<uint8_t>(error));
+      m_sensor_status.error.set(static_cast<uint8_t>(error));
 
       switch (error)
       {
-         case mpu6500::SensorError::bus_error:
+         case imu_sensor::ImuSensorError::bus_error:
             m_logger.print("encountered error->bus_error");
             break;
-         case mpu6500::SensorError::id_mismatch_error:
+         case imu_sensor::ImuSensorError::id_mismatch_error:
             m_logger.print("encountered error->id_mismatch_error");
             break;
-         case mpu6500::SensorError::config_mismatch_error:
+         case imu_sensor::ImuSensorError::config_mismatch_error:
             m_logger.print("encountered error->config_mismatch_error");
             break;
-         case mpu6500::SensorError::data_pattern_error:
+         case imu_sensor::ImuSensorError::data_pattern_error:
             m_logger.print("encountered error->data_pattern_error");
             break;
-         case mpu6500::SensorError::out_of_range_data_error:
+         case imu_sensor::ImuSensorError::out_of_range_data_error:
             m_logger.print("encountered error->out_of_range_data_error");
             break;
-         case mpu6500::SensorError::non_stationary_calibration_error:
-            m_logger.print("encountered error->non_stationary_calibration_error");
-            break;
-         case mpu6500::SensorError::unstable_gyro_error:
-            m_logger.print("encountered error->unstable_gyro_error");
-            break;
-         case mpu6500::SensorError::unstable_accel_error:
-            m_logger.print("encountered error->unstable_accel_error");
-            break;
-         case mpu6500::SensorError::max_error:
+         case imu_sensor::ImuSensorError::max_error:
          default:
             m_logger.print("encountered unexpected error");
             error::stop_operation();
@@ -373,52 +294,34 @@ public:
       }
    }
 
-   void set_abnormal_samples_error()
+   imu_sensor::RawImuSensorData get_raw_data() const
    {
-      if (!is_platform_stationary())
-      {
-         set_error(mpu6500::SensorError::non_stationary_calibration_error);
-      }
+      return m_raw_sensor_data;
+   }
 
-      if (!is_accel_stable())
-      {
-         set_error(mpu6500::SensorError::unstable_accel_error);
-      }
+   imu_sensor::ImuSensorStatus get_status() const
+   {
+      return m_sensor_status;
+   }
 
-      if (!is_gyro_stable())
-      {
-         set_error(mpu6500::SensorError::unstable_gyro_error);
-      }
+   imu_sensor::ErrorBits get_error() const
+   {
+      return m_sensor_status.error;
    }
 
    mpu6500::SensorState get_state() const
    {
-      return m_local_imu_health.state;
-   }
-
-   mpu6500::ErrorBits get_error() const
-   {
-      return m_local_imu_health.error;
-   }
-
-   std::tuple<Vec3, Vec3> get_bias() const
-   {
-      return {m_bias.accel, m_bias.gyro};
+      return m_state;
    }
 
    bool validation_successful() const
    {
-      return m_local_imu_health.validation_ok;
-   }
-
-   bool self_test_successful() const
-   {
-      return m_local_imu_health.self_test_ok;
+      return m_sensor_status.validation_ok;
    }
 
    bool config_successful() const
    {
-      return m_local_imu_health.config_ok;
+      return m_sensor_status.config_ok;
    }
 
    bool id_matched() const
@@ -451,11 +354,6 @@ public:
       return (is_gyro_range_plausible() && is_accel_range_plausible() && is_temp_plausible());
    }
 
-   bool is_sensor_sane() const
-   {
-      return (is_platform_stationary() && is_accel_stable() && is_gyro_stable());
-   }
-
    bool power_reset_wait_over() const
    {
       return m_wait_timer_ms >= params::power_on_reset_wait_ms;
@@ -473,63 +371,10 @@ public:
 
    bool read_failures_below_limit() const
    {
-      return (m_local_imu_health.read_failure_count < m_read_failures_limit);
-   }
-
-   bool all_samples_collected() const
-   {
-      return (m_calibration_data.sample_counter >= m_num_calibration_samples);
+      return (m_sensor_status.read_failure_count < m_read_failures_limit);
    }
 
 private:
-   void calculate_standard_deviation()
-   {
-      error::verify(m_calibration_data.sample_counter > 1u);
-
-      // finalize welford's algorithm
-      const float n_minus_one = static_cast<float>(m_calibration_data.sample_counter) - 1.0f;
-
-      const Vec3 variance_accel = m_calibration_data.ssq_accel / n_minus_one;
-      const Vec3 variance_gyro  = m_calibration_data.ssq_gyro / n_minus_one;
-
-      const float std_accel_x = sqrtf(variance_accel[0]);
-      const float std_accel_y = sqrtf(variance_accel[1]);
-      const float std_accel_z = sqrtf(variance_accel[2]);
-      const float std_gyro_x  = sqrtf(variance_gyro[0]);
-      const float std_gyro_y  = sqrtf(variance_gyro[1]);
-      const float std_gyro_z  = sqrtf(variance_gyro[2]);
-
-      m_calibration_data.std_accel = Vec3{std_accel_x, std_accel_y, std_accel_z};
-      m_calibration_data.std_gyro  = Vec3{std_gyro_x, std_gyro_y, std_gyro_z};
-   }
-
-   void calculate_bias()
-   {
-      const float magnitude = m_calibration_data.mean_accel.norm();
-      error::verify(magnitude > 0);
-
-      // unit vector -> a^ = a/|a|
-      // gravity_body vector -> G_b = G * a^
-      const Vec3 gravity_body = m_calibration_data.mean_accel * (math::constants::g_to_mps2 / magnitude);
-
-      // bias = a - G_b
-      // accel bias is the residual vector after subtracting the G component
-      m_bias.accel = Vec3{m_calibration_data.mean_accel[0],
-                          m_calibration_data.mean_accel[1],
-                          m_calibration_data.mean_accel[2] - gravity_body[2]};
-
-      // gyro bias is just mean
-      m_bias.gyro = m_calibration_data.mean_gyro;
-
-      m_logger.printf("bias accel x: %.2f, y: %.2f, z: %.2f | bias gyro x :  %.2f, y: %.2f, z: %.2f",
-                      m_bias.accel[0],
-                      m_bias.accel[1],
-                      m_bias.accel[2],
-                      m_bias.gyro[0],
-                      m_bias.gyro[1],
-                      m_bias.gyro[2]);
-   }
-
    static constexpr uint8_t get_write_spi_command(const uint8_t reg) noexcept
    {
       return (reg & static_cast<uint8_t>(~params::read_mask));
@@ -560,8 +405,7 @@ private:
    bool is_gyro_range_plausible() const
    {
       // sensor range check -> must be performed with raw/uncalibrated data
-      error::verify(m_local_imu_data.gyro_radps.has_value());
-      const auto& g = m_local_imu_data.gyro_radps.value();
+      const auto& g = m_raw_sensor_data.gyro_radps;
       return ((std::fabs(g[0]) <= m_gyro_absolute_plausibility_limit_radps) &&
               (std::fabs(g[1]) <= m_gyro_absolute_plausibility_limit_radps) &&
               (std::fabs(g[2]) <= m_gyro_absolute_plausibility_limit_radps));
@@ -570,8 +414,7 @@ private:
    bool is_accel_range_plausible() const
    {
       // sensor range check -> must be performed with raw/uncalibrated data
-      error::verify(m_local_imu_data.accel_mps2.has_value());
-      const auto& a = m_local_imu_data.accel_mps2.value();
+      const auto& a = m_raw_sensor_data.accel_mps2;
       return ((std::fabs(a[0]) <= m_accel_absolute_plausibility_limit_mps2) &&
               (std::fabs(a[1]) <= m_accel_absolute_plausibility_limit_mps2) &&
               (std::fabs(a[2]) <= m_accel_absolute_plausibility_limit_mps2));
@@ -580,33 +423,13 @@ private:
    bool is_temp_plausible() const
    {
       // sensor range check -> must be performed with raw/uncalibrated data
-      if (!m_local_imu_data.temperature_c.has_value())
+      if (!m_raw_sensor_data.temperature_c.has_value())
       {
          return true;   // nothing to check
       }
 
-      return ((params::temp_min_plauisble_range < m_local_imu_data.temperature_c.value()) &&
-              (m_local_imu_data.temperature_c.value() < params::temp_max_plauisble_range));
-   }
-
-   bool is_platform_stationary() const
-   {
-      const float magnitude = m_calibration_data.mean_accel.norm();
-      return std::abs(magnitude - math::constants::g_to_mps2) <= m_accel_tolerance_mps2;
-   }
-
-   bool is_accel_stable() const
-   {
-      return ((m_calibration_data.std_accel[0] <= m_accel_tolerance_mps2) &&
-              (m_calibration_data.std_accel[1] <= m_accel_tolerance_mps2) &&
-              (m_calibration_data.std_accel[2] <= m_accel_tolerance_mps2));
-   }
-
-   bool is_gyro_stable() const
-   {
-      return ((m_calibration_data.std_gyro[0] <= m_gyro_tolerance_radps) &&
-              (m_calibration_data.std_gyro[1] <= m_gyro_tolerance_radps) &&
-              (m_calibration_data.std_gyro[2] <= m_gyro_tolerance_radps));
+      return ((params::temp_min_plauisble_range < m_raw_sensor_data.temperature_c.value()) &&
+              (m_raw_sensor_data.temperature_c.value() < params::temp_max_plauisble_range));
    }
 
    struct Config_registers
@@ -618,27 +441,13 @@ private:
       uint8_t accel_config_2;
    };
 
-   struct CalibrationData
-   {
-      // mean, (ssq) aggregation of squared distances from the mean and (std) standard deviation
-      Vec3     mean_accel, ssq_accel, std_accel;
-      Vec3     mean_gyro, ssq_gyro, std_gyro;
-      uint32_t sample_counter{};   // N
-   };
-
-   struct Bias
-   {
-      Vec3 accel{};
-      Vec3 gyro{};
-   };
-
    static constexpr uint8_t one_byte_shift  = 8u;
    static constexpr uint8_t three_bit_shift = 3u;
 
-   ImuData&                                           m_imu_data_storage;
-   SensorHealth&                                      m_imu_health_storage;
    SpiMaster&                                         m_spi_master;
    Logger&                                            m_logger;
+   imu_sensor::RawImuSensorData&                      m_raw_sensor_data_out;
+   imu_sensor::ImuSensorStatus&                       m_sensor_status_out;
    const uint8_t                                      m_read_failures_limit;
    const uint32_t                                     m_execution_period_ms;
    const uint32_t                                     m_receive_wait_timeout_ms;
@@ -653,15 +462,11 @@ private:
    const float                                        m_accel_scale;
    const float                                        m_gyro_absolute_plausibility_limit_radps;
    const float                                        m_accel_absolute_plausibility_limit_mps2;
-   const uint16_t                                     m_num_calibration_samples;
-   const float                                        m_gyro_tolerance_radps;
-   const float                                        m_accel_tolerance_mps2;
    std::array<uint8_t, params::num_bytes_transaction> m_tx_buffer{};
    std::array<uint8_t, params::num_bytes_transaction> m_rx_buffer{};
-   imu::ImuData                                       m_local_imu_data{};
-   mpu6500::SensorHealth                              m_local_imu_health{};
-   CalibrationData                                    m_calibration_data{};
-   Bias                                               m_bias{};
+   imu_sensor::RawImuSensorData                       m_raw_sensor_data{};
+   imu_sensor::ImuSensorStatus                        m_sensor_status{};
+   mpu6500::SensorState                               m_state{mpu6500::SensorState::stopped};
    uint8_t                                            m_device_id{};
    Config_registers                                   m_config_registers{};
    uint32_t                                           m_wait_timer_ms{};

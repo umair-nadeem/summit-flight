@@ -167,7 +167,7 @@ private:
       m_reference_pressure_estimation_start_time_ms = m_current_time_ms;
       m_imu_sample_dt_s                             = 0.0f;
       m_last_barometer_sample                       = BarometerData::Sample{};
-      m_last_imu_sample                             = ImuData::Sample{};
+      m_previous_imu_sample                         = ImuData::Sample{};
 
       m_attitude_estimator.reset();
       m_altitude_ekf.reset();
@@ -241,16 +241,9 @@ private:
          return;
       }
 
-      // imu sensor mpu6500 gives data in FLU body frame
-      const math::Vector3 accel_flu = m_last_imu_sample.data.accel_mps2.value();
-      const math::Vector3 gyro_flu  = m_last_imu_sample.data.gyro_radps.value();
-
-      // convert sensor axes from FLU body frame to FRD
-      const math::Vector3 accel_frd{map_imu_sensor_axes_to_frd(accel_flu)};
-      const math::Vector3 gyro_frd{map_imu_sensor_axes_to_frd(gyro_flu)};
-
-      const math::Vector3 accel_mps2{rotate_cw_90(accel_frd)};
-      const math::Vector3 gyro_radps{rotate_cw_90(gyro_frd)};
+      // imu sensor mpu6500
+      const math::Vector3 accel_mps2 = m_previous_imu_sample.data.accel_mps2.value();
+      const math::Vector3 gyro_radps = m_previous_imu_sample.data.gyro_radps.value();
 
       // update attitude state estimation
       m_attitude_estimator.update(accel_mps2, gyro_radps, m_imu_sample_dt_s);
@@ -301,20 +294,20 @@ private:
    bool read_from_imu()
    {
       const auto imu_sample = m_imu_data.get_latest();
-      if (imu_sample.timestamp_ms > m_last_imu_sample.timestamp_ms)
+      if (imu_sample.timestamp_ms > m_previous_imu_sample.timestamp_ms)
       {
-         // if this is our first sample
-         if (m_last_imu_sample.timestamp_ms == 0)
+         // if this is first sample
+         if (m_previous_imu_sample.timestamp_ms == 0)
          {
-            m_last_imu_sample = imu_sample;
+            m_previous_imu_sample = imu_sample;
             return false;
          }
 
          // check for valid data
          if (imu_sample.data.accel_mps2.has_value() && imu_sample.data.gyro_radps.has_value())
          {
-            m_imu_sample_dt_s = static_cast<float>(imu_sample.timestamp_ms - m_last_imu_sample.timestamp_ms) * 0.001f;
-            m_last_imu_sample = imu_sample;
+            m_imu_sample_dt_s     = static_cast<float>(imu_sample.timestamp_ms - m_previous_imu_sample.timestamp_ms) * 0.001f;
+            m_previous_imu_sample = imu_sample;
             return true;
          }
          else
@@ -365,7 +358,7 @@ private:
    bool imu_data_is_stale() const
    {
       // Check IMU data freshness
-      const uint32_t imu_data_age_ms = m_current_time_ms - m_last_imu_sample.timestamp_ms;
+      const uint32_t imu_data_age_ms = m_current_time_ms - m_previous_imu_sample.timestamp_ms;
       if (imu_data_age_ms > m_max_age_imu_data_ms)
       {
          m_logger.printf("imu data stale (age: %u ms)", imu_data_age_ms);
@@ -387,17 +380,6 @@ private:
       return false;
    }
 
-   // converts sensor axes from Front-Left-Up to Front_Right-Down
-   static constexpr auto map_imu_sensor_axes_to_frd(const math::Vector3& vector3_flu)
-   {
-      return math::Vector3{-vector3_flu[1], -vector3_flu[0], -vector3_flu[2]};
-   }
-
-   static constexpr auto rotate_cw_90(const math::Vector3& vec3)
-   {
-      return math::Vector3{-vec3[1], vec3[0], vec3[2]};
-   }
-
    AttitudeEstimator&                    m_attitude_estimator;
    AltitudeEkf&                          m_altitude_ekf;
    EstimatorHealth&                      m_estimator_health_storage;
@@ -416,7 +398,7 @@ private:
    const float                           m_pitch_trim;
    aeromight_boundaries::EstimatorHealth m_local_estimator_health{};
    StateEstimation                       m_local_estimation_data{};
-   ImuData::Sample                       m_last_imu_sample{};
+   ImuData::Sample                       m_previous_imu_sample{};
    BarometerData::Sample                 m_last_barometer_sample{};
    float                                 m_imu_sample_dt_s{};
    float                                 m_barometer_sample_dt_s{};

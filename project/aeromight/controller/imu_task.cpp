@@ -1,12 +1,13 @@
 #include "ImuTaskData.hpp"
 #include "aeromight_boundaries/AeromightData.hpp"
-#include "aeromight_imu/ImuDriverExecutor.hpp"
 #include "error/error_handler.hpp"
+#include "event_handling/EventBinding.hpp"
+#include "event_handling/EventDispatcher.hpp"
 #include "hw/uart/uart.hpp"
+#include "imu/Imu.hpp"
 #include "logging/LogClient.hpp"
 #include "mpu6500/Mpu6500.hpp"
 #include "rtos/QueueSender.hpp"
-#include "rtos/periodic_task.hpp"
 #include "sys_time/ClockSource.hpp"
 #include "task_params.hpp"
 
@@ -39,17 +40,17 @@ extern "C"
       constexpr uint16_t num_calibration_samples                      = 400u;
       constexpr float    gyro_tolerance_radps                         = 0.1f;
       constexpr float    accel_tolerance_mps2                         = 1.5f;
+      constexpr bool     front_left_up_frame                          = true;
 
-      LogClient logger_imu_driver_executor{logging::logging_queue_sender, "imu_runner"};
       LogClient logger_mpu6500{logging::logging_queue_sender, "mpu6500"};
+      LogClient logger_imu{logging::logging_queue_sender, "imu"};
 
-      mpu6500::Mpu6500<sys_time::ClockSource,
-                       decltype(data->spi1_master),
-                       decltype(logger_mpu6500)>
-          mpu6500{aeromight_boundaries::aeromight_data.imu_sensor_data_storage,
-                  aeromight_boundaries::aeromight_data.imu_sensor_health_storage,
-                  data->spi1_master,
+      mpu6500::Mpu6500<decltype(data->spi1_master),
+                       LogClient>
+          mpu6500{data->spi1_master,
                   logger_mpu6500,
+                  data->mpu6500_data,
+                  data->mpu6500_status,
                   mpu6500_read_failures_limit,
                   controller::task::imu_task_period_in_ms,
                   mpu6500_receive_wait_timeout_ms,
@@ -59,29 +60,34 @@ extern "C"
                   mpu6500_accel_full_scale,
                   mpu6500_accel_a_dlpf_config,
                   mpu6500_gyro_range_plausibility_margin_radps,
-                  mpu6500_accel_range_plausibility_margin_mps2,
-                  num_calibration_samples,
-                  gyro_tolerance_radps,
-                  accel_tolerance_mps2};
+                  mpu6500_accel_range_plausibility_margin_mps2};
 
-      aeromight_imu::ImuDriverExecutor<
-          decltype(mpu6500),
-          decltype(data->imu_task_notification_waiter),
-          decltype(data->blue_led),
-          LogClient>
-          imu_driver_executor{mpu6500,
-                              data->imu_task_notification_waiter,
-                              data->blue_led,
-                              logger_imu_driver_executor,
-                              controller::task::imu_task_period_in_ms};
+      imu::Imu<sys_time::ClockSource, LogClient> imu{aeromight_boundaries::aeromight_data.imu_data_storage,
+                                                     aeromight_boundaries::aeromight_data.imu_health_storage,
+                                                     logger_imu,
+                                                     num_calibration_samples,
+                                                     gyro_tolerance_radps,
+                                                     accel_tolerance_mps2,
+                                                     front_left_up_frame};
 
-      imu_driver_executor.start();
+      using TickBinding        = event_handling::EventBinding<decltype(mpu6500), &decltype(mpu6500)::execute>;
+      using RxCompleteBinding  = event_handling::EventBinding<decltype(mpu6500), &decltype(mpu6500)::notify_receive_complete>;
+      using CalibrationBinding = event_handling::EventBinding<decltype(imu), &decltype(imu)::start_calibration>;
+
+      event_handling::EventDispatcher imu_event_dispatcher{data->imu_task_notification_waiter,
+                                                           controller::task::imu_task_period_in_ms,
+                                                           TickBinding{mpu6500, data->event_tick_bit_mask},
+                                                           RxCompleteBinding{mpu6500, data->event_rx_complete_bit_mask},
+                                                           CalibrationBinding{imu, data->event_calibrate_bit_mask}};
+
+      mpu6500.start();
       data->imu_task_tick_timer.enable_interrupt();
       data->imu_task_tick_timer.enable_counter();
 
       while (true)
       {
-         imu_driver_executor.run_once();
+         imu_event_dispatcher.execute();
+         imu.execute(data->mpu6500_data, data->mpu6500_status);
       }
    }
 }

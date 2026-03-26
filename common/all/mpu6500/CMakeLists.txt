@@ -3,6 +3,6 @@ add_module(
    LIBS
       boundaries
       error
-      imu
+      imu_sensor
       sml
 )
