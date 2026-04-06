@@ -3,10 +3,12 @@
 #include <bitset>
 #include <cstdint>
 
+#include "types/types.hpp"
+
 namespace barometer_sensor
 {
 
-enum class BarometerSensorError : uint8_t
+enum class BarometerSensorError : types::ErrorBitsType
 {
    bus_error = 0,                // bus communication failure/timeout
    id_mismatch_error,            // id mismatch
@@ -18,6 +20,6 @@ enum class BarometerSensorError : uint8_t
    max_error
 };
 
-using ErrorBits = std::bitset<static_cast<uint8_t>(BarometerSensorError::max_error)>;
+using BarometerSensorErrorBits = std::bitset<static_cast<types::ErrorBitsType>(BarometerSensorError::max_error)>;
 
 }   // namespace barometer_sensor

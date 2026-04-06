@@ -3,7 +3,6 @@ add_module(
       src/AltitudeEkf.cpp
    LIBS
       barometer_sensor
-      bmp390
       estimation
       math
       utilities

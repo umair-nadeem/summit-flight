@@ -280,7 +280,7 @@ public:
 
    void set_error(const barometer_sensor::BarometerSensorError error)
    {
-      m_local_barometer_health.error.set(static_cast<uint8_t>(error));
+      m_local_barometer_health.error.set(static_cast<types::ErrorBitsType>(error));
 
       switch (error)
       {
@@ -319,7 +319,7 @@ public:
       return m_local_barometer_health.state;
    }
 
-   barometer_sensor::ErrorBits get_error() const
+   barometer_sensor::BarometerSensorErrorBits get_error() const
    {
       return m_local_barometer_health.error;
    }

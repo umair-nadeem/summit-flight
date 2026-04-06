@@ -12,6 +12,7 @@ enum class SystemArmedState : uint8_t
 struct SystemControlSetpoints
 {
    SystemArmedState state{SystemArmedState::disarm};
+   bool             imu_calibration{false};
 };
 
 }   // namespace aeromight_boundaries

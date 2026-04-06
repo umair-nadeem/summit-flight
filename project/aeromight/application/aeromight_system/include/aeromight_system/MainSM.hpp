@@ -12,22 +12,24 @@ struct SystemManagerStateMachine
 {
 
    // leaf states
-   static constexpr auto s_init                    = boost::sml::state<class StateInit>;
-   static constexpr auto s_init_checkpoint         = boost::sml::state<class StateInitCheckpoint>;
-   static constexpr auto s_wait_sensors            = boost::sml::state<class StateWaitSensors>;
-   static constexpr auto s_wait_sensors_checkpoint = boost::sml::state<class StateWaitSensorsCheckpoint>;
-   static constexpr auto s_wait_control            = boost::sml::state<class StateWaitControl>;
-   static constexpr auto s_wait_control_checkpoint = boost::sml::state<class StateWaitControlCheckpoint>;
-   static constexpr auto s_disarmed                = boost::sml::state<class StateIdle>;
-   static constexpr auto s_disarmed_checkpoint     = boost::sml::state<class StateIdleCheckpoint>;
-   static constexpr auto s_arming                  = boost::sml::state<class StateArming>;
-   static constexpr auto s_arming_checkpoint       = boost::sml::state<class StateArmingCheckpoint>;
-   static constexpr auto s_armed                   = boost::sml::state<class StateArmed>;
-   static constexpr auto s_armed_checkpoint        = boost::sml::state<class StateArmedCheckpoint>;
-   static constexpr auto s_disarming               = boost::sml::state<class StateDisarming>;
-   static constexpr auto s_disarming_checkpoint    = boost::sml::state<class StateDisarmingCheckpoint>;
-   static constexpr auto s_to_fault                = boost::sml::state<class StateToFault>;
-   static constexpr auto s_fault                   = boost::sml::state<class StateFault>;
+   static constexpr auto s_init                       = boost::sml::state<class StateInit>;
+   static constexpr auto s_init_checkpoint            = boost::sml::state<class StateInitCheckpoint>;
+   static constexpr auto s_wait_sensors               = boost::sml::state<class StateWaitSensors>;
+   static constexpr auto s_wait_sensors_checkpoint    = boost::sml::state<class StateWaitSensorsCheckpoint>;
+   static constexpr auto s_wait_control               = boost::sml::state<class StateWaitControl>;
+   static constexpr auto s_wait_control_checkpoint    = boost::sml::state<class StateWaitControlCheckpoint>;
+   static constexpr auto s_disarmed                   = boost::sml::state<class StateIdle>;
+   static constexpr auto s_disarmed_checkpoint        = boost::sml::state<class StateIdleCheckpoint>;
+   static constexpr auto s_arming                     = boost::sml::state<class StateArming>;
+   static constexpr auto s_arming_checkpoint          = boost::sml::state<class StateArmingCheckpoint>;
+   static constexpr auto s_armed                      = boost::sml::state<class StateArmed>;
+   static constexpr auto s_armed_checkpoint           = boost::sml::state<class StateArmedCheckpoint>;
+   static constexpr auto s_disarming                  = boost::sml::state<class StateDisarming>;
+   static constexpr auto s_disarming_checkpoint       = boost::sml::state<class StateDisarmingCheckpoint>;
+   static constexpr auto s_imu_calibration            = boost::sml::state<class StateImuCalibration>;
+   static constexpr auto s_imu_calibration_checkpoint = boost::sml::state<class StateImuCalibrationCheckpoint>;
+   static constexpr auto s_to_fault                   = boost::sml::state<class StateToFault>;
+   static constexpr auto s_fault                      = boost::sml::state<class StateFault>;
 
    // events
    struct EventTick
@@ -49,6 +51,11 @@ struct SystemManagerStateMachine
          state.start_control();
       };
 
+      constexpr auto start_imu_calibration = [](StateHandler& state)
+      {
+         state.start_imu_calibration();
+      };
+
       constexpr auto arm_system = [](StateHandler& state)
       {
          state.arm_system();
@@ -67,6 +74,11 @@ struct SystemManagerStateMachine
       constexpr auto set_wait_control_state = [](StateHandler& state)
       {
          state.set_state(SystemManagerState::wait_control);
+      };
+
+      constexpr auto set_imu_calibration_state = [](StateHandler& state)
+      {
+         state.set_state(SystemManagerState::imu_calibration);
       };
 
       constexpr auto set_disarming_state = [](StateHandler& state)
@@ -141,6 +153,16 @@ struct SystemManagerStateMachine
          return state.disarm();
       };
 
+      constexpr auto imu_calibration = [](StateHandler& state)
+      {
+         return state.imu_calibration();
+      };
+
+      constexpr auto imu_calibration_finished = [](StateHandler& state)
+      {
+         return state.imu_calibration_finished();
+      };
+
       constexpr auto is_health_good = [](StateHandler& state)
       {
          return state.is_health_good();
@@ -173,7 +195,12 @@ struct SystemManagerStateMachine
 
           s_disarmed          + e_tick                                              / show_disarm_led                                             = s_disarmed_checkpoint,
           s_disarmed_checkpoint       [arm && is_health_good && is_radio_link_good] / (set_arming_state, set_reference_time)                      = s_arming,
+          s_disarmed_checkpoint       [imu_calibration && is_health_good]           / (start_imu_calibration, set_imu_calibration_state)          = s_imu_calibration,
           s_disarmed_checkpoint                                                                                                                   = s_disarmed,
+
+          s_imu_calibration          + e_tick                                                                                                     = s_imu_calibration_checkpoint,
+          s_imu_calibration_checkpoint[imu_calibration_finished]                    / set_disarmed_state                                          = s_disarmed,
+          s_imu_calibration_checkpoint                                                                                                            = s_imu_calibration,
 
           s_arming            + e_tick                                                                                                            = s_arming_checkpoint,
           s_arming_checkpoint         [disarm || !is_health_good || !is_radio_link_good] / set_disarmed_state                                     = s_disarmed,

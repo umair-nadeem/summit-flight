@@ -276,7 +276,7 @@ private:
 
    void set_error(const imu::ImuError& error)
    {
-      m_imu_status.error.set(static_cast<uint8_t>(error));
+      m_imu_status.error.set(static_cast<types::ErrorBitsType>(error));
 
       switch (error)
       {

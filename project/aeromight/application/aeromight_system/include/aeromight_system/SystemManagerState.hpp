@@ -8,6 +8,7 @@ enum class SystemManagerState
    init,
    wait_sensors,
    wait_control,
+   imu_calibration,
    disarming,
    disarmed,
    arming,

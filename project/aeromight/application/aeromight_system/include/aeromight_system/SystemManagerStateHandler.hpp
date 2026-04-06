@@ -2,6 +2,7 @@
 
 #include "SystemManagerState.hpp"
 #include "aeromight_boundaries/HealthSummary.hpp"
+#include "aeromight_boundaries/RadioLinkActuals.hpp"
 #include "aeromight_boundaries/SystemControlSetpoints.hpp"
 #include "aeromight_boundaries/SystemStateInfo.hpp"
 #include "boundaries/SharedData.hpp"
@@ -15,36 +16,38 @@ namespace aeromight_system
 {
 
 template <interfaces::rtos::IQueueReceiver<aeromight_boundaries::HealthSummary> QueueReceiver,
-          interfaces::rtos::INotifier                                           EstimationNotifier,
+          interfaces::rtos::INotifier                                           Notifier,
           interfaces::pcb_component::ILed                                       Led,
           interfaces::IClockSource                                              ClockSource,
           typename Logger>
 class SystemManagerStateHandler
 {
-   using SystemStateInfo        = boundaries::SharedData<aeromight_boundaries::SystemStateInfo>;
-   using SystemControlSetpoints = boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints>;
-   using RadioLinkActuals       = boundaries::SharedData<aeromight_boundaries::RadioLinkActuals>;
+   using SystemStateInfoPublisher         = boundaries::SharedData<aeromight_boundaries::SystemStateInfo>;
+   using SystemControlSetpointsSubscriber = boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints>;
+   using RadioLinkActualsSubscriber       = boundaries::SharedData<aeromight_boundaries::RadioLinkActuals>;
 
 public:
-   explicit SystemManagerStateHandler(QueueReceiver&                health_summary_queue_receiver,
-                                      EstimationNotifier&           control_start_notifier,
-                                      Led&                          led,
-                                      SystemStateInfo&              system_state_info_storage,
-                                      const SystemControlSetpoints& system_control_setpoints_storage,
-                                      const RadioLinkActuals&       radio_link_actuals_storage,
-                                      Logger&                       logger,
-                                      const float                   stick_input_deadband_abs,
-                                      const float                   min_good_signal_rssi_dbm,
-                                      const uint32_t                max_age_stale_data_ms,
-                                      const uint32_t                min_state_debounce_duration_ms,
-                                      const uint32_t                timeout_sensors_readiness_ms,
-                                      const uint32_t                timeout_control_readiness_ms)
+   explicit SystemManagerStateHandler(QueueReceiver&                          health_summary_queue_receiver,
+                                      Notifier&                               control_start_notifier,
+                                      Notifier&                               imu_start_calibration_notifier,
+                                      Led&                                    led,
+                                      SystemStateInfoPublisher&               system_state_info_publisher,
+                                      const SystemControlSetpointsSubscriber& system_control_setpoints_subscriber,
+                                      const RadioLinkActualsSubscriber&       radio_link_actuals_subscriber,
+                                      Logger&                                 logger,
+                                      const float                             stick_input_deadband_abs,
+                                      const float                             min_good_signal_rssi_dbm,
+                                      const uint32_t                          max_age_stale_data_ms,
+                                      const uint32_t                          min_state_debounce_duration_ms,
+                                      const uint32_t                          timeout_sensors_readiness_ms,
+                                      const uint32_t                          timeout_control_readiness_ms)
        : m_health_summary_queue_receiver{health_summary_queue_receiver},
          m_control_start_notifier(control_start_notifier),
+         m_imu_start_calibration_notifier(imu_start_calibration_notifier),
          m_led{led},
-         m_system_state_info_storage(system_state_info_storage),
-         m_system_control_setpoints_storage(system_control_setpoints_storage),
-         m_radio_link_actuals_storage(radio_link_actuals_storage),
+         m_system_state_info_publisher(system_state_info_publisher),
+         m_system_control_setpoints_subscriber(system_control_setpoints_subscriber),
+         m_radio_link_actuals_subscriber(radio_link_actuals_subscriber),
          m_logger{logger},
          m_stick_input_deadband_abs{stick_input_deadband_abs},
          m_min_good_signal_rssi_dbm{min_good_signal_rssi_dbm},
@@ -76,19 +79,25 @@ public:
 
    void read_radio_input()
    {
-      m_system_control_setpoints = m_system_control_setpoints_storage.get_latest();
-      m_radio_link_actuals       = m_radio_link_actuals_storage.get_latest();
+      m_system_control_setpoints = m_system_control_setpoints_subscriber.get_latest();
+      m_radio_link_actuals       = m_radio_link_actuals_subscriber.get_latest();
    }
 
    void publish_system_state_info()
    {
-      m_system_state_info_storage.update_latest(m_system_state_info, m_current_time_ms);
+      m_system_state_info_publisher.update_latest(m_system_state_info, m_current_time_ms);
    }
 
    void start_control()
    {
       m_control_start_notifier.notify();
       m_logger.print("started control");
+   }
+
+   void start_imu_calibration()
+   {
+      m_imu_start_calibration_notifier.notify();
+      m_logger.print("start imu calibration");
    }
 
    void arm_system()
@@ -117,6 +126,11 @@ public:
 
          case SystemManagerState::wait_control:
             m_logger.print("entered state->wait_control");
+            break;
+
+         case SystemManagerState::imu_calibration:
+            turn_off_status_led();
+            m_logger.print("entered state->imu_calibration");
             break;
 
          case SystemManagerState::disarming:
@@ -202,6 +216,16 @@ public:
    bool disarm() const
    {
       return (m_system_control_setpoints.data.state == aeromight_boundaries::SystemArmedState::disarm);
+   }
+
+   bool imu_calibration() const
+   {
+      return (m_system_control_setpoints.data.imu_calibration);
+   }
+
+   bool imu_calibration_finished() const
+   {
+      return (m_health_summary.imu_calibration_finished);
    }
 
    bool stale_health() const
@@ -322,28 +346,29 @@ private:
 
    static constexpr uint32_t led_state_duration = 750u;
 
-   QueueReceiver&                        m_health_summary_queue_receiver;
-   EstimationNotifier&                   m_control_start_notifier;
-   Led&                                  m_led;
-   SystemStateInfo&                      m_system_state_info_storage;
-   const SystemControlSetpoints&         m_system_control_setpoints_storage;
-   const RadioLinkActuals&               m_radio_link_actuals_storage;
-   Logger&                               m_logger;
-   const float                           m_stick_input_deadband_abs;
-   const float                           m_min_good_signal_rssi_dbm;
-   const uint32_t                        m_max_age_stale_data_ms;
-   const uint32_t                        m_min_state_debounce_duration_ms;
-   const uint32_t                        m_timeout_sensors_readiness_ms;
-   const uint32_t                        m_timeout_control_readiness_ms;
-   aeromight_boundaries::SystemStateInfo m_system_state_info{};
-   aeromight_boundaries::HealthSummary   m_health_summary{};
-   SystemControlSetpoints::Sample        m_system_control_setpoints{};
-   RadioLinkActuals::Sample              m_radio_link_actuals{};
-   SystemManagerState                    m_state{SystemManagerState::init};
-   uint32_t                              m_current_time_ms{0};
-   uint32_t                              m_reference_time_ms{0};
-   uint32_t                              m_status_led_timer{0};
-   bool                                  m_status_led_on{false};
+   QueueReceiver&                           m_health_summary_queue_receiver;
+   Notifier&                                m_control_start_notifier;
+   Notifier&                                m_imu_start_calibration_notifier;
+   Led&                                     m_led;
+   SystemStateInfoPublisher&                m_system_state_info_publisher;
+   const SystemControlSetpointsSubscriber&  m_system_control_setpoints_subscriber;
+   const RadioLinkActualsSubscriber&        m_radio_link_actuals_subscriber;
+   Logger&                                  m_logger;
+   const float                              m_stick_input_deadband_abs;
+   const float                              m_min_good_signal_rssi_dbm;
+   const uint32_t                           m_max_age_stale_data_ms;
+   const uint32_t                           m_min_state_debounce_duration_ms;
+   const uint32_t                           m_timeout_sensors_readiness_ms;
+   const uint32_t                           m_timeout_control_readiness_ms;
+   aeromight_boundaries::SystemStateInfo    m_system_state_info{};
+   aeromight_boundaries::HealthSummary      m_health_summary{};
+   SystemControlSetpointsSubscriber::Sample m_system_control_setpoints{};
+   RadioLinkActualsSubscriber::Sample       m_radio_link_actuals{};
+   SystemManagerState                       m_state{SystemManagerState::init};
+   uint32_t                                 m_current_time_ms{0};
+   uint32_t                                 m_reference_time_ms{0};
+   uint32_t                                 m_status_led_timer{0};
+   bool                                     m_status_led_on{false};
 };
 
 }   // namespace aeromight_system

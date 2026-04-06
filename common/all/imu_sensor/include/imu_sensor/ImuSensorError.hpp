@@ -3,10 +3,12 @@
 #include <bitset>
 #include <cstdint>
 
+#include "types/types.hpp"
+
 namespace imu_sensor
 {
 
-enum class ImuSensorError : uint8_t
+enum class ImuSensorError : types::ErrorBitsType
 {
    bus_error,                 // bus communication failure
    id_mismatch_error,         // id mismatch
@@ -16,6 +18,6 @@ enum class ImuSensorError : uint8_t
    max_error
 };
 
-using ErrorBits = std::bitset<static_cast<uint8_t>(ImuSensorError::max_error)>;
+using ErrorBits = std::bitset<static_cast<types::ErrorBitsType>(ImuSensorError::max_error)>;
 
 }   // namespace imu_sensor

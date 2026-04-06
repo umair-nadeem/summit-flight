@@ -11,6 +11,8 @@ namespace aeromight_boundaries
 struct StateEstimation
 {
    uint32_t timestamp_ms{};
+   bool     attitude_estimation_valid{};
+   bool     altitude_estimation_valid{};
 
    math::Quaternion attitude{};
    math::Vector3    accel_mps2{};
@@ -19,9 +21,23 @@ struct StateEstimation
 
    math::Euler euler{};
 
-   // altitude control
+   // altitude
    float altitude;
    float vertical_velocity;
+
+   void reset_attitude_state()
+   {
+      attitude.zero();
+      accel_mps2.zero();
+      gyro_bias.zero();
+      gyro_bias.zero();
+   }
+
+   void reset_altitude_state()
+   {
+      altitude          = 0.0f;
+      vertical_velocity = 0.0f;
+   }
 };
 
 }   // namespace aeromight_boundaries

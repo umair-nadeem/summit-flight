@@ -15,6 +15,7 @@ struct HealthSummary
    bool               all_sensors_ready{};
    bool               estimation_ready{};
    bool               control_ready{};
+   bool               imu_calibration_finished{};
    FlightHealthStatus flight_health{};
    std::size_t        queue_failure_count{};
 

@@ -35,12 +35,13 @@ extern "C"
       LogClient logger_system_manager_task{logging::logging_queue_sender, "system"};
 
       aeromight_system::SystemManager<decltype(data->health_summary_queue_receiver),
-                                      decltype(data->control_task_start_notifier),
-                                      decltype(data->armed_status_led),
+                                      rtos::Notifier,
+                                      hw::pcb_component::Led,
                                       sys_time::ClockSource,
                                       LogClient>
           system_manager{data->health_summary_queue_receiver,
                          data->control_task_start_notifier,
+                         data->imu_task_calibrate_notifier,
                          data->armed_status_led,
                          aeromight_boundaries::aeromight_data.system_state_info,
                          aeromight_boundaries::aeromight_data.system_control_setpoints,

@@ -222,6 +222,7 @@ void setup_task_notifications()
 
    // control task
    system_manager_task_data.control_task_start_notifier.set_task_to_notify(control_task_handle);
+   system_manager_task_data.imu_task_calibrate_notifier.set_task_to_notify(imu_task_handle);
 }
 
 void init_hardware()

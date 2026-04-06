@@ -3,10 +3,12 @@
 #include <bitset>
 #include <cstdint>
 
+#include "types/types.hpp"
+
 namespace imu
 {
 
-enum class ImuError : uint8_t
+enum class ImuError : types::ErrorBitsType
 {
    non_stationary_calibration_error,   // platform is not stationary during calibration phase
    unstable_gyro_error,                // non-consistent gyro samples collected in self-test
@@ -14,6 +16,6 @@ enum class ImuError : uint8_t
    max_error
 };
 
-using ErrorBits = std::bitset<static_cast<uint8_t>(ImuError::max_error)>;
+using ErrorBits = std::bitset<static_cast<types::ErrorBitsType>(ImuError::max_error)>;
 
 }   // namespace imu

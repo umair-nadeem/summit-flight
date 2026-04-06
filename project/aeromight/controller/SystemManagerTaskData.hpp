@@ -2,6 +2,7 @@
 
 #include "aeromight_boundaries/ControlTaskEvents.hpp"
 #include "aeromight_boundaries/HealthSummary.hpp"
+#include "aeromight_boundaries/ImuTaskEvents.hpp"
 #include "hardware_bindings.hpp"
 #include "hw/pcb_component/Led.hpp"
 #include "rtos/Notifier.hpp"
@@ -27,6 +28,7 @@ struct SystemManagerTaskData
 
    // task notifications
    rtos::Notifier control_task_start_notifier{utilities::enum_to_bit_mask<aeromight_boundaries::ControlTaskEvents::start>()};
+   rtos::Notifier imu_task_calibrate_notifier{utilities::enum_to_bit_mask<aeromight_boundaries::ImuTaskEvents::calibrate>()};
 };
 
 extern SystemManagerTaskData system_manager_task_data;

@@ -267,7 +267,7 @@ public:
 
    void set_error(const imu_sensor::ImuSensorError& error)
    {
-      m_sensor_status.error.set(static_cast<uint8_t>(error));
+      m_sensor_status.error.set(static_cast<types::ErrorBitsType>(error));
 
       switch (error)
       {

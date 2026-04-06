@@ -40,73 +40,70 @@ extern "C"
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
       // complimentary/mahony filter parameters
-      constexpr float    accelerometer_weight                           = 0.2f;
-      constexpr float    gyro_bias_weight                               = 0.1f;
+      constexpr float    accelerometer_weight                   = 0.2f;
+      constexpr float    gyro_bias_weight                       = 0.1f;
       // altitude ekf2 parameters
-      constexpr float    process_noise_z                                = 1.0f;
-      constexpr float    process_noise_vz                               = 5.0f;
-      constexpr float    process_noise_accel_bias                       = 0.0001f;
-      constexpr float    measurement_noise_baro                         = 0.5f;
-      constexpr float    tilt_gating_attitude_angle_rad                 = 0.2f;
-      constexpr float    tilt_gating_accel_weight                       = 0.08f;
+      constexpr float    process_noise_z                        = 1.0f;
+      constexpr float    process_noise_vz                       = 5.0f;
+      constexpr float    process_noise_accel_bias               = 0.0001f;
+      constexpr float    measurement_noise_baro                 = 0.5f;
+      constexpr float    tilt_gating_attitude_angle_rad         = 0.2f;
+      constexpr float    tilt_gating_accel_weight               = 0.08f;
       // estimation parameters
-      constexpr uint8_t  num_samples_reference_pressure                 = 10u;
-      constexpr uint8_t  max_recovery_attempts                          = 3u;
-      constexpr uint32_t wait_timeout_reference_pressure_acquisition_ms = controller::task::barometer_task_period_in_ms * 50u;
-      constexpr uint32_t max_age_imu_data_ms                            = controller::task::imu_task_period_in_ms * 10u;
-      constexpr uint32_t max_age_baro_data_ms                           = controller::task::barometer_task_period_in_ms * 10u;
-      constexpr float    max_valid_imu_sample_dt_s                      = 0.02f;
-      constexpr float    max_valid_barometer_sample_dt_s                = 10.0f;
-      constexpr float    roll_trim                                      = -0.02f;
-      constexpr float    pitch_trim                                     = -0.01f;
+      constexpr bool     run_altitude_estimation                = false;
+      constexpr uint32_t max_age_imu_data_ms                    = controller::task::imu_task_period_in_ms * 10u;
+      constexpr uint32_t max_age_baro_data_ms                   = controller::task::barometer_task_period_in_ms * 10u;
+      constexpr float    max_valid_imu_sample_dt_s              = 0.02f;
+      constexpr float    max_valid_barometer_sample_dt_s        = 10.0f;
       // control parameters
-      constexpr float    min_dt_s                                       = 0.002f;
-      constexpr float    max_dt_s                                       = 0.010f;
-      constexpr float    gyro_lpf_cutoff_hz                             = 80.0f;
-      constexpr float    stick_input_lpf_cutoff_hz                      = 10.0f;
-      constexpr float    pid_dterm_filter_cutoff_frequency_hz           = 25.0f;
-      constexpr float    thrust_linearization_factor                    = 0.8f;
+      constexpr uint32_t max_age_state_estimation_data_ms       = controller::task::control_task_period_in_ms * 10u;
+      constexpr float    min_dt_s                               = 0.002f;
+      constexpr float    max_dt_s                               = 0.010f;
+      constexpr float    gyro_lpf_cutoff_hz                     = 80.0f;
+      constexpr float    stick_input_lpf_cutoff_hz              = 10.0f;
+      constexpr float    pid_dterm_filter_cutoff_frequency_hz   = 25.0f;
+      constexpr float    thrust_linearization_factor            = 0.8f;
       // throttle and thrust
-      constexpr float    thrust_limiting                                = 0.3f;
-      constexpr float    actuator_min                                   = 0.0f;
-      constexpr float    actuator_max                                   = 1.0f - thrust_limiting;
-      constexpr float    actuator_idle                                  = 0.1f;
-      constexpr float    throttle_min                                   = actuator_min;
-      constexpr float    throttle_max                                   = actuator_max;
-      constexpr float    throttle_arming                                = 0.01f;
-      constexpr float    throttle_hover                                 = 0.3f;
-      constexpr float    throttle_curve_factor                          = 0.5f;
-      constexpr float    throttle_gate_integrator                       = 0.15f;
+      constexpr float    thrust_limiting                        = 0.3f;
+      constexpr float    actuator_min                           = 0.0f;
+      constexpr float    actuator_max                           = 1.0f - thrust_limiting;
+      constexpr float    actuator_idle                          = 0.1f;
+      constexpr float    throttle_min                           = actuator_min;
+      constexpr float    throttle_max                           = actuator_max;
+      constexpr float    throttle_arming                        = 0.01f;
+      constexpr float    throttle_hover                         = 0.3f;
+      constexpr float    throttle_curve_factor                  = 0.5f;
+      constexpr float    throttle_gate_integrator               = 0.15f;
       // attitude controller
-      constexpr bool     run_attitude_controller                        = false;
-      constexpr float    max_tilt_angle_rad                             = 30 * math::constants::deg_to_rad;
-      constexpr float    attitude_controller_roll_kp                    = 5.0f;
-      constexpr float    attitude_controller_pitch_kp                   = 5.0f;
-      constexpr float    attitude_controller_yaw_kp                     = 0.0f;
-      constexpr float    max_roll_rate_radps                            = 3.0f;
-      constexpr float    max_pitch_rate_radps                           = 3.0f;
-      constexpr float    max_yaw_rate_radps                             = 3.0f;
+      constexpr bool     run_attitude_controller                = false;
+      constexpr float    max_tilt_angle_rad                     = 30 * math::constants::deg_to_rad;
+      constexpr float    attitude_controller_roll_kp            = 5.0f;
+      constexpr float    attitude_controller_pitch_kp           = 5.0f;
+      constexpr float    attitude_controller_yaw_kp             = 0.0f;
+      constexpr float    max_roll_rate_radps                    = 3.0f;
+      constexpr float    max_pitch_rate_radps                   = 3.0f;
+      constexpr float    max_yaw_rate_radps                     = 3.0f;
       // rate controller
-      constexpr float    torque_limit                                   = 1.0f;
+      constexpr float    torque_limit                           = 1.0f;
       // p
-      constexpr float    rate_controller_roll_kp                        = 0.04f;
-      constexpr float    rate_controller_pitch_kp                       = 0.04f;
-      constexpr float    rate_controller_yaw_kp                         = 0.06f;
+      constexpr float    rate_controller_roll_kp                = 0.04f;
+      constexpr float    rate_controller_pitch_kp               = 0.04f;
+      constexpr float    rate_controller_yaw_kp                 = 0.06f;
       // i
-      constexpr float    rate_controller_roll_ki                        = 0.0f;
-      constexpr float    rate_controller_pitch_ki                       = 0.0f;
-      constexpr float    rate_controller_yaw_ki                         = 0.0f;
-      constexpr float    rate_controller_roll_integrator_limit          = 0.2f;
-      constexpr float    rate_controller_pitch_integrator_limit         = 0.2f;
-      constexpr float    rate_controller_yaw_integrator_limit           = 0.03f;
+      constexpr float    rate_controller_roll_ki                = 0.0f;
+      constexpr float    rate_controller_pitch_ki               = 0.0f;
+      constexpr float    rate_controller_yaw_ki                 = 0.0f;
+      constexpr float    rate_controller_roll_integrator_limit  = 0.2f;
+      constexpr float    rate_controller_pitch_integrator_limit = 0.2f;
+      constexpr float    rate_controller_yaw_integrator_limit   = 0.03f;
       // d
-      constexpr float    rate_controller_roll_kd                        = 0.0f;
-      constexpr float    rate_controller_pitch_kd                       = 0.0f;
-      constexpr float    rate_controller_yaw_kd                         = 0.0f;
+      constexpr float    rate_controller_roll_kd                = 0.0f;
+      constexpr float    rate_controller_pitch_kd               = 0.0f;
+      constexpr float    rate_controller_yaw_kd                 = 0.0f;
       // control allocator
-      constexpr float    thrust_deadband                                = 0.01f;
-      constexpr float    yaw_saturation_limit_factor                    = 0.25f;
-      constexpr float    slew_rate_limit_s                              = 1.0f;
+      constexpr float    thrust_deadband                        = 0.01f;
+      constexpr float    yaw_saturation_limit_factor            = 0.25f;
+      constexpr float    slew_rate_limit_s                      = 1.0f;
 
       LogClient logger_estimation{logging::logging_queue_sender, "estimation"};
       LogClient logger_control{logging::logging_queue_sender, "control"};
@@ -131,15 +128,11 @@ extern "C"
                      aeromight_boundaries::aeromight_data.imu_data_storage,
                      aeromight_boundaries::aeromight_data.barometer_data_storage,
                      logger_estimation,
-                     max_recovery_attempts,
-                     num_samples_reference_pressure,
-                     wait_timeout_reference_pressure_acquisition_ms,
+                     run_altitude_estimation,
                      max_age_imu_data_ms,
                      max_age_baro_data_ms,
                      max_valid_imu_sample_dt_s,
-                     max_valid_barometer_sample_dt_s,
-                     roll_trim,
-                     pitch_trim};
+                     max_valid_barometer_sample_dt_s};
 
       const math::Vector3 attitude_gains_p{attitude_controller_roll_kp, attitude_controller_pitch_kp, attitude_controller_yaw_kp};
 
@@ -208,6 +201,7 @@ extern "C"
                   aeromight_boundaries::aeromight_data.system_state_info,
                   data->state_estimation,
                   logger_control,
+                  max_age_state_estimation_data_ms,
                   min_dt_s,
                   max_dt_s,
                   run_attitude_controller,
@@ -226,26 +220,24 @@ extern "C"
                                  controller::task::control_task_period_in_ms};
 
       const auto event_bits = data->control_task_notification_waiter.wait(rtos::constants::max_delay);
-      if ((event_bits != 0) &&
-          (event_handling::has_event(event_bits, aeromight_boundaries::ControlTaskEvents::start)))
-      {
-         // start pwm
-         data->master_pwm_timer.enable_interrupt();
-
-         data->slave_pwm_timer.enable_channel(data->slave_pwm_timer_channels);
-         data->master_pwm_timer.enable_channel(data->master_pwm_timer_channels);
-
-         data->master_pwm_timer.enable_all_outputs();
-
-         data->slave_pwm_timer.enable_counter();
-         data->master_pwm_timer.enable_counter();
-
-         estimation_and_control.start();
-      }
-      else
+      if ((event_bits == 0) ||
+          (!event_handling::has_event(event_bits, aeromight_boundaries::ControlTaskEvents::start)))
       {
          error::stop_operation();
       }
+
+      // start pwm
+      data->master_pwm_timer.enable_interrupt();
+
+      data->slave_pwm_timer.enable_channel(data->slave_pwm_timer_channels);
+      data->master_pwm_timer.enable_channel(data->master_pwm_timer_channels);
+
+      data->master_pwm_timer.enable_all_outputs();
+
+      data->slave_pwm_timer.enable_counter();
+      data->master_pwm_timer.enable_counter();
+
+      estimation_and_control.start();
 
       rtos::run_periodic_task(estimation_and_control);
    }

@@ -7,7 +7,7 @@ namespace aeromight_system
 {
 
 template <interfaces::rtos::IQueueReceiver<aeromight_boundaries::HealthSummary> QueueReceiver,
-          interfaces::rtos::INotifier                                           EstimationNotifier,
+          interfaces::rtos::INotifier                                           Notifier,
           interfaces::pcb_component::ILed                                       Led,
           interfaces::IClockSource                                              ClockSource,
           typename Logger>
@@ -15,11 +15,12 @@ class SystemManager
 {
 public:
    explicit SystemManager(QueueReceiver&                                                              health_summary_queue_receiver,
-                          EstimationNotifier&                                                         control_start_notifier,
+                          Notifier&                                                                   control_start_notifier,
+                          Notifier&                                                                   imu_start_calibration_notifier,
                           Led&                                                                        led,
-                          boundaries::SharedData<aeromight_boundaries::SystemStateInfo>&              system_state_info_storage,
-                          const boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints>& system_control_setpoints_storage,
-                          const boundaries::SharedData<aeromight_boundaries::RadioLinkActuals>&       radio_link_actuals_storage,
+                          boundaries::SharedData<aeromight_boundaries::SystemStateInfo>&              system_state_info_publisher,
+                          const boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints>& system_control_setpoints_subscriber,
+                          const boundaries::SharedData<aeromight_boundaries::RadioLinkActuals>&       radio_link_actuals_subscriber,
                           Logger&                                                                     logger,
                           const float                                                                 stick_input_deadband_abs,
                           const float                                                                 min_good_signal_rssi_dbm,
@@ -31,10 +32,11 @@ public:
        : m_period_ms{period_ms},
          m_state_handler{health_summary_queue_receiver,
                          control_start_notifier,
+                         imu_start_calibration_notifier,
                          led,
-                         system_state_info_storage,
-                         system_control_setpoints_storage,
-                         radio_link_actuals_storage,
+                         system_state_info_publisher,
+                         system_control_setpoints_subscriber,
+                         radio_link_actuals_subscriber,
                          logger,
                          stick_input_deadband_abs,
                          min_good_signal_rssi_dbm,
@@ -51,7 +53,9 @@ public:
       m_state_handler.get_time();
       m_state_handler.read_health_summary();
       m_state_handler.read_radio_input();
+
       m_state_machine.process_event(typename StateMachineDef::EventTick{});
+
       m_state_handler.publish_system_state_info();
    }
 
@@ -66,7 +70,7 @@ public:
    }
 
 private:
-   using StateHandler    = SystemManagerStateHandler<QueueReceiver, EstimationNotifier, Led, ClockSource, Logger>;
+   using StateHandler    = SystemManagerStateHandler<QueueReceiver, Notifier, Led, ClockSource, Logger>;
    using StateMachineDef = SystemManagerStateMachine<StateHandler>;
 
    const uint32_t                  m_period_ms;

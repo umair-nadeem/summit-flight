@@ -126,7 +126,7 @@ TEST_F(EstimationTest, fault_due_to_reference_pressure_acquisition_timeout)
    provide_ticks(wait_timeout_reference_pressure_acquisition_ms - current_ms);   // just enough ticks to go to fault without attempting recovery
 
    aeromight_boundaries::EstimatorHealth::ErrorBits error{};
-   error.set(static_cast<uint8_t>(aeromight_boundaries::EstimatorHealth::Error::reference_pressure_estimate_timeout));
+   error.set(static_cast<types::ErrorBitsType>(aeromight_boundaries::EstimatorHealth::Error::reference_pressure_estimate_timeout));
 
    const aeromight_boundaries::EstimatorHealth health = estimator_health_storage.get_latest().data;
    EXPECT_EQ(health.error.to_ulong(), error.to_ulong());
@@ -147,8 +147,8 @@ TEST_F(EstimationTest, fault_due_to_pressure_sample_with_missing_data)
    }
 
    aeromight_boundaries::EstimatorHealth::ErrorBits error{};
-   error.set(static_cast<uint8_t>(aeromight_boundaries::EstimatorHealth::Error::reference_pressure_estimate_timeout));
-   error.set(static_cast<uint8_t>(aeromight_boundaries::EstimatorHealth::Error::missing_valid_baro_data));
+   error.set(static_cast<types::ErrorBitsType>(aeromight_boundaries::EstimatorHealth::Error::reference_pressure_estimate_timeout));
+   error.set(static_cast<types::ErrorBitsType>(aeromight_boundaries::EstimatorHealth::Error::missing_valid_baro_data));
 
    const aeromight_boundaries::EstimatorHealth health = estimator_health_storage.get_latest().data;
    EXPECT_EQ(health.error.to_ulong(), error.to_ulong());
@@ -167,7 +167,7 @@ TEST_F(EstimationTest, fault_due_to_reference_pressure_below_plausible_range)
    }
 
    aeromight_boundaries::EstimatorHealth::ErrorBits error{};
-   error.set(static_cast<uint8_t>(aeromight_boundaries::EstimatorHealth::Error::reference_pressure_implausible));
+   error.set(static_cast<types::ErrorBitsType>(aeromight_boundaries::EstimatorHealth::Error::reference_pressure_implausible));
 
    const aeromight_boundaries::EstimatorHealth health = estimator_health_storage.get_latest().data;
    EXPECT_EQ(health.error.to_ulong(), error.to_ulong());
@@ -187,7 +187,7 @@ TEST_F(EstimationTest, fault_due_to_reference_pressure_above_plausible_range)
    }
 
    aeromight_boundaries::EstimatorHealth::ErrorBits error{};
-   error.set(static_cast<uint8_t>(aeromight_boundaries::EstimatorHealth::Error::reference_pressure_implausible));
+   error.set(static_cast<types::ErrorBitsType>(aeromight_boundaries::EstimatorHealth::Error::reference_pressure_implausible));
 
    const aeromight_boundaries::EstimatorHealth health = estimator_health_storage.get_latest().data;
    EXPECT_EQ(health.error.to_ulong(), error.to_ulong());
@@ -352,7 +352,7 @@ TEST_F(EstimationTest, fault_due_to_stale_imu_data)
    }
 
    aeromight_boundaries::EstimatorHealth::ErrorBits error{};
-   error.set(static_cast<uint8_t>(aeromight_boundaries::EstimatorHealth::Error::stale_imu_sensor_data));
+   error.set(static_cast<types::ErrorBitsType>(aeromight_boundaries::EstimatorHealth::Error::stale_imu_sensor_data));
 
    const aeromight_boundaries::EstimatorHealth health = estimator_health_storage.get_latest().data;
    EXPECT_TRUE(health.valid_reference_pressure_acquired);
@@ -381,7 +381,7 @@ TEST_F(EstimationTest, no_fault_due_to_stale_baro_data)
    }
 
    aeromight_boundaries::EstimatorHealth::ErrorBits error{};
-   error.set(static_cast<uint8_t>(aeromight_boundaries::EstimatorHealth::Error::stale_baro_sensor_data));
+   error.set(static_cast<types::ErrorBitsType>(aeromight_boundaries::EstimatorHealth::Error::stale_baro_sensor_data));
 
    const aeromight_boundaries::EstimatorHealth health = estimator_health_storage.get_latest().data;
    EXPECT_TRUE(health.valid_reference_pressure_acquired);

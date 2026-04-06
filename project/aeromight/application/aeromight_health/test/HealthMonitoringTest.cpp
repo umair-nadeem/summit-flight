@@ -490,7 +490,7 @@ TEST_F(HealthMonitoringTest, imu_failure_causes_flight_critical_fault)
    for (const auto& error : error_types)
    {
       imu_health.error.reset();
-      imu_health.error.set(static_cast<uint8_t>(error));
+      imu_health.error.set(static_cast<types::ErrorBitsType>(error));
       imu_health_storage.update_latest(imu_health, current_ms);
       barometer_health_storage.update_latest(baro_health, current_ms);          // keep providing good baro health status
       estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
@@ -608,7 +608,7 @@ TEST_F(HealthMonitoringTest, baro_failure_does_not_cause_flight_critical_fault)
    for (const auto& error : error_types)
    {
       baro_health.error.reset();
-      baro_health.error.set(static_cast<uint8_t>(error));
+      baro_health.error.set(static_cast<types::ErrorBitsType>(error));
       barometer_health_storage.update_latest(baro_health, current_ms);
       imu_health_storage.update_latest(imu_health, current_ms);                 // keep providing good imu health status
       estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
@@ -722,7 +722,7 @@ TEST_F(HealthMonitoringTest, estimation_failure_causes_flight_critical_fault)
    for (const auto& error : error_types)
    {
       estimation_health.error.reset();
-      estimation_health.error.set(static_cast<uint8_t>(error));
+      estimation_health.error.set(static_cast<types::ErrorBitsType>(error));
       estimation_health_storage.update_latest(estimation_health, current_ms);
       imu_health_storage.update_latest(imu_health, current_ms);           // keep providing good imu health status
       barometer_health_storage.update_latest(baro_health, current_ms);    // keep providing good baro health status
@@ -826,7 +826,7 @@ TEST_F(HealthMonitoringTest, control_failure_causes_flight_critical_fault)
    EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::operational);
 
    // control has now error
-   control_health.error.set(static_cast<uint8_t>(aeromight_boundaries::ControlHealth::Error::invalid_time_delta));
+   control_health.error.set(static_cast<types::ErrorBitsType>(aeromight_boundaries::ControlHealth::Error::invalid_time_delta));
    imu_health_storage.update_latest(imu_health, current_ms);                 // keep providing good imu health status
    barometer_health_storage.update_latest(baro_health, current_ms);          // keep providing good baro health status
    estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
