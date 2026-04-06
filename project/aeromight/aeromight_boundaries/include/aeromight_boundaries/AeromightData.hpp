@@ -19,19 +19,19 @@ namespace aeromight_boundaries
 struct AeromightData
 {
    // IMU
-   boundaries::SharedData<imu::ImuData>   imu_data_storage{};
-   boundaries::SharedData<imu::ImuStatus> imu_health_storage{};
+   boundaries::SharedData<imu::ImuData>   imu_data{};
+   boundaries::SharedData<imu::ImuStatus> imu_health{};
 
    // Barometer
-   boundaries::SharedData<barometer_sensor::BarometerData>   barometer_data_storage{};
-   boundaries::SharedData<barometer_sensor::BarometerHealth> barometer_health_storage{};
+   boundaries::SharedData<barometer_sensor::BarometerData>   barometer_data{};
+   boundaries::SharedData<barometer_sensor::BarometerHealth> barometer_health{};
 
    // Estimator
-   boundaries::SharedData<EstimatorHealth> estimator_health_storage{};
+   boundaries::SharedData<EstimatorHealth> estimator_health{};
 
    // Control
    boundaries::SharedData<ActuatorControl>        actuator_control{};
-   boundaries::SharedData<ControlHealth>          control_health_storage{};
+   boundaries::SharedData<ControlHealth>          control_health{};
    boundaries::SharedData<FlightControlSetpoints> flight_control_setpoints{};
 
    // System Manager

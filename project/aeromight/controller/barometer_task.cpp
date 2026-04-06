@@ -36,8 +36,8 @@ extern "C"
       bmp390::Bmp390<sys_time::ClockSource,
                      decltype(data->i2c_driver),
                      LogClient>
-          bmp390{aeromight_boundaries::aeromight_data.barometer_data_storage,
-                 aeromight_boundaries::aeromight_data.barometer_health_storage,
+          bmp390{aeromight_boundaries::aeromight_data.barometer_data,
+                 aeromight_boundaries::aeromight_data.barometer_health,
                  data->i2c_driver,
                  logger_bmp390,
                  bmp390_read_failures_limit,

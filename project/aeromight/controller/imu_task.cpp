@@ -62,8 +62,8 @@ extern "C"
                   mpu6500_gyro_range_plausibility_margin_radps,
                   mpu6500_accel_range_plausibility_margin_mps2};
 
-      imu::Imu<sys_time::ClockSource, LogClient> imu{aeromight_boundaries::aeromight_data.imu_data_storage,
-                                                     aeromight_boundaries::aeromight_data.imu_health_storage,
+      imu::Imu<sys_time::ClockSource, LogClient> imu{aeromight_boundaries::aeromight_data.imu_data,
+                                                     aeromight_boundaries::aeromight_data.imu_health,
                                                      logger_imu,
                                                      num_calibration_samples,
                                                      gyro_tolerance_radps,
