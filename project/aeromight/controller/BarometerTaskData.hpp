@@ -1,6 +1,8 @@
 #pragma once
 
 #include "aeromight_boundaries/BarometerTaskEvents.hpp"
+#include "barometer_sensor/BarometerSensorStatus.hpp"
+#include "barometer_sensor/RawBarometerSensorData.hpp"
 #include "hardware_bindings.hpp"
 #include "hw/i2c/I2c.hpp"
 #include "rtos/NotificationWaiter.hpp"
@@ -27,6 +29,10 @@ struct BarometerTaskData
    rtos::NotificationWaiter barometer_task_notification_waiter{};
    rtos::Notifier           barometer_task_tick_notifier_from_task{event_tick_bit_mask};
    rtos::Notifier           barometer_task_rx_complete_notifier_from_isr{event_rx_complete_bit_mask};
+
+   // sensor
+   barometer_sensor::RawBarometerSensorData bmp390_data{};
+   barometer_sensor::BarometerSensorStatus  bmp390_status{};
 };
 
 extern BarometerTaskData barometer_task_data;

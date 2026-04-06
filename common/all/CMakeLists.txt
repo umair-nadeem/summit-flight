@@ -1,4 +1,5 @@
 add_subdirectory(boundaries)
+add_subdirectory(barometer)
 add_subdirectory(barometer_sensor)
 add_subdirectory(bmp390)
 add_subdirectory(control)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SetupSM.hpp"
+#include "bmp390/SensorState.hpp"
 
 namespace bmp390
 {
@@ -33,7 +34,7 @@ struct Bmp390MainStateMachine
    static constexpr auto s_data_read_fail    = boost::sml::state<class StateDataReadFailure>;
    static constexpr auto s_recovery          = boost::sml::state<class StateRecovery>;
    static constexpr auto s_to_failure        = boost::sml::state<class StateToFailure>;
-   static constexpr auto s_failure           = boost::sml::state<class StateFailure>;
+   static constexpr auto s_fault             = boost::sml::state<class StateFault>;
 
    auto operator()() const
    {
@@ -73,32 +74,29 @@ struct Bmp390MainStateMachine
       static constexpr auto convert_raw_data = [](StateHandler& state)
       { state.convert_raw_data(); };
 
-      constexpr auto publish_data = [](StateHandler& state)
-      { state.publish_data(); };
-
-      constexpr auto publish_health = [](StateHandler& state)
-      { state.publish_health(); };
+      constexpr auto update = [](StateHandler& state)
+      { state.update(); };
 
       constexpr auto reset_data = [](StateHandler& state)
       { state.reset_data(); };
 
       static constexpr auto set_setup_state = [](StateHandler& state)
-      { state.set_state(barometer_sensor::BarometerSensorState::setup); };
+      { state.set_state(bmp390::SensorState::setup); };
 
       static constexpr auto set_read_coefficients_state = [](StateHandler& state)
-      { state.set_state(barometer_sensor::BarometerSensorState::read_coefficients); };
+      { state.set_state(bmp390::SensorState::read_coefficients); };
 
       static constexpr auto set_operational_state = [](StateHandler& state)
-      { state.set_state(barometer_sensor::BarometerSensorState::operational); };
+      { state.set_state(bmp390::SensorState::operational); };
 
       static constexpr auto set_recovery_state = [](StateHandler& state)
-      { state.set_state(barometer_sensor::BarometerSensorState::recovery); };
-
-      static constexpr auto set_failure_state = [](StateHandler& state)
-      { state.set_state(barometer_sensor::BarometerSensorState::failure); };
+      { state.set_state(bmp390::SensorState::recovery); };
 
       static constexpr auto set_stopped_state = [](StateHandler& state)
-      { state.set_state(barometer_sensor::BarometerSensorState::stopped); };
+      { state.set_state(bmp390::SensorState::stopped); };
+
+      constexpr auto set_fault = [](StateHandler& state)
+      { state.set_fault(); };
 
       static constexpr auto set_bus_error = [](StateHandler& state)
       { state.set_error(barometer_sensor::BarometerSensorError::bus_error); };
@@ -155,12 +153,12 @@ struct Bmp390MainStateMachine
           *s_stopped           + e_start                                           / set_setup_state                                             = s_init_setup,
 
           // setup
-          s_init_setup                           [setup_successful]                / (set_read_coefficients_state, publish_health)               = s_read_coeff,
+          s_init_setup                           [setup_successful]                / set_read_coefficients_state                                 = s_read_coeff,
           s_init_setup                           [!setup_successful]                                                                             = s_to_failure,
 
           // read coefficients
           s_read_coeff         + e_tick                                            / (reset_timer, read_coefficients)                            = s_read_coeff_wait,
-          s_read_coeff_wait    + e_receive_done  [is_coefficients_pattern_ok]      / (store_coefficients, set_operational_state, publish_health) = s_measurement,
+          s_read_coeff_wait    + e_receive_done  [is_coefficients_pattern_ok]      / (store_coefficients, set_operational_state)                 = s_measurement,
           s_read_coeff_wait    + e_receive_done  [!is_coefficients_pattern_ok]     / set_coefficients_pattern_error                              = s_to_failure,
           s_read_coeff_wait    + e_tick          [transfer_error]                  / set_bus_error                                               = s_to_failure,
           s_read_coeff_wait    + e_tick          [!receive_wait_timeout]           / tick_timer,
@@ -175,20 +173,20 @@ struct Bmp390MainStateMachine
           s_data_read_wait     + e_tick          [receive_wait_timeout]            / (set_bus_error, count_read_failure)                         = s_data_read_fail,
 
           s_data_verification                    [sensor_error_reported]           / (set_sensor_error, count_read_failure)                      = s_data_read_fail,
-          s_data_verification                    [is_data_valid]                   / (reset_read_failures, publish_data, publish_health)         = s_measurement,
+          s_data_verification                    [is_data_valid]                   / (update, reset_read_failures)                               = s_measurement,
           s_data_verification                    [!is_data_valid]                  / (set_out_of_range_data_error, count_read_failure)           = s_data_read_fail,
 
           s_data_read_fail                       [read_failures_below_limit]                                                                     = s_measurement,
-          s_data_read_fail                       [!read_failures_below_limit]      / (set_recovery_state, publish_health)                        = s_recovery,
+          s_data_read_fail                       [!read_failures_below_limit]      / set_recovery_state                                          = s_recovery,
 
           // soft recovery re-orchestrates setup composite SM
           s_recovery           + e_tick                                            / count_recovery_attempt                                      = s_recovery_setup,
 
-          s_recovery_setup                       [setup_successful]                / (reset_recovery_attempts, set_operational_state, publish_health) = s_measurement,
-          s_recovery_setup                       [!setup_successful && recovery_attempts_below_limit] / publish_health                           = s_recovery,
+          s_recovery_setup                       [setup_successful]                / (reset_recovery_attempts, set_operational_state)            = s_measurement,
+          s_recovery_setup                       [!setup_successful && recovery_attempts_below_limit]                                            = s_recovery,
           s_recovery_setup                       [!setup_successful && !recovery_attempts_below_limit]                                           = s_to_failure,
 
-          s_to_failure                                                             / (set_failure_state, publish_health, reset_data)             = s_failure,
+          s_to_failure                                                             / (set_fault, reset_data)                                     = s_fault,
 
           s_init_setup         + e_stop                                            / set_stopped_state                                           = s_stopped,
           s_recovery_setup     + e_stop                                            / set_stopped_state                                           = s_stopped,

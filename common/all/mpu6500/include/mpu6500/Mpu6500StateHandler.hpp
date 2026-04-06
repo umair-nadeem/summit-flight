@@ -304,7 +304,7 @@ public:
       return m_sensor_status;
    }
 
-   imu_sensor::ErrorBits get_error() const
+   imu_sensor::ImuSensorErrorBits get_error() const
    {
       return m_sensor_status.error;
    }

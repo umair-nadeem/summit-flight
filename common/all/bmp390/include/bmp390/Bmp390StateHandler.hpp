@@ -4,35 +4,31 @@
 #include <cmath>
 #include <span>
 
-#include "barometer_sensor/BarometerData.hpp"
-#include "barometer_sensor/BarometerHealth.hpp"
-#include "boundaries/SharedData.hpp"
+#include "SensorState.hpp"
+#include "barometer_sensor/BarometerSensorStatus.hpp"
+#include "barometer_sensor/RawBarometerSensorData.hpp"
 #include "error/error_handler.hpp"
-#include "interfaces/IClockSource.hpp"
 #include "params.hpp"
 
 namespace bmp390
 {
 
-template <interfaces::IClockSource ClockSource, typename I2cDriver, typename Logger>
+template <typename I2cDriver, typename Logger>
 class Bmp390StateHandler
 {
-   using BarometerData   = ::boundaries::SharedData<barometer_sensor::BarometerData>;
-   using BarometerHealth = ::boundaries::SharedData<barometer_sensor::BarometerHealth>;
-
 public:
-   explicit Bmp390StateHandler(BarometerData&   barometer_data_storage,
-                               BarometerHealth& barometer_health_storage,
-                               I2cDriver&       i2c_driver,
-                               Logger&          logger,
-                               const uint8_t    read_failures_limit,
-                               const uint8_t    max_recovery_attempts,
-                               const uint32_t   execution_period_ms,
-                               const uint32_t   receive_wait_timeout_ms)
-       : m_barometer_data_storage{barometer_data_storage},
-         m_barometer_health_storage{barometer_health_storage},
-         m_i2c_driver{i2c_driver},
+   explicit Bmp390StateHandler(I2cDriver&                                i2c_driver,
+                               Logger&                                   logger,
+                               barometer_sensor::RawBarometerSensorData& raw_sensor_data_out,
+                               barometer_sensor::BarometerSensorStatus&  sensor_status_out,
+                               const uint8_t                             read_failures_limit,
+                               const uint8_t                             max_recovery_attempts,
+                               const uint32_t                            execution_period_ms,
+                               const uint32_t                            receive_wait_timeout_ms)
+       : m_i2c_driver{i2c_driver},
          m_logger{logger},
+         m_raw_sensor_data_out{raw_sensor_data_out},
+         m_sensor_status_out{sensor_status_out},
          m_read_failures_limit{read_failures_limit},
          m_max_recovery_attempts{max_recovery_attempts},
          m_execution_period_ms{execution_period_ms},
@@ -52,24 +48,24 @@ public:
 
    void count_read_failure()
    {
-      m_local_barometer_health.read_failure_count++;
+      m_sensor_status.read_failure_count++;
       m_logger.print("read failure");
    }
 
    void count_recovery_attempt()
    {
-      m_local_barometer_health.recovery_attempt_count++;
+      m_sensor_status.recovery_attempt_count++;
       m_logger.print("recovery attempt");
    }
 
    void reset_read_failures()
    {
-      m_local_barometer_health.read_failure_count = 0;
+      m_sensor_status.read_failure_count = 0;
    }
 
    void reset_recovery_attempts()
    {
-      m_local_barometer_health.recovery_attempt_count = 0;
+      m_sensor_status.recovery_attempt_count = 0;
    }
 
    // attempts to clear stuck i2c peripheral by generating at least 9 clock cycles for dummy address
@@ -213,63 +209,65 @@ public:
       uint32_t   pressure_raw    = to_int24(buffer[pressure_msb_byte_index], buffer[pressure_lsb_byte_index], buffer[pressure_xlsb_byte_index]);
       uint32_t   temperature_raw = to_int24(buffer[temperature_msb_byte_index], buffer[temperature_lsb_byte_index], buffer[temperature_xlsb_byte_index]);
 
-      m_local_barometer_data.temperature_c = compensate_temperature(static_cast<float>(temperature_raw));
-      m_local_barometer_data.pressure_pa   = compensate_pressure(m_local_barometer_data.temperature_c.value(), static_cast<float>(pressure_raw));
+      m_raw_sensor_data.temperature_c = compensate_temperature(static_cast<float>(temperature_raw));
+      m_raw_sensor_data.pressure_pa   = compensate_pressure(m_raw_sensor_data.temperature_c.value(), static_cast<float>(pressure_raw));
    }
 
-   void publish_data()
+   void update()
    {
-      const volatile uint32_t clock = ClockSource::now_ms();
-      m_barometer_data_storage.update_latest(m_local_barometer_data, clock);
-   }
-
-   void publish_health()
-   {
-      m_barometer_health_storage.update_latest(m_local_barometer_health, ClockSource::now_ms());
+      // atomically update output
+      m_raw_sensor_data.count++;
+      m_raw_sensor_data_out = m_raw_sensor_data;
+      m_sensor_status_out   = m_sensor_status;
    }
 
    void reset_data()
    {
-      m_local_barometer_data.pressure_pa.reset();
-      m_local_barometer_data.temperature_c.reset();
-      m_barometer_data_storage.update_latest(m_local_barometer_data, ClockSource::now_ms());
+      m_raw_sensor_data.pressure_pa = 0.0f;
+      m_raw_sensor_data.temperature_c.reset();
    }
 
    void mark_setup_fail()
    {
-      m_local_barometer_health.setup_ok = false;
+      m_sensor_status.setup_ok = false;
       m_logger.print("setup failed");
    }
 
    void mark_setup_success()
    {
-      m_local_barometer_health.setup_ok = true;
+      m_sensor_status.setup_ok = true;
       m_logger.print("setup successful");
    }
 
-   void set_state(const barometer_sensor::BarometerSensorState state)
+   void set_fault()
    {
-      m_local_barometer_health.state = state;
+      m_sensor_status.fault = true;
+      set_state(bmp390::SensorState::fault);
+   }
 
-      switch (m_local_barometer_health.state)
+   void set_state(const bmp390::SensorState& state)
+   {
+      m_state = state;
+
+      switch (m_state)
       {
-         case barometer_sensor::BarometerSensorState::stopped:
+         case bmp390::SensorState::stopped:
             m_logger.print("entered state->stopped");
             break;
-         case barometer_sensor::BarometerSensorState::setup:
+         case bmp390::SensorState::setup:
             m_logger.print("entered state->setup");
             break;
-         case barometer_sensor::BarometerSensorState::read_coefficients:
+         case bmp390::SensorState::read_coefficients:
             m_logger.print("entered state->read_coefficients");
             break;
-         case barometer_sensor::BarometerSensorState::operational:
+         case bmp390::SensorState::operational:
             m_logger.print("entered state->operational");
             break;
-         case barometer_sensor::BarometerSensorState::recovery:
+         case bmp390::SensorState::recovery:
             m_logger.print("entered state->recovery");
             break;
-         case barometer_sensor::BarometerSensorState::failure:
-            m_logger.print("entered state->failure");
+         case bmp390::SensorState::fault:
+            m_logger.print("entered state->fault");
             break;
          default:
             m_logger.print("entered unexpected state");
@@ -280,7 +278,7 @@ public:
 
    void set_error(const barometer_sensor::BarometerSensorError error)
    {
-      m_local_barometer_health.error.set(static_cast<types::ErrorBitsType>(error));
+      m_sensor_status.error.set(static_cast<types::ErrorBitsType>(error));
 
       switch (error)
       {
@@ -314,19 +312,29 @@ public:
       }
    }
 
-   barometer_sensor::BarometerSensorState get_state() const
+   barometer_sensor::RawBarometerSensorData get_raw_data() const
    {
-      return m_local_barometer_health.state;
+      return m_raw_sensor_data;
+   }
+
+   barometer_sensor::BarometerSensorStatus get_status() const
+   {
+      return m_sensor_status;
    }
 
    barometer_sensor::BarometerSensorErrorBits get_error() const
    {
-      return m_local_barometer_health.error;
+      return m_sensor_status.error;
+   }
+
+   bmp390::SensorState get_state() const
+   {
+      return m_state;
    }
 
    bool setup_successful() const
    {
-      return m_local_barometer_health.setup_ok;
+      return m_sensor_status.setup_ok;
    }
 
    bool id_matched() const
@@ -382,12 +390,12 @@ public:
 
    bool read_failures_below_limit() const
    {
-      return (m_local_barometer_health.read_failure_count < m_read_failures_limit);
+      return (m_sensor_status.read_failure_count < m_read_failures_limit);
    }
 
    bool recovery_attempts_below_limit() const
    {
-      return (m_local_barometer_health.recovery_attempt_count < m_max_recovery_attempts);
+      return (m_sensor_status.recovery_attempt_count < m_max_recovery_attempts);
    }
 
 private:
@@ -420,19 +428,19 @@ private:
 
    bool is_pressure_range_plausible() const
    {
-      return ((params::min_plauisble_range_pressure_pa < m_local_barometer_data.pressure_pa) &&
-              (m_local_barometer_data.pressure_pa < params::max_plauisble_range_pressure_pa));
+      return ((params::min_plauisble_range_pressure_pa < m_raw_sensor_data.pressure_pa) &&
+              (m_raw_sensor_data.pressure_pa < params::max_plauisble_range_pressure_pa));
    }
 
    bool is_temperature_range_plausible() const
    {
-      if (!m_local_barometer_data.temperature_c.has_value())
+      if (!m_raw_sensor_data.temperature_c.has_value())
       {
          return true;   // nothing to check
       }
 
-      return ((params::min_plauisble_range_temp_c < m_local_barometer_data.temperature_c.value()) &&
-              (m_local_barometer_data.temperature_c.value() < params::max_plauisble_range_temp_c));
+      return ((params::min_plauisble_range_temp_c < m_raw_sensor_data.temperature_c.value()) &&
+              (m_raw_sensor_data.temperature_c.value() < params::max_plauisble_range_temp_c));
    }
 
    uint8_t get_err_reg_byte_from_rx_buffer() const
@@ -507,26 +515,27 @@ private:
 
    static constexpr double offset_p1_p2 = std::ldexp(1.0, 14);   // 2^14 - no sign inversion
 
-   BarometerData&                           m_barometer_data_storage;
-   BarometerHealth&                         m_barometer_health_storage;
-   I2cDriver&                               m_i2c_driver;
-   Logger&                                  m_logger;
-   const uint8_t                            m_read_failures_limit;
-   const uint8_t                            m_max_recovery_attempts;
-   const uint32_t                           m_execution_period_ms;
-   const uint32_t                           m_receive_wait_timeout_ms;
-   barometer_sensor::BarometerData          m_local_barometer_data{};
-   barometer_sensor::BarometerHealth        m_local_barometer_health{};
-   std::array<uint8_t, params::buffer_size> m_tx_buffer{};
-   std::array<uint8_t, params::buffer_size> m_rx_buffer{};
-   uint8_t                                  m_device_id{};
-   Config_registers                         m_config_registers{};
-   params::CalibrationCoeffiecients         m_raw_coefficients{};
-   params::QuantizedCoeffiecients           m_quantized_coefficients{};
-   uint8_t                                  m_error_register{};
-   bool                                     m_i2c_error{false};
-   uint32_t                                 m_wait_timer_ms{};
-   std::size_t                              m_data_log_counter{};
+   I2cDriver&                                m_i2c_driver;
+   Logger&                                   m_logger;
+   barometer_sensor::RawBarometerSensorData& m_raw_sensor_data_out;
+   barometer_sensor::BarometerSensorStatus&  m_sensor_status_out;
+   const uint8_t                             m_read_failures_limit;
+   const uint8_t                             m_max_recovery_attempts;
+   const uint32_t                            m_execution_period_ms;
+   const uint32_t                            m_receive_wait_timeout_ms;
+   std::array<uint8_t, params::buffer_size>  m_tx_buffer{};
+   std::array<uint8_t, params::buffer_size>  m_rx_buffer{};
+   barometer_sensor::RawBarometerSensorData  m_raw_sensor_data{};
+   barometer_sensor::BarometerSensorStatus   m_sensor_status{};
+   bmp390::SensorState                       m_state{SensorState::stopped};
+   uint8_t                                   m_device_id{};
+   Config_registers                          m_config_registers{};
+   params::CalibrationCoeffiecients          m_raw_coefficients{};
+   params::QuantizedCoeffiecients            m_quantized_coefficients{};
+   uint8_t                                   m_error_register{};
+   bool                                      m_i2c_error{false};
+   uint32_t                                  m_wait_timer_ms{};
+   std::size_t                               m_data_log_counter{};
 };
 
 }   // namespace bmp390

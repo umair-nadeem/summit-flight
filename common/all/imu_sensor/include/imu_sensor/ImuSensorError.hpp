@@ -18,6 +18,6 @@ enum class ImuSensorError : types::ErrorBitsType
    max_error
 };
 
-using ErrorBits = std::bitset<static_cast<types::ErrorBitsType>(ImuSensorError::max_error)>;
+using ImuSensorErrorBits = std::bitset<static_cast<types::ErrorBitsType>(ImuSensorError::max_error)>;
 
 }   // namespace imu_sensor

@@ -33,13 +33,12 @@ extern "C"
 
       LogClient logger_bmp390{logging::logging_queue_sender, "bmp390"};
 
-      bmp390::Bmp390<sys_time::ClockSource,
-                     decltype(data->i2c_driver),
+      bmp390::Bmp390<decltype(data->i2c_driver),
                      LogClient>
-          bmp390{aeromight_boundaries::aeromight_data.barometer_data,
-                 aeromight_boundaries::aeromight_data.barometer_health,
-                 data->i2c_driver,
+          bmp390{data->i2c_driver,
                  logger_bmp390,
+                 data->bmp390_data,
+                 data->bmp390_status,
                  bmp390_read_failures_limit,
                  bmp390_max_recovery_attempts,
                  controller::task::barometer_task_period_in_ms,
@@ -48,17 +47,17 @@ extern "C"
       using TickBinding       = event_handling::EventBinding<decltype(bmp390), &decltype(bmp390)::execute>;
       using RxCompleteBinding = event_handling::EventBinding<decltype(bmp390), &decltype(bmp390)::notify_receive_complete>;
 
-      event_handling::EventDispatcher bmp390_event_dispatcher{data->barometer_task_notification_waiter,
-                                                              notification_wait_period_in_ms,
-                                                              TickBinding{bmp390, data->event_tick_bit_mask},
-                                                              RxCompleteBinding{bmp390, data->event_rx_complete_bit_mask}};
+      event_handling::EventDispatcher barometer_event_dispatcher{data->barometer_task_notification_waiter,
+                                                                 notification_wait_period_in_ms,
+                                                                 TickBinding{bmp390, data->event_tick_bit_mask},
+                                                                 RxCompleteBinding{bmp390, data->event_rx_complete_bit_mask}};
 
       data->i2c_driver.register_receive_complete_callback(&i2c1_receive_complete_callback, nullptr);
       bmp390.start();
 
       while (true)
       {
-         bmp390_event_dispatcher.execute();
+         barometer_event_dispatcher.execute();
       }
    }
 }

@@ -7,8 +7,8 @@
 #include "RadioLinkActuals.hpp"
 #include "SystemControlSetpoints.hpp"
 #include "SystemStateInfo.hpp"
-#include "barometer_sensor/BarometerData.hpp"
-#include "barometer_sensor/BarometerHealth.hpp"
+#include "barometer/BarometerData.hpp"
+#include "barometer/BarometerStatus.hpp"
 #include "boundaries/SharedData.hpp"
 #include "imu/ImuData.hpp"
 #include "imu/ImuStatus.hpp"
@@ -23,8 +23,8 @@ struct AeromightData
    boundaries::SharedData<imu::ImuStatus> imu_health{};
 
    // Barometer
-   boundaries::SharedData<barometer_sensor::BarometerData>   barometer_data{};
-   boundaries::SharedData<barometer_sensor::BarometerHealth> barometer_health{};
+   boundaries::SharedData<barometer::BarometerData>   barometer_data{};
+   boundaries::SharedData<barometer::BarometerStatus> barometer_health{};
 
    // Estimator
    boundaries::SharedData<EstimatorHealth> estimator_health{};

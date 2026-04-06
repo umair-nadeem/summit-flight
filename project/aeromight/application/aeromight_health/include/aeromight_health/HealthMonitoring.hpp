@@ -4,7 +4,7 @@
 #include "aeromight_boundaries/ControlHealth.hpp"
 #include "aeromight_boundaries/EstimatorHealth.hpp"
 #include "aeromight_boundaries/HealthSummary.hpp"
-#include "barometer_sensor/BarometerHealth.hpp"
+#include "barometer/BarometerStatus.hpp"
 #include "boundaries/SharedData.hpp"
 #include "imu/ImuStatus.hpp"
 #include "interfaces/IClockSource.hpp"
@@ -21,7 +21,7 @@ class HealthMonitoring
 public:
    explicit HealthMonitoring(QueueSender&                                                         queue_sender,
                              const boundaries::SharedData<imu::ImuStatus>&                        imu_health_subscriber,
-                             const boundaries::SharedData<barometer_sensor::BarometerHealth>&     barometer_health_subscriber,
+                             const boundaries::SharedData<barometer::BarometerStatus>&            barometer_health_subscriber,
                              const boundaries::SharedData<aeromight_boundaries::EstimatorHealth>& estimation_health_subscriber,
                              const boundaries::SharedData<aeromight_boundaries::ControlHealth>&   control_health_subscriber,
                              Logger&                                                              logger,
@@ -254,16 +254,13 @@ private:
    {
       const bool barometer_stale = (((m_current_time_ms - m_barometer_health_snapshot.timestamp_ms) > m_max_age_barometer_health_ms));
 
-      const bool barometer_read_failures = m_barometer_health_snapshot.data.read_failure_count > 0;
-
-      const bool barometer_fault = ((m_barometer_health_snapshot.data.state == barometer_sensor::BarometerSensorState::failure) ||
-                                    (m_barometer_health_snapshot.data.error.to_ulong() != 0));
+      const bool barometer_fault = (!m_barometer_health_snapshot.data.available);
 
       if (barometer_fault)
       {
          return aeromight_boundaries::SubsystemHealth::fault;
       }
-      else if (barometer_stale || barometer_read_failures)
+      else if (barometer_stale)
       {
          return aeromight_boundaries::SubsystemHealth::degraded;
       }
@@ -334,9 +331,7 @@ private:
    {
       const auto& barometer_health = m_barometer_health_snapshot.data;
 
-      return (barometer_health.setup_ok &&
-              (barometer_health.error.to_ulong() == 0) &&
-              (barometer_health.state == barometer_sensor::BarometerSensorState::operational));
+      return (barometer_health.available);
    }
 
    bool estimation_is_ready() const
@@ -351,7 +346,7 @@ private:
 
    QueueSender&                                                          m_queue_sender;
    const boundaries::SharedData<imu::ImuStatus>&                         m_imu_health_subscriber;
-   const boundaries::SharedData<barometer_sensor::BarometerHealth>&      m_barometer_health_subscriber;
+   const boundaries::SharedData<barometer::BarometerStatus>&             m_barometer_health_subscriber;
    const boundaries::SharedData<aeromight_boundaries::EstimatorHealth>&  m_estimation_health_subscriber;
    const boundaries::SharedData<aeromight_boundaries::ControlHealth>&    m_control_health_subscriber;
    Logger&                                                               m_logger;
@@ -365,7 +360,7 @@ private:
    const uint32_t                                                        m_max_age_control_health_ms;
    aeromight_boundaries::HealthSummary                                   m_health_summary{};
    boundaries::SharedData<imu::ImuStatus>::Sample                        m_imu_health_snapshot{};
-   boundaries::SharedData<barometer_sensor::BarometerHealth>::Sample     m_barometer_health_snapshot{};
+   boundaries::SharedData<barometer::BarometerStatus>::Sample            m_barometer_health_snapshot{};
    boundaries::SharedData<aeromight_boundaries::EstimatorHealth>::Sample m_estimation_health_snapshot{};
    boundaries::SharedData<aeromight_boundaries::ControlHealth>::Sample   m_control_health_snapshot{};
    HealthMonitoringState                                                 m_state{HealthMonitoringState::startup};

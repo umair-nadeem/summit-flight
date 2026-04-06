@@ -72,7 +72,7 @@ public:
       return m_state_handler.get_status();
    }
 
-   imu_sensor::ErrorBits get_error() const
+   imu_sensor::ImuSensorErrorBits get_error() const
    {
       return m_state_handler.get_error();
    }

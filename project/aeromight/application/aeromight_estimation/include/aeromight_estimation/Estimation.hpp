@@ -2,7 +2,7 @@
 
 #include "aeromight_boundaries/EstimatorHealth.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
-#include "barometer_sensor/BarometerData.hpp"
+#include "barometer/BarometerData.hpp"
 #include "boundaries/SharedData.hpp"
 #include "error/error_handler.hpp"
 #include "imu/ImuData.hpp"
@@ -17,7 +17,7 @@ class Estimation
 {
    using EstimatorHealthPublisher = boundaries::SharedData<aeromight_boundaries::EstimatorHealth>;
    using ImuDataSubscriber        = boundaries::SharedData<imu::ImuData>;
-   using BarometerDataSubscriber  = boundaries::SharedData<barometer_sensor::BarometerData>;
+   using BarometerDataSubscriber  = boundaries::SharedData<barometer::BarometerData>;
    using Error                    = aeromight_boundaries::EstimatorHealth::Error;
 
 public:

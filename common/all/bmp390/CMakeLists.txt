@@ -1,8 +1,7 @@
 add_module(
    SOURCES
    LIBS
-      boundaries
-      error
       barometer_sensor
+      error
       sml
 )

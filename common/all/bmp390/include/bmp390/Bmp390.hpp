@@ -6,25 +6,22 @@
 namespace bmp390
 {
 
-template <interfaces::IClockSource ClockSource, typename I2cDriver, typename Logger>
+template <typename I2cDriver, typename Logger>
 class Bmp390
 {
-   using BarometerData   = ::boundaries::SharedData<barometer_sensor::BarometerData>;
-   using BarometerHealth = ::boundaries::SharedData<barometer_sensor::BarometerHealth>;
-
 public:
-   explicit Bmp390(BarometerData&   barometer_data_storage,
-                   BarometerHealth& barometer_health_storage,
-                   I2cDriver&       i2c_driver,
-                   Logger&          logger,
-                   const uint8_t    read_failures_limit,
-                   const uint8_t    max_recovery_attempts,
-                   const uint32_t   execution_period_ms,
-                   const uint32_t   receive_wait_timeout_ms)
-       : m_state_handler{barometer_data_storage,
-                         barometer_health_storage,
-                         i2c_driver,
+   explicit Bmp390(I2cDriver&                                i2c_driver,
+                   Logger&                                   logger,
+                   barometer_sensor::RawBarometerSensorData& raw_sensor_data_out,
+                   barometer_sensor::BarometerSensorStatus&  sensor_status_out,
+                   const uint8_t                             read_failures_limit,
+                   const uint8_t                             max_recovery_attempts,
+                   const uint32_t                            execution_period_ms,
+                   const uint32_t                            receive_wait_timeout_ms)
+       : m_state_handler{i2c_driver,
                          logger,
+                         raw_sensor_data_out,
+                         sensor_status_out,
                          read_failures_limit,
                          max_recovery_attempts,
                          execution_period_ms,
@@ -37,13 +34,11 @@ public:
    void start()
    {
       m_state_machine.process_event(EventStart{});
-      m_logger.print("starting barometer driver");
    }
 
    void stop()
    {
       m_state_machine.process_event(EventStop{});
-      m_logger.print("stopping barometer driver");
    }
 
    void execute()
@@ -56,9 +51,14 @@ public:
       m_state_machine.process_event(EventReceiveDone{});
    }
 
-   barometer_sensor::BarometerSensorState get_state() const
+   barometer_sensor::RawBarometerSensorData get_raw_data() const
    {
-      return m_state_handler.get_state();
+      return m_state_handler.get_raw_data();
+   }
+
+   barometer_sensor::BarometerSensorStatus get_status() const
+   {
+      return m_state_handler.get_status();
    }
 
    barometer_sensor::BarometerSensorErrorBits get_error() const
@@ -66,8 +66,13 @@ public:
       return m_state_handler.get_error();
    }
 
+   bmp390::SensorState get_state() const
+   {
+      return m_state_handler.get_state();
+   }
+
 private:
-   using StateHandler    = Bmp390StateHandler<ClockSource, I2cDriver, Logger>;
+   using StateHandler    = Bmp390StateHandler<I2cDriver, Logger>;
    using StateMachineDef = Bmp390MainStateMachine<StateHandler>;
 
    StateHandler                    m_state_handler;

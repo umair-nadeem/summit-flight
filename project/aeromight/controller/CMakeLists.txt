@@ -35,6 +35,7 @@ target_link_libraries(aeromight_lib INTERFACE
    aeromight_system
    aeromight_health
    aeromight_link
+   barometer
    bmp390
    event_handling
    error
