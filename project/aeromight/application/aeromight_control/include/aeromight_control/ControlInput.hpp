@@ -9,15 +9,15 @@ namespace aeromight_control
 template <typename ThrottleCurve>
 class ControlInput
 {
-   using FlightControlSetpointsStorage = boundaries::SharedData<aeromight_boundaries::FlightControlSetpoints>;
+   using FlightControlSetpointsSubscriber = boundaries::SharedData<aeromight_boundaries::FlightControlSetpoints>;
 
 public:
-   explicit ControlInput(ThrottleCurve&                       throttle_curve,
-                         const FlightControlSetpointsStorage& flight_control_setpoints_storage,
-                         const float                          throttle_min,
-                         const float                          throttle_max)
+   explicit ControlInput(ThrottleCurve&                          throttle_curve,
+                         const FlightControlSetpointsSubscriber& flight_control_setpoints_subscriber,
+                         const float                             throttle_min,
+                         const float                             throttle_max)
        : m_throttle_curve{throttle_curve},
-         m_flight_control_setpoints_storage{flight_control_setpoints_storage},
+         m_flight_control_setpoints_subscriber{flight_control_setpoints_subscriber},
          m_throttle_min{throttle_min},
          m_throttle_max{throttle_max}
    {
@@ -25,7 +25,7 @@ public:
 
    aeromight_boundaries::FlightControlSetpoints get_flight_control_setpoints() const
    {
-      auto flight_control_setpoints = m_flight_control_setpoints_storage.get_latest();
+      auto flight_control_setpoints = m_flight_control_setpoints_subscriber.get_latest();
       apply_stick_input_transformation(flight_control_setpoints.data);
       return flight_control_setpoints.data;
    }
@@ -40,10 +40,10 @@ private:
       setpoints.throttle = std::clamp(setpoints.throttle, m_throttle_min, m_throttle_max);
    }
 
-   ThrottleCurve&                       m_throttle_curve;
-   const FlightControlSetpointsStorage& m_flight_control_setpoints_storage;
-   const float                          m_throttle_min;
-   const float                          m_throttle_max;
+   ThrottleCurve&                          m_throttle_curve;
+   const FlightControlSetpointsSubscriber& m_flight_control_setpoints_subscriber;
+   const float                             m_throttle_min;
+   const float                             m_throttle_max;
 };
 
 }   // namespace aeromight_control

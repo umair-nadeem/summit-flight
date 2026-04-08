@@ -229,7 +229,7 @@ private:
       // gyro LPF
       for (std::size_t i = 0; i < num_axis; i++)
       {
-         m_gyro_radps[i] = m_gyro_lpf[i].get().apply(m_state_estimation.gyro_radps[i], m_dt_s);
+         m_gyro_radps[i] = m_gyro_lpf[i].get().apply(m_state_estimation.raw_gyro_radps[i], m_dt_s);
       }
 
       // PID d-term LPF
@@ -323,12 +323,12 @@ private:
       if ((m_counter++ % 125) == 0)
       {
          m_logger.printf("acc %.2f %.2f %.2f | gyr %.2f %.2f %.2f | est %.3f %.3f %.3f | rate %.2f %.2f %.2f | trq %.4f %.4f %.4f | t %.2f | pwm %.4f %.4f %.4f %.4f",
-                         m_state_estimation.accel_mps2[0],
-                         m_state_estimation.accel_mps2[1],
-                         m_state_estimation.accel_mps2[2],
-                         m_state_estimation.gyro_radps[0],
-                         m_state_estimation.gyro_radps[1],
-                         m_state_estimation.gyro_radps[2],
+                         m_state_estimation.raw_accel_mps2[0],
+                         m_state_estimation.raw_accel_mps2[1],
+                         m_state_estimation.raw_accel_mps2[2],
+                         m_state_estimation.raw_gyro_radps[0],
+                         m_state_estimation.raw_gyro_radps[1],
+                         m_state_estimation.raw_gyro_radps[2],
                          m_state_estimation.euler.roll(),
                          m_state_estimation.euler.pitch(),
                          m_state_estimation.euler.yaw(),

@@ -171,16 +171,16 @@ private:
       const math::Vector3 gyro_radps = imu_sample.data.gyro_radps.value();
       m_attitude_estimator.update(accel_mps2, gyro_radps, dt_s);
 
-      m_state_estimation.attitude   = m_attitude_estimator.get_quaternion();
-      m_state_estimation.accel_mps2 = accel_mps2;
-      m_state_estimation.gyro_radps = m_attitude_estimator.get_unbiased_gyro_data(gyro_radps);
-      m_state_estimation.gyro_bias  = m_attitude_estimator.get_gyro_bias();
-      m_state_estimation.euler      = math::quaternion_to_euler(m_state_estimation.attitude);
+      const auto attitude_q             = m_attitude_estimator.get_quaternion();
+      m_state_estimation.euler          = math::quaternion_to_euler(attitude_q);
+      m_state_estimation.raw_accel_mps2 = accel_mps2;
+      m_state_estimation.raw_gyro_radps = gyro_radps;
+      m_state_estimation.gyro_bias      = m_attitude_estimator.get_gyro_bias();
 
       if (m_run_altitude_estimation)
       {
          // predict altitude with ekf2
-         m_altitude_ekf.predict(accel_mps2, m_state_estimation.attitude, dt_s);
+         m_altitude_ekf.predict(accel_mps2, attitude_q, dt_s);
       }
    }
 
