@@ -1,8 +1,8 @@
 #pragma once
 
 #include "ActuatorSetpoints.hpp"
-#include "ControlHealth.hpp"
-#include "EstimatorHealth.hpp"
+#include "ControlStatus.hpp"
+#include "EstimatorStatus.hpp"
 #include "FlightControlSetpoints.hpp"
 #include "RadioLinkActuals.hpp"
 #include "SystemControlSetpoints.hpp"
@@ -27,11 +27,11 @@ struct AeromightData
    boundaries::SharedData<barometer::BarometerStatus> barometer_health{};
 
    // Estimator
-   boundaries::SharedData<EstimatorHealth> estimator_health{};
+   boundaries::SharedData<EstimatorStatus> estimator_health{};
 
    // Control
    boundaries::SharedData<ActuatorControl>        actuator_control{};
-   boundaries::SharedData<ControlHealth>          control_health{};
+   boundaries::SharedData<ControlStatus>          control_health{};
    boundaries::SharedData<FlightControlSetpoints> flight_control_setpoints{};
 
    // System Manager

@@ -23,13 +23,11 @@ extern "C"
 
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
-      constexpr uint32_t wait_before_first_summary_update_ms      = 1000u;
-      constexpr uint32_t max_wait_sensors_readiness_ms            = 10'000u;
-      constexpr uint32_t max_wait_estimation_control_readiness_ms = 2'000u;
-      constexpr uint32_t max_age_stale_imu_sensor_health_ms       = controller::task::health_monitoring_task_period_in_ms * 5u;
-      constexpr uint32_t max_age_barometer_sensor_health_ms       = controller::task::health_monitoring_task_period_in_ms * 10u;
-      constexpr uint32_t max_age_estimation_health_ms             = controller::task::health_monitoring_task_period_in_ms * 15u;
-      constexpr uint32_t max_age_control_health_ms                = controller::task::health_monitoring_task_period_in_ms * 5u;
+      constexpr uint32_t max_age_stale_imu_sensor_health_ms = controller::task::health_monitoring_task_period_in_ms * 5u;
+      constexpr uint32_t max_age_barometer_sensor_health_ms = controller::task::health_monitoring_task_period_in_ms * 10u;
+      constexpr uint32_t max_age_estimation_health_ms       = controller::task::health_monitoring_task_period_in_ms * 15u;
+      constexpr uint32_t max_age_control_health_ms          = controller::task::health_monitoring_task_period_in_ms * 5u;
+      constexpr bool     evaluate_barometer_health          = false;
 
       LogClient logger_health_monitoring{logging::logging_queue_sender, "health"};
 
@@ -43,13 +41,11 @@ extern "C"
                             aeromight_boundaries::aeromight_data.control_health,
                             logger_health_monitoring,
                             controller::task::health_monitoring_task_period_in_ms,
-                            wait_before_first_summary_update_ms,
-                            max_wait_sensors_readiness_ms,
-                            max_wait_estimation_control_readiness_ms,
                             max_age_stale_imu_sensor_health_ms,
                             max_age_barometer_sensor_health_ms,
                             max_age_estimation_health_ms,
-                            max_age_control_health_ms};
+                            max_age_control_health_ms,
+                            evaluate_barometer_health};
 
       rtos::run_periodic_task(health_monitoring);
    }

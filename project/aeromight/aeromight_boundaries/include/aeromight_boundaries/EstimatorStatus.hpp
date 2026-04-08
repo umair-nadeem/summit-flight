@@ -8,7 +8,7 @@
 namespace aeromight_boundaries
 {
 
-struct EstimatorHealth
+struct EstimatorStatus
 {
    enum class Error : types::ErrorBitsType
    {

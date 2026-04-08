@@ -24,20 +24,6 @@ struct StateEstimation
    // altitude
    float altitude;
    float vertical_velocity;
-
-   void reset_attitude_state()
-   {
-      attitude.zero();
-      accel_mps2.zero();
-      gyro_bias.zero();
-      gyro_bias.zero();
-   }
-
-   void reset_altitude_state()
-   {
-      altitude          = 0.0f;
-      vertical_velocity = 0.0f;
-   }
 };
 
 }   // namespace aeromight_boundaries

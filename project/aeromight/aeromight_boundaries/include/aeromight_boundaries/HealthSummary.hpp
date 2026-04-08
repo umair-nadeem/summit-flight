@@ -2,7 +2,6 @@
 
 #include <cstdint>
 
-#include "FlightHealthStatus.hpp"
 #include "SubsystemHealth.hpp"
 
 namespace aeromight_boundaries
@@ -12,12 +11,12 @@ struct HealthSummary
 {
    uint32_t timestamp_ms{};
 
-   bool               all_sensors_ready{};
-   bool               estimation_ready{};
-   bool               control_ready{};
-   bool               imu_calibration_finished{};
-   FlightHealthStatus flight_health{};
-   std::size_t        queue_failure_count{};
+   bool        imu_operational{};
+   bool        imu_calibration_finished{};
+   bool        barometer_operational{};
+   bool        estimation_operational{};
+   bool        control_operational{};
+   std::size_t total_queue_failure_count{};
 
    SubsystemHealth imu_health{SubsystemHealth::init};
    SubsystemHealth barometer_health{SubsystemHealth::init};
@@ -27,14 +26,14 @@ struct HealthSummary
    bool operator==(const HealthSummary& rhs) const noexcept
    {
       return ((timestamp_ms == rhs.timestamp_ms) &&
-              (all_sensors_ready == rhs.all_sensors_ready) &&
-              (estimation_ready == rhs.estimation_ready) &&
-              (control_ready == rhs.control_ready) &&
-              (flight_health == rhs.flight_health) &&
-              (queue_failure_count == rhs.queue_failure_count) &&
+              (imu_operational == rhs.imu_operational) &&
+              (imu_calibration_finished == rhs.imu_calibration_finished) &&
+              (barometer_operational == rhs.barometer_operational) &&
+              (estimation_operational == rhs.estimation_operational) &&
+              (control_operational == rhs.control_operational) &&
+              (total_queue_failure_count == rhs.total_queue_failure_count) &&
               (imu_health == rhs.imu_health) &&
               (barometer_health == rhs.barometer_health) &&
-              (all_sensors_ready == rhs.all_sensors_ready) &&
               (estimation_health == rhs.estimation_health) &&
               (control_health == rhs.control_health));
    }

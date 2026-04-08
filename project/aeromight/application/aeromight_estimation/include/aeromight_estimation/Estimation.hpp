@@ -1,6 +1,6 @@
 #pragma once
 
-#include "aeromight_boundaries/EstimatorHealth.hpp"
+#include "aeromight_boundaries/EstimatorStatus.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
 #include "barometer/BarometerData.hpp"
 #include "boundaries/SharedData.hpp"
@@ -15,10 +15,10 @@ namespace aeromight_estimation
 template <typename AttitudeEstimator, typename AltitudeEkf, interfaces::IClockSource ClockSource, typename Logger>
 class Estimation
 {
-   using EstimatorHealthPublisher = boundaries::SharedData<aeromight_boundaries::EstimatorHealth>;
+   using EstimatorHealthPublisher = boundaries::SharedData<aeromight_boundaries::EstimatorStatus>;
    using ImuDataSubscriber        = boundaries::SharedData<imu::ImuData>;
    using BarometerDataSubscriber  = boundaries::SharedData<barometer::BarometerData>;
-   using Error                    = aeromight_boundaries::EstimatorHealth::Error;
+   using Error                    = aeromight_boundaries::EstimatorStatus::Error;
 
 public:
    explicit Estimation(AttitudeEstimator&                     attitude_estimator,
@@ -104,7 +104,7 @@ private:
 
       if (imu_valid && imu_current)
       {
-         update_attitude_estimation(imu_sample);
+         update_attitude_state(imu_sample, static_cast<float>(imu_sample.timestamp_ms - m_previous_imu_sample.timestamp_ms) * 0.001f);
          m_state_estimation.attitude_estimation_valid = true;
       }
       else
@@ -119,7 +119,6 @@ private:
             m_estimation_status.error.set(static_cast<types::ErrorBitsType>(Error::stale_imu_sensor_data));
          }
 
-         m_state_estimation.reset_attitude_state();
          m_state_estimation.attitude_estimation_valid = false;
       }
 
@@ -137,7 +136,7 @@ private:
 
       if (baro_valid && baro_current)
       {
-         update_altitude_estimation(barometer_sample);
+         update_altitude_state(barometer_sample, static_cast<float>(barometer_sample.timestamp_ms - m_previous_barometer_sample.timestamp_ms) * 0.001f);
          m_state_estimation.altitude_estimation_valid = true;
       }
       else
@@ -152,16 +151,14 @@ private:
             m_estimation_status.error.set(static_cast<types::ErrorBitsType>(Error::stale_baro_sensor_data));
          }
 
-         m_state_estimation.reset_altitude_state();
          m_state_estimation.altitude_estimation_valid = false;
       }
 
       m_previous_barometer_sample = barometer_sample;
    }
 
-   void update_attitude_estimation(const ImuDataSubscriber::Sample& imu_sample)
+   void update_attitude_state(const ImuDataSubscriber::Sample& imu_sample, const float dt_s)
    {
-      const float dt_s = static_cast<float>(imu_sample.timestamp_ms - m_previous_imu_sample.timestamp_ms) * 0.001f;
       if (dt_s > m_max_valid_imu_sample_dt_s)
       {
          m_attitude_estimator.reset();
@@ -187,22 +184,19 @@ private:
       }
    }
 
-   void update_altitude_estimation(const BarometerDataSubscriber::Sample& barometer_sample)
+   void update_altitude_state(const BarometerDataSubscriber::Sample& barometer_sample, const float dt_s)
    {
-      const float dt_s = static_cast<float>(barometer_sample.timestamp_ms - m_previous_barometer_sample.timestamp_ms) * 0.001f;
       if (dt_s > m_max_valid_barometer_sample_dt_s)
       {
          m_altitude_ekf.reset();
          return;
       }
 
-      const float altitude_m = m_previous_barometer_sample.data.altitude_m.value();
-
       // update altitude estimate of ekf2
+      const float altitude_m = barometer_sample.data.altitude_m.value();
       m_altitude_ekf.update(altitude_m);
 
-      const auto altitude_state = m_altitude_ekf.get_ekf_state();
-
+      const auto altitude_state            = m_altitude_ekf.get_ekf_state();
       m_state_estimation.altitude          = altitude_state.z;
       m_state_estimation.vertical_velocity = altitude_state.v_z;
    }
@@ -250,7 +244,7 @@ private:
    const uint32_t                         m_max_age_baro_data_ms;
    const float                            m_max_valid_imu_sample_dt_s;
    const float                            m_max_valid_barometer_sample_dt_s;
-   aeromight_boundaries::EstimatorHealth  m_estimation_status{};
+   aeromight_boundaries::EstimatorStatus  m_estimation_status{};
    aeromight_boundaries::StateEstimation  m_state_estimation{};
    ImuDataSubscriber::Sample              m_previous_imu_sample{};
    BarometerDataSubscriber::Sample        m_previous_barometer_sample{};

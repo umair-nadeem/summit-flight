@@ -3,7 +3,7 @@
 #include <algorithm>
 
 #include "aeromight_boundaries/ActuatorSetpoints.hpp"
-#include "aeromight_boundaries/ControlHealth.hpp"
+#include "aeromight_boundaries/ControlStatus.hpp"
 #include "aeromight_boundaries/FlightControlSetpoints.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
 #include "aeromight_boundaries/SystemStateInfo.hpp"
@@ -26,7 +26,7 @@ template <typename AttitudeController,
 class Control
 {
    using ActuatorControlPublisher  = boundaries::SharedData<aeromight_boundaries::ActuatorControl>;
-   using ControlHealthPublisher    = boundaries::SharedData<aeromight_boundaries::ControlHealth>;
+   using ControlHealthPublisher    = boundaries::SharedData<aeromight_boundaries::ControlStatus>;
    using SystemStateInfoSubscriber = boundaries::SharedData<aeromight_boundaries::SystemStateInfo>;
    using ControlAxis               = aeromight_boundaries::ControlAxis;
 
@@ -117,7 +117,7 @@ public:
       if (!is_state_estimation_valid())
       {
          reset_everything();
-         m_control_status.error.set(static_cast<types::ErrorBitsType>(aeromight_boundaries::ControlHealth::Error::invalid_estimation_data));
+         m_control_status.error.set(static_cast<types::ErrorBitsType>(aeromight_boundaries::ControlStatus::Error::invalid_estimation_data));
       }
       else   // run control
       {
@@ -376,7 +376,7 @@ private:
    const float                                                   m_throttle_gate_integrator;
    const float                                                   m_thrust_linearization_factor;
    aeromight_boundaries::ActuatorControl                         m_actuator_control{};
-   aeromight_boundaries::ControlHealth                           m_control_status{};
+   aeromight_boundaries::ControlStatus                           m_control_status{};
    aeromight_boundaries::FlightControlSetpoints                  m_flight_control_setpoints{};
    aeromight_boundaries::SystemStateInfo                         m_system_state_info{};
    aeromight_boundaries::StateEstimation                         m_state_estimation{};

@@ -200,12 +200,12 @@ public:
 
    bool sensors_ready() const
    {
-      return m_health_summary.all_sensors_ready;
+      return m_health_summary.imu_operational;
    }
 
    bool control_ready() const
    {
-      return m_health_summary.estimation_ready;
+      return (m_health_summary.estimation_operational && m_health_summary.control_operational);
    }
 
    bool arm() const
@@ -248,34 +248,27 @@ public:
    {
       if (!stale_health())
       {
-         if (m_health_summary.flight_health != aeromight_boundaries::FlightHealthStatus::critical)
+         if (is_imu_operational())
          {
-            if (is_imu_operational())
+            if (is_estimation_operational())
             {
-               if (is_estimation_operational())
+               if (is_control_operational())
                {
-                  if (is_control_operational())
-                  {
-                     return true;
-                  }
-                  else
-                  {
-                     m_logger.print("control failure");
-                  }
+                  return true;
                }
                else
                {
-                  m_logger.print("estimation failure");
+                  m_logger.print("control is not operational");
                }
             }
             else
             {
-               m_logger.print("imu failure");
+               m_logger.print("estimation is not operational");
             }
          }
          else
          {
-            m_logger.print("flight health critical");
+            m_logger.print("imu is not operational");
          }
       }
       else
