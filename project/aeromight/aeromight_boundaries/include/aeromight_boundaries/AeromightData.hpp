@@ -6,7 +6,7 @@
 #include "FlightControlSetpoints.hpp"
 #include "RadioLinkActuals.hpp"
 #include "SystemControlSetpoints.hpp"
-#include "SystemStateInfo.hpp"
+#include "SystemState.hpp"
 #include "barometer/BarometerData.hpp"
 #include "barometer/BarometerStatus.hpp"
 #include "boundaries/SharedData.hpp"
@@ -35,7 +35,7 @@ struct AeromightData
    boundaries::SharedData<FlightControlSetpoints> flight_control_setpoints{};
 
    // System Manager
-   boundaries::SharedData<SystemStateInfo>        system_state_info{};
+   boundaries::SharedData<SystemState>            system_state_info{};
    boundaries::SharedData<SystemControlSetpoints> system_control_setpoints{};
 
    // Radio Link

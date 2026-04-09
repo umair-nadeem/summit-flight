@@ -151,10 +151,10 @@ private:
    {
       const auto control_health = m_control_health_subscriber.get_latest();
 
-      m_health_summary.control_operational = (control_health.data.enabled &&
-                                              (control_health.data.error.to_ullong() == 0));
+      m_health_summary.control_operational = control_health.data.enabled;
 
-      const bool control_stale = (((m_current_time_ms - control_health.timestamp_ms) > m_max_age_control_health_ms));
+      const bool control_stale = (((m_current_time_ms - control_health.timestamp_ms) > m_max_age_control_health_ms) ||
+                                  (control_health.data.error.to_ullong() != 0));
 
       if (!m_health_summary.control_operational)
       {

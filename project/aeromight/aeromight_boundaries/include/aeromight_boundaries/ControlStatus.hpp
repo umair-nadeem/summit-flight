@@ -12,7 +12,8 @@ struct ControlStatus
 {
    enum class Error : types::ErrorBitsType
    {
-      invalid_estimation_data,
+      invalid_estimation_sample,
+      timing_jitter,
       max_error
    };
 

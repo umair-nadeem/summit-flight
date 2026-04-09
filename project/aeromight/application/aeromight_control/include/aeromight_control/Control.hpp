@@ -6,7 +6,7 @@
 #include "aeromight_boundaries/ControlStatus.hpp"
 #include "aeromight_boundaries/FlightControlSetpoints.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
-#include "aeromight_boundaries/SystemStateInfo.hpp"
+#include "aeromight_boundaries/SystemState.hpp"
 #include "boundaries/SharedData.hpp"
 #include "control/Motor.hpp"
 #include "interfaces/IClockSource.hpp"
@@ -25,10 +25,11 @@ template <typename AttitudeController,
           typename Logger>
 class Control
 {
-   using ActuatorControlPublisher  = boundaries::SharedData<aeromight_boundaries::ActuatorControl>;
-   using ControlHealthPublisher    = boundaries::SharedData<aeromight_boundaries::ControlStatus>;
-   using SystemStateInfoSubscriber = boundaries::SharedData<aeromight_boundaries::SystemStateInfo>;
-   using ControlAxis               = aeromight_boundaries::ControlAxis;
+   using ActuatorControlPublisher = boundaries::SharedData<aeromight_boundaries::ActuatorControl>;
+   using ControlHealthPublisher   = boundaries::SharedData<aeromight_boundaries::ControlStatus>;
+   using SystemStateSubscriber    = boundaries::SharedData<aeromight_boundaries::SystemState>;
+   using Error                    = aeromight_boundaries::ControlStatus::Error;
+   using ControlAxis              = aeromight_boundaries::ControlAxis;
 
 public:
    static constexpr std::size_t num_axis = 3u;
@@ -48,7 +49,7 @@ public:
                     ButterworthLpf2&                             pid_dterm_z_lpf,
                     ActuatorControlPublisher&                    actuator_control_publisher,
                     ControlHealthPublisher&                      control_health_publisher,
-                    const SystemStateInfoSubscriber&             system_state_info_subscriber,
+                    const SystemStateSubscriber&                 system_state_subscriber,
                     const aeromight_boundaries::StateEstimation& state_estimation_subscriber,
                     Logger&                                      logger,
                     const uint32_t                               max_age_state_estimation_data_ms,
@@ -71,7 +72,7 @@ public:
          m_pid_dterm_lpf{pid_dterm_x_lpf, pid_dterm_y_lpf, pid_dterm_z_lpf},
          m_actuator_control_publisher{actuator_control_publisher},
          m_control_health_publisher{control_health_publisher},
-         m_system_state_info_subscriber{system_state_info_subscriber},
+         m_system_state_subscriber{system_state_subscriber},
          m_state_estimation_subscriber{state_estimation_subscriber},
          m_logger{logger},
          m_max_age_state_estimation_data_ms{max_age_state_estimation_data_ms},
@@ -113,40 +114,39 @@ public:
       get_state_estimation();
 
       m_control_status.error.reset();
+      m_degraded_mode = false;
 
       if (!is_state_estimation_valid())
       {
-         reset_everything();
-         m_control_status.error.set(static_cast<types::ErrorBitsType>(aeromight_boundaries::ControlStatus::Error::invalid_estimation_data));
+         m_degraded_mode = true;
+         m_control_status.error.set(static_cast<types::ErrorBitsType>(Error::invalid_estimation_sample));
       }
-      else   // run control
+
+      get_rate_setpoints();
+
+      get_torque_setpoints();
+
+      update_actuator_setpoints();
+
+      if (m_actuator_control_setpoint.armed)
       {
-         get_rate_setpoints();
-
-         get_torque_setpoints();
-
-         update_actuator_setpoints();
-
-         if (m_actuator_control.enabled)
+         if (!m_system_state_setpoints.armed)
          {
-            if (!m_system_state_info.armed)
-            {
-               reset_everything();
-               m_logger.print("disarmed");
-            }
+            reset_everything();
+            m_logger.print("disarmed");
          }
-         else
+      }
+      else
+      {
+         if (m_system_state_setpoints.armed && (m_flight_control_setpoints.throttle < m_throttle_arming))
          {
-            if (m_system_state_info.armed && (m_flight_control_setpoints.throttle < m_throttle_arming))
-            {
-               reset();
-               reset_filters();
-               m_actuator_control.enabled = true;
-               m_logger.print("armed");
-            }
-
-            m_actuator_control.setpoints.zero();
+            reset();
+            reset_filters();
+            m_actuator_control_setpoint.armed = true;
+            m_logger.print("armed");
          }
+
+         m_actuator_control_setpoint.setpoints.zero();
       }
 
       publish_actuator_setpoints();
@@ -169,12 +169,16 @@ private:
       m_current_time_ms        = m_current_time_us / 1000u;
 
       m_dt_s = static_cast<float>(m_current_time_us - m_last_execution_time_us) * 0.000001f;
-      m_dt_s = std::clamp(m_dt_s, m_min_dt_s, m_max_dt_s);
+      if ((m_dt_s < m_min_dt_s) || (m_max_dt_s < m_dt_s))
+      {
+         m_dt_s = std::clamp(m_dt_s, m_min_dt_s, m_max_dt_s);
+         m_control_status.error.set(static_cast<types::ErrorBitsType>(Error::timing_jitter));
+      }
    }
 
    void get_system_state_info()
    {
-      m_system_state_info = m_system_state_info_subscriber.get_latest().data;
+      m_system_state_setpoints = m_system_state_subscriber.get_latest().data;
    }
 
    void get_flight_control_setpoints()
@@ -191,7 +195,7 @@ private:
    {
       using Axis = aeromight_boundaries::ControlAxis;
 
-      if (m_run_attitude_controller)
+      if (m_run_attitude_controller && !m_degraded_mode)
       {
          math::Vector2 manual_setpoints{m_stick_input_lpf[Axis::roll].get().apply(m_flight_control_setpoints.roll * m_max_tilt_angle_rad, m_dt_s),
                                         m_stick_input_lpf[Axis::pitch].get().apply(m_flight_control_setpoints.pitch * m_max_tilt_angle_rad, m_dt_s)};
@@ -239,14 +243,15 @@ private:
          m_dterm_gyro_radps[i] = m_pid_dterm_lpf[i].get().apply(m_gyro_radps[i]);
       }
 
-      const math::Vector3 angular_acceleration{(m_dterm_gyro_radps - m_previous_dterm_gyro_radps) / m_dt_s};
+      const math::Vector3 gyro_derivative_radps2{(m_dterm_gyro_radps - m_previous_dterm_gyro_radps) / m_dt_s};
 
-      const bool run_integrator{m_system_state_info.armed &&
+      const bool run_integrator{m_system_state_setpoints.armed &&
+                                !m_degraded_mode &&
                                 (m_flight_control_setpoints.throttle > m_throttle_gate_integrator)};
 
       m_torque_setpoints = m_rate_controller.update(m_angular_rate_setpoints,
                                                     m_gyro_radps,
-                                                    angular_acceleration,
+                                                    gyro_derivative_radps2,
                                                     m_dt_s,
                                                     run_integrator);
    }
@@ -264,18 +269,18 @@ private:
 
       m_control_allocator.clip_actuator_setpoints();
 
-      m_actuator_control.setpoints = m_control_allocator.get_actuator_setpoints();
+      m_actuator_control_setpoint.setpoints = m_control_allocator.get_actuator_setpoints();
 
       // determine allocator saturation
       m_control_allocator.estimate_saturation();
       m_rate_controller.set_saturation_status(m_control_allocator.get_actuator_saturation_positive(), m_control_allocator.get_actuator_saturation_negative());
 
-      control::Motor::apply_thrust_linearization(m_actuator_control.setpoints, m_thrust_linearization_factor, m_actuator_min, m_actuator_max);
+      control::Motor::apply_thrust_linearization(m_actuator_control_setpoint.setpoints, m_thrust_linearization_factor, m_actuator_min, m_actuator_max);
    }
 
    void publish_actuator_setpoints()
    {
-      m_actuator_control_publisher.update_latest(m_actuator_control, m_current_time_ms);
+      m_actuator_control_publisher.update_latest(m_actuator_control_setpoint, m_current_time_ms);
    }
 
    void publish_health()
@@ -287,8 +292,8 @@ private:
    {
       reset();
       reset_filters();
-      m_actuator_control.enabled = false;
-      m_actuator_control.setpoints.zero();
+      m_actuator_control_setpoint.armed = false;
+      m_actuator_control_setpoint.setpoints.zero();
    }
 
    void reset()
@@ -339,10 +344,10 @@ private:
                          m_torque_setpoints[1],
                          m_torque_setpoints[2],
                          m_flight_control_setpoints.throttle,
-                         m_actuator_control.setpoints[0],
-                         m_actuator_control.setpoints[1],
-                         m_actuator_control.setpoints[2],
-                         m_actuator_control.setpoints[3]);
+                         m_actuator_control_setpoint.setpoints[0],
+                         m_actuator_control_setpoint.setpoints[1],
+                         m_actuator_control_setpoint.setpoints[2],
+                         m_actuator_control_setpoint.setpoints[3]);
       }
    }
 
@@ -361,7 +366,7 @@ private:
    std::array<std::reference_wrapper<ButterworthLpf2>, num_axis> m_pid_dterm_lpf;
    ActuatorControlPublisher&                                     m_actuator_control_publisher;
    ControlHealthPublisher&                                       m_control_health_publisher;
-   const SystemStateInfoSubscriber&                              m_system_state_info_subscriber;
+   const SystemStateSubscriber&                                  m_system_state_subscriber;
    const aeromight_boundaries::StateEstimation&                  m_state_estimation_subscriber;
    Logger&                                                       m_logger;
    const uint32_t                                                m_max_age_state_estimation_data_ms;
@@ -375,10 +380,10 @@ private:
    const float                                                   m_throttle_arming;
    const float                                                   m_throttle_gate_integrator;
    const float                                                   m_thrust_linearization_factor;
-   aeromight_boundaries::ActuatorControl                         m_actuator_control{};
+   aeromight_boundaries::ActuatorControl                         m_actuator_control_setpoint{};
    aeromight_boundaries::ControlStatus                           m_control_status{};
    aeromight_boundaries::FlightControlSetpoints                  m_flight_control_setpoints{};
-   aeromight_boundaries::SystemStateInfo                         m_system_state_info{};
+   aeromight_boundaries::SystemState                             m_system_state_setpoints{};
    aeromight_boundaries::StateEstimation                         m_state_estimation{};
    math::Vector3                                                 m_gyro_radps{};
    math::Vector3                                                 m_dterm_gyro_radps{};
@@ -386,6 +391,7 @@ private:
    math::Vector3                                                 m_angular_rate_setpoints{};
    math::Vector3                                                 m_torque_setpoints{};
    float                                                         m_dt_s{0.0f};
+   bool                                                          m_degraded_mode{false};
    uint32_t                                                      m_current_time_ms{0};
    uint32_t                                                      m_current_time_us{0};
    uint32_t                                                      m_last_execution_time_us{0};

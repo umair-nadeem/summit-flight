@@ -4,7 +4,7 @@
 #include "aeromight_boundaries/HealthSummary.hpp"
 #include "aeromight_boundaries/RadioLinkActuals.hpp"
 #include "aeromight_boundaries/SystemControlSetpoints.hpp"
-#include "aeromight_boundaries/SystemStateInfo.hpp"
+#include "aeromight_boundaries/SystemState.hpp"
 #include "boundaries/SharedData.hpp"
 #include "error/error_handler.hpp"
 #include "interfaces/IClockSource.hpp"
@@ -22,7 +22,7 @@ template <interfaces::rtos::IQueueReceiver<aeromight_boundaries::HealthSummary> 
           typename Logger>
 class SystemManagerStateHandler
 {
-   using SystemStateInfoPublisher         = boundaries::SharedData<aeromight_boundaries::SystemStateInfo>;
+   using SystemStatePublisher             = boundaries::SharedData<aeromight_boundaries::SystemState>;
    using SystemControlSetpointsSubscriber = boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints>;
    using RadioLinkActualsSubscriber       = boundaries::SharedData<aeromight_boundaries::RadioLinkActuals>;
 
@@ -31,7 +31,7 @@ public:
                                       Notifier&                               control_start_notifier,
                                       Notifier&                               imu_start_calibration_notifier,
                                       Led&                                    led,
-                                      SystemStateInfoPublisher&               system_state_info_publisher,
+                                      SystemStatePublisher&                   system_state_publisher,
                                       const SystemControlSetpointsSubscriber& system_control_setpoints_subscriber,
                                       const RadioLinkActualsSubscriber&       radio_link_actuals_subscriber,
                                       Logger&                                 logger,
@@ -45,7 +45,7 @@ public:
          m_control_start_notifier(control_start_notifier),
          m_imu_start_calibration_notifier(imu_start_calibration_notifier),
          m_led{led},
-         m_system_state_info_publisher(system_state_info_publisher),
+         m_system_state_publisher(system_state_publisher),
          m_system_control_setpoints_subscriber(system_control_setpoints_subscriber),
          m_radio_link_actuals_subscriber(radio_link_actuals_subscriber),
          m_logger{logger},
@@ -83,9 +83,9 @@ public:
       m_radio_link_actuals       = m_radio_link_actuals_subscriber.get_latest();
    }
 
-   void publish_system_state_info()
+   void publish_system_state()
    {
-      m_system_state_info_publisher.update_latest(m_system_state_info, m_current_time_ms);
+      m_system_state_publisher.update_latest(m_system_state, m_current_time_ms);
    }
 
    void start_control()
@@ -102,12 +102,12 @@ public:
 
    void arm_system()
    {
-      m_system_state_info.armed = true;
+      m_system_state.armed = true;
    }
 
    void disarm_system()
    {
-      m_system_state_info.armed = false;
+      m_system_state.armed = false;
    }
 
    void set_state(const SystemManagerState state)
@@ -343,7 +343,7 @@ private:
    Notifier&                                m_control_start_notifier;
    Notifier&                                m_imu_start_calibration_notifier;
    Led&                                     m_led;
-   SystemStateInfoPublisher&                m_system_state_info_publisher;
+   SystemStatePublisher&                    m_system_state_publisher;
    const SystemControlSetpointsSubscriber&  m_system_control_setpoints_subscriber;
    const RadioLinkActualsSubscriber&        m_radio_link_actuals_subscriber;
    Logger&                                  m_logger;
@@ -353,7 +353,7 @@ private:
    const uint32_t                           m_min_state_debounce_duration_ms;
    const uint32_t                           m_timeout_sensors_readiness_ms;
    const uint32_t                           m_timeout_control_readiness_ms;
-   aeromight_boundaries::SystemStateInfo    m_system_state_info{};
+   aeromight_boundaries::SystemState        m_system_state{};
    aeromight_boundaries::HealthSummary      m_health_summary{};
    SystemControlSetpointsSubscriber::Sample m_system_control_setpoints{};
    RadioLinkActualsSubscriber::Sample       m_radio_link_actuals{};

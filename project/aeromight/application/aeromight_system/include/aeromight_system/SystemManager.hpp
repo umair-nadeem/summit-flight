@@ -18,7 +18,7 @@ public:
                           Notifier&                                                                   control_start_notifier,
                           Notifier&                                                                   imu_start_calibration_notifier,
                           Led&                                                                        led,
-                          boundaries::SharedData<aeromight_boundaries::SystemStateInfo>&              system_state_info_publisher,
+                          boundaries::SharedData<aeromight_boundaries::SystemState>&                  system_state_publisher,
                           const boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints>& system_control_setpoints_subscriber,
                           const boundaries::SharedData<aeromight_boundaries::RadioLinkActuals>&       radio_link_actuals_subscriber,
                           Logger&                                                                     logger,
@@ -34,7 +34,7 @@ public:
                          control_start_notifier,
                          imu_start_calibration_notifier,
                          led,
-                         system_state_info_publisher,
+                         system_state_publisher,
                          system_control_setpoints_subscriber,
                          radio_link_actuals_subscriber,
                          logger,
@@ -56,7 +56,7 @@ public:
 
       m_state_machine.process_event(typename StateMachineDef::EventTick{});
 
-      m_state_handler.publish_system_state_info();
+      m_state_handler.publish_system_state();
    }
 
    SystemManagerState get_state() const

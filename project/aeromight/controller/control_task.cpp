@@ -276,7 +276,7 @@ extern "C"
          const bool     stale_sample  = (sample_age_ms > max_age_actuator_control_data_ms);
          const auto&    act           = sample.data;
 
-         const bool enable_outputs = (!stale_sample) && (act.enabled);
+         const bool enable_outputs = (!stale_sample) && (act.armed);
 
          for (uint8_t i = 0; i < 4u; i++)
          {

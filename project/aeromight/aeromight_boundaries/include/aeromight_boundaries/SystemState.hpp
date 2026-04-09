@@ -3,7 +3,7 @@
 namespace aeromight_boundaries
 {
 
-struct SystemStateInfo
+struct SystemState
 {
    bool armed;
 };

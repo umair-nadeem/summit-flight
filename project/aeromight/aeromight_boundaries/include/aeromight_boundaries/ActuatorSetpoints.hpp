@@ -18,7 +18,7 @@ struct ActuatorParams
 struct ActuatorControl
 {
    ActuatorSetpoints setpoints{0.0f};
-   bool              enabled{false};
+   bool              armed{false};
 };
 
 struct ControlAxis

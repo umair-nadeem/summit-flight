@@ -26,8 +26,8 @@ public:
    }
 
    math::Vector3 update(const math::Vector3& rate_setpoint_radps,
-                        const math::Vector3& rate_gyro_measured_radps,
-                        const math::Vector3& angular_acceleration_radps2,
+                        const math::Vector3& gyro_radps,
+                        const math::Vector3& gyro_derivative_radps2,
                         const float          dt_s,
                         const bool           run_integrator)
    {
@@ -38,10 +38,10 @@ public:
          return {};
       }
 
-      const math::Vector3 rate_error = rate_setpoint_radps - rate_gyro_measured_radps;
+      const math::Vector3 rate_error = rate_setpoint_radps - gyro_radps;
       const math::Vector3 p          = m_gains_p.emul(rate_error);
       const math::Vector3 i          = m_rate_integrator;
-      const math::Vector3 d          = m_gains_d.emul(angular_acceleration_radps2);
+      const math::Vector3 d          = m_gains_d.emul(gyro_derivative_radps2);
 
       math::Vector3 torque_cmd = p + i - d;
 
