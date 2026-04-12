@@ -35,7 +35,7 @@ extern "C"
       hw::uart::handle_uart_global_interrupt(data.logging_uart.config, data.logging_uart.isr_sem_giver);
    }
 
-   void DMA2_Stream2_IRQHandler()
+   void DMA2_Stream5_IRQHandler()
    {
       // do nothing, because rx is not applicable
    }

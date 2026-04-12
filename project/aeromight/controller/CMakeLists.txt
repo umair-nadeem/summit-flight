@@ -37,6 +37,7 @@ target_link_libraries(aeromight_lib INTERFACE
    aeromight_link
    barometer
    bmp390
+   dshot
    event_handling
    error
    imu

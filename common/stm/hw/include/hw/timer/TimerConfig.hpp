@@ -8,6 +8,7 @@ namespace hw::timer
 struct TimerConfig
 {
    TIM_TypeDef* timer_handle;
+   uint32_t     autoreload;
 };
 
 }   // namespace hw::timer

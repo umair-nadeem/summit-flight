@@ -89,6 +89,48 @@ void clear_dma_te_flag(DMA_TypeDef* dma_handle, const uint32_t dma_stream)
    }
 }
 
+void clear_dma_ht_flag(DMA_TypeDef* dma_handle, const uint32_t dma_stream)
+{
+   switch (dma_stream)
+   {
+      case LL_DMA_STREAM_0:
+         LL_DMA_ClearFlag_HT0(dma_handle);
+         break;
+
+      case LL_DMA_STREAM_1:
+         LL_DMA_ClearFlag_HT1(dma_handle);
+         break;
+
+      case LL_DMA_STREAM_2:
+         LL_DMA_ClearFlag_HT2(dma_handle);
+         break;
+
+      case LL_DMA_STREAM_3:
+         LL_DMA_ClearFlag_HT3(dma_handle);
+         break;
+
+      case LL_DMA_STREAM_4:
+         LL_DMA_ClearFlag_HT4(dma_handle);
+         break;
+
+      case LL_DMA_STREAM_5:
+         LL_DMA_ClearFlag_HT5(dma_handle);
+         break;
+
+      case LL_DMA_STREAM_6:
+         LL_DMA_ClearFlag_HT6(dma_handle);
+         break;
+
+      case LL_DMA_STREAM_7:
+         LL_DMA_ClearFlag_HT7(dma_handle);
+         break;
+
+      default:
+         error::stop_operation();
+         break;
+   }
+}
+
 bool is_dma_tc_flag_active(DMA_TypeDef* dma_handle, const uint32_t dma_stream)
 {
    switch (dma_stream)

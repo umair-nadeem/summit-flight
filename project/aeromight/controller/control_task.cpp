@@ -179,6 +179,7 @@ extern "C"
                                  decltype(rate_controller),
                                  decltype(control_allocator),
                                  decltype(control_input),
+                                 decltype(data->dshot),
                                  math::FirstOrderLpf,
                                  math::ButterworthFilter,
                                  sys_time::ClockSource,
@@ -187,6 +188,7 @@ extern "C"
                   rate_controller,
                   control_allocator,
                   control_input,
+                  data->dshot,
                   roll_input_lpf,
                   pitch_input_lpf,
                   yaw_input_lpf,
@@ -196,7 +198,7 @@ extern "C"
                   pid_dterm_x_lpf,
                   pid_dterm_y_lpf,
                   pid_dterm_z_lpf,
-                  aeromight_boundaries::aeromight_data.actuator_control,
+                  data->motor_output_map,
                   aeromight_boundaries::aeromight_data.control_health,
                   aeromight_boundaries::aeromight_data.system_state_info,
                   data->state_estimation,
@@ -227,8 +229,6 @@ extern "C"
       }
 
       // start pwm
-      data->master_pwm_timer.enable_interrupt();
-
       data->slave_pwm_timer.enable_channel(data->slave_pwm_timer_channels);
       data->master_pwm_timer.enable_channel(data->master_pwm_timer_channels);
 
@@ -240,52 +240,6 @@ extern "C"
       estimation_and_control.start();
 
       rtos::run_periodic_task(estimation_and_control);
-   }
-
-}   // extern "C"
-
-extern "C"
-{
-   constexpr uint32_t pwm_min_us                       = 1000u;                                                 // 1.0 ms
-   constexpr uint32_t pwm_max_us                       = 2000u;                                                 // 2.0 ms
-   constexpr uint32_t max_age_actuator_control_data_ms = controller::task::control_task_period_in_ms * 1250u;   // 5 seconds
-
-   static inline uint32_t actuator_to_ccr(float x)
-   {
-      x = std::clamp(x, 0.0f, 1.0f);
-      return pwm_min_us + static_cast<uint32_t>(x * static_cast<float>(pwm_max_us - pwm_min_us));
-   }
-
-   // PWM generator
-   void TIM1_UP_TIM10_IRQHandler(void)
-   {
-      using namespace hw::timer;
-
-      auto& data = controller::control_task_data;
-
-      // Check update interrupt
-      if (data.master_pwm_timer.is_update_flag_active())
-      {
-         data.master_pwm_timer.clear_update_flag();
-
-         const auto& actuator_control_storage = aeromight_boundaries::aeromight_data.actuator_control;
-
-         // Get latest actuator command (lock-free)
-         const auto     sample        = actuator_control_storage.get_latest();
-         const uint32_t sample_age_ms = (sys_time::ClockSource::now_ms() - sample.timestamp_ms);
-         const bool     stale_sample  = (sample_age_ms > max_age_actuator_control_data_ms);
-         const auto&    act           = sample.data;
-
-         const bool enable_outputs = (!stale_sample) && (act.armed);
-
-         for (uint8_t i = 0; i < 4u; i++)
-         {
-            const uint32_t pwm = enable_outputs ? actuator_to_ccr(act.setpoints[i]) : pwm_min_us;
-
-            auto& out = data.motor_output_map[i];
-            out.timer.set_compare_value_for_channel(out.channel, pwm);
-         }
-      }
    }
 
 }   // extern "C"

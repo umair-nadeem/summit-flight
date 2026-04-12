@@ -259,6 +259,11 @@ void setup_adc()
    radio_link_task_data.voltage_sensing_adc.prepare_for_communication();
 }
 
+void setup_dshot()
+{
+   control_task_data.dshot.prepare_for_communication();
+}
+
 void start_sys_clock()
 {
    sys_clock_data.syc_clock_timer.enable_counter();
@@ -281,6 +286,7 @@ extern "C"
          controller::setup_uart();
          controller::setup_spi();
          controller::setup_adc();
+         controller::setup_dshot();
 
          // start sys clock
          controller::start_sys_clock();

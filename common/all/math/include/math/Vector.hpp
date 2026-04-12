@@ -208,6 +208,11 @@ struct Vector
       a *= (static_cast<T>(1) / scalar);
    }
 
+   const std::array<T, N>& as_array() const
+   {
+      return m_data;
+   }
+
    constexpr Vector normalized() const
    {
       const T n = norm();

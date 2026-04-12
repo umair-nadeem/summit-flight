@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <span>
 
 #include "aeromight_boundaries/ActuatorSetpoints.hpp"
 #include "aeromight_boundaries/ControlStatus.hpp"
@@ -8,9 +9,10 @@
 #include "aeromight_boundaries/StateEstimation.hpp"
 #include "aeromight_boundaries/SystemState.hpp"
 #include "boundaries/SharedData.hpp"
-#include "control/Motor.hpp"
+#include "dshot/dshot.hpp"
 #include "interfaces/IClockSource.hpp"
 #include "math/Vector2.hpp"
+#include "motor/motor.hpp"
 
 namespace aeromight_control
 {
@@ -19,25 +21,27 @@ template <typename AttitudeController,
           typename RateController,
           typename ControlAllocator,
           typename ControlInput,
+          typename Dshot,
           typename FirstOrderLpf,
           typename ButterworthLpf2,
           interfaces::IClockSource ClockSource,
           typename Logger>
 class Control
 {
-   using ActuatorControlPublisher = boundaries::SharedData<aeromight_boundaries::ActuatorControl>;
-   using ControlHealthPublisher   = boundaries::SharedData<aeromight_boundaries::ControlStatus>;
-   using SystemStateSubscriber    = boundaries::SharedData<aeromight_boundaries::SystemState>;
-   using Error                    = aeromight_boundaries::ControlStatus::Error;
-   using ControlAxis              = aeromight_boundaries::ControlAxis;
+   using ControlHealthPublisher = boundaries::SharedData<aeromight_boundaries::ControlStatus>;
+   using SystemStateSubscriber  = boundaries::SharedData<aeromight_boundaries::SystemState>;
+   using Error                  = aeromight_boundaries::ControlStatus::Error;
+   using ControlAxis            = aeromight_boundaries::ControlAxis;
 
 public:
-   static constexpr std::size_t num_axis = 3u;
+   static constexpr std::size_t num_axis      = 3u;
+   static constexpr std::size_t num_actuators = aeromight_boundaries::ActuatorParams::num_actuators;
 
    explicit Control(AttitudeController&                          attitude_controller,
                     RateController&                              rate_controller,
                     ControlAllocator&                            control_allocator,
                     ControlInput&                                control_input,
+                    Dshot&                                       dshot,
                     FirstOrderLpf&                               roll_input_lpf,
                     FirstOrderLpf&                               pitch_input_lpf,
                     FirstOrderLpf&                               yaw_input_lpf,
@@ -47,7 +51,7 @@ public:
                     ButterworthLpf2&                             pid_dterm_x_lpf,
                     ButterworthLpf2&                             pid_dterm_y_lpf,
                     ButterworthLpf2&                             pid_dterm_z_lpf,
-                    ActuatorControlPublisher&                    actuator_control_publisher,
+                    const std::array<uint8_t, num_actuators>&    motor_mapping,
                     ControlHealthPublisher&                      control_health_publisher,
                     const SystemStateSubscriber&                 system_state_subscriber,
                     const aeromight_boundaries::StateEstimation& state_estimation_subscriber,
@@ -67,10 +71,11 @@ public:
          m_rate_controller{rate_controller},
          m_control_allocator{control_allocator},
          m_control_input{control_input},
+         m_dshot{dshot},
          m_stick_input_lpf{roll_input_lpf, pitch_input_lpf, yaw_input_lpf},
          m_gyro_lpf{gyro_x_lpf, gyro_y_lpf, gyro_z_lpf},
          m_pid_dterm_lpf{pid_dterm_x_lpf, pid_dterm_y_lpf, pid_dterm_z_lpf},
-         m_actuator_control_publisher{actuator_control_publisher},
+         m_motor_mapping{motor_mapping},
          m_control_health_publisher{control_health_publisher},
          m_system_state_subscriber{system_state_subscriber},
          m_state_estimation_subscriber{state_estimation_subscriber},
@@ -149,7 +154,7 @@ public:
          m_actuator_control_setpoint.setpoints.zero();
       }
 
-      publish_actuator_setpoints();
+      update_motor_commands();
 
       publish_health();
 
@@ -274,13 +279,32 @@ private:
       // determine allocator saturation
       m_control_allocator.estimate_saturation();
       m_rate_controller.set_saturation_status(m_control_allocator.get_actuator_saturation_positive(), m_control_allocator.get_actuator_saturation_negative());
-
-      control::Motor::apply_thrust_linearization(m_actuator_control_setpoint.setpoints, m_thrust_linearization_factor, m_actuator_min, m_actuator_max);
    }
 
-   void publish_actuator_setpoints()
+   void update_motor_commands()
    {
-      m_actuator_control_publisher.update_latest(m_actuator_control_setpoint, m_current_time_ms);
+      using DshotVector = math::Vector<uint16_t, num_actuators>;
+
+      math::Vector4 motor_values{};
+      DshotVector   dshot_throttle{};
+      DshotVector   dshot_frames{};
+
+      // apply motor permutation
+      motor::apply_motor_permutation(motor_values, m_actuator_control_setpoint.setpoints, m_motor_mapping);
+
+      motor::apply_thrust_linearization(motor_values, m_thrust_linearization_factor, m_actuator_min, m_actuator_max);
+
+      for (std::size_t i = 0; i < num_actuators; i++)
+      {
+         dshot_throttle[i] = dshot::thrust_to_dshot_throttle(motor_values[i]);
+      }
+
+      for (std::size_t i = 0; i < num_actuators; i++)
+      {
+         dshot_frames[i] = dshot::get_dshot_frame(dshot_throttle[i], false);
+      }
+
+      m_dshot.send(dshot_frames.as_array());
    }
 
    void publish_health()
@@ -361,10 +385,11 @@ private:
    RateController&                                               m_rate_controller;
    ControlAllocator&                                             m_control_allocator;
    ControlInput&                                                 m_control_input;
+   Dshot&                                                        m_dshot;
    std::array<std::reference_wrapper<FirstOrderLpf>, num_axis>   m_stick_input_lpf;
    std::array<std::reference_wrapper<FirstOrderLpf>, num_axis>   m_gyro_lpf;
    std::array<std::reference_wrapper<ButterworthLpf2>, num_axis> m_pid_dterm_lpf;
-   ActuatorControlPublisher&                                     m_actuator_control_publisher;
+   const std::array<uint8_t, num_actuators>&                     m_motor_mapping;
    ControlHealthPublisher&                                       m_control_health_publisher;
    const SystemStateSubscriber&                                  m_system_state_subscriber;
    const aeromight_boundaries::StateEstimation&                  m_state_estimation_subscriber;

@@ -1,8 +1,14 @@
 #pragma once
 
+#include <array>
+
+#include "aeromight_boundaries/ActuatorSetpoints.hpp"
 #include "aeromight_boundaries/ControlTaskEvents.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
+#include "dshot/params.hpp"
 #include "hardware_bindings.hpp"
+#include "hw/dshot/Dshot.hpp"
+#include "hw/dshot/DshotConfig.hpp"
 #include "hw/timer/Timer.hpp"
 #include "rtos/NotificationWaiter.hpp"
 #include "utilities/enum_to_bit_mask.hpp"
@@ -21,28 +27,53 @@ struct ControlTaskData
 {
    using Channel = hw::timer::OutputChannel;
 
-   // TIM1
-   hw::timer::Timer master_pwm_timer{global_data.timer.tim1_config};
-   // TIM4
-   hw::timer::Timer slave_pwm_timer{global_data.timer.tim4_config};
-
    hw::timer::ChannelType master_pwm_timer_channels{utilities::enum_to_bit_mask<Channel::channel1>() |
                                                     utilities::enum_to_bit_mask<Channel::channel2>() |
                                                     utilities::enum_to_bit_mask<Channel::channel3>()};
 
    hw::timer::ChannelType slave_pwm_timer_channels{utilities::enum_to_bit_mask<Channel::channel3>()};
 
-   struct MotorOutput
-   {
-      hw::timer::Timer& timer;
-      Channel           channel;
-   };
+   // TIM1
+   hw::timer::Timer master_pwm_timer{global_data.timer.tim1_config};
+   // TIM4
+   hw::timer::Timer slave_pwm_timer{global_data.timer.tim4_config};
 
-   std::array<MotorOutput, 4> motor_output_map{
-       MotorOutput{master_pwm_timer, Channel::channel1},   // motor 1
-       MotorOutput{master_pwm_timer, Channel::channel3},   // motor 2
-       MotorOutput{slave_pwm_timer, Channel::channel3},    // motor 3
-       MotorOutput{master_pwm_timer, Channel::channel2}    // motor 4
+   // dshot configs
+   std::array<hw::dshot::DshotConfig, aeromight_boundaries::ActuatorParams::num_actuators>
+       dshot_configs{
+           {{DMA2, LL_DMA_STREAM_1,
+             global_data.timer.tim1_config.timer_handle,
+             LL_TIM_CHANNEL_CH1,
+             &global_data.timer.tim1_config.timer_handle->CCR1},
+
+            {DMA2, LL_DMA_STREAM_2,
+             global_data.timer.tim1_config.timer_handle,
+             LL_TIM_CHANNEL_CH2,
+             &global_data.timer.tim1_config.timer_handle->CCR2},
+
+            {DMA2, LL_DMA_STREAM_6,
+             global_data.timer.tim1_config.timer_handle,
+             LL_TIM_CHANNEL_CH3,
+             &global_data.timer.tim1_config.timer_handle->CCR3},
+
+            {DMA1, LL_DMA_STREAM_7,
+             global_data.timer.tim4_config.timer_handle,
+             LL_TIM_CHANNEL_CH3,
+             &global_data.timer.tim4_config.timer_handle->CCR3}}};
+
+   // dshot frame buffers
+   std::array<std::array<uint16_t, dshot::frame_len>, aeromight_boundaries::ActuatorParams::num_actuators> dshot_buffers{};
+
+   hw::dshot::Dshot<aeromight_boundaries::ActuatorParams::num_actuators> dshot{dshot_buffers,
+                                                                               dshot_configs,
+                                                                               static_cast<uint16_t>(global_data.timer.tim1_config.autoreload)};
+
+   // motor output mapping
+   std::array<uint8_t, 4> motor_output_map{
+       0u,   // motor 1
+       3u,   // motor 2
+       1u,   // motor 3
+       2u    // motor 4
    };
 
    aeromight_boundaries::StateEstimation state_estimation{};

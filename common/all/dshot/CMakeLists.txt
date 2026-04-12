@@ -3,6 +3,4 @@ add_module(
    LIBS
       error
       math
-      motor
-      utilities
 )

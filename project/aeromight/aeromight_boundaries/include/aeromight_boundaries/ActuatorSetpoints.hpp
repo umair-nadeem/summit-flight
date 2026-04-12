@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include "math/Vector4.hpp"
 
 namespace aeromight_boundaries

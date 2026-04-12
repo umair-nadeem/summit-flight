@@ -24,7 +24,7 @@ struct LoggingTaskData
           .uart_handle   = USART1,
           .dma_handle    = DMA2,
           .tx_dma_stream = LL_DMA_STREAM_7,
-          .rx_dma_stream = LL_DMA_STREAM_2};
+          .rx_dma_stream = LL_DMA_STREAM_5};
 
       std::array<uint8_t, logging::params::max_log_len> dma_tx_buffer{};
       std::array<uint8_t, 1u>                           dummy_dma_rx_buffer{};

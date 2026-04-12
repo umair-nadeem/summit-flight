@@ -30,7 +30,6 @@ struct AeromightData
    boundaries::SharedData<EstimatorStatus> estimator_health{};
 
    // Control
-   boundaries::SharedData<ActuatorControl>        actuator_control{};
    boundaries::SharedData<ControlStatus>          control_health{};
    boundaries::SharedData<FlightControlSetpoints> flight_control_setpoints{};
 
