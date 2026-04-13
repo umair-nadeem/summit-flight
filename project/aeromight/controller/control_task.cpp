@@ -90,9 +90,9 @@ extern "C"
       constexpr float    rate_controller_pitch_kp               = 0.035f;
       constexpr float    rate_controller_yaw_kp                 = 0.06f;
       // i
-      constexpr float    rate_controller_roll_ki                = 0.02f;
-      constexpr float    rate_controller_pitch_ki               = 0.02f;
-      constexpr float    rate_controller_yaw_ki                 = 0.01f;
+      constexpr float    rate_controller_roll_ki                = 0.025f;
+      constexpr float    rate_controller_pitch_ki               = 0.025f;
+      constexpr float    rate_controller_yaw_ki                 = 0.015f;
       constexpr float    rate_controller_roll_integrator_limit  = 0.2f;
       constexpr float    rate_controller_pitch_integrator_limit = 0.2f;
       constexpr float    rate_controller_yaw_integrator_limit   = 0.03f;
