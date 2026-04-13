@@ -105,6 +105,10 @@ extern "C"
       constexpr float    rate_controller_roll_kd                = 0.002f;
       constexpr float    rate_controller_pitch_kd               = 0.002f;
       constexpr float    rate_controller_yaw_kd                 = 0.0f;
+      // ff
+      constexpr float    rate_controller_roll_kff               = 0.008f;
+      constexpr float    rate_controller_pitch_kff              = 0.008f;
+      constexpr float    rate_controller_yaw_kff                = 0.006f;
       // control allocator
       constexpr float    thrust_deadband                        = 0.01f;
       constexpr float    yaw_saturation_limit_factor            = 0.25f;
@@ -146,11 +150,13 @@ extern "C"
       const math::Vector3 rate_gains_p{rate_controller_roll_kp, rate_controller_pitch_kp, rate_controller_yaw_kp};
       const math::Vector3 rate_gains_i{rate_controller_roll_ki, rate_controller_pitch_ki, rate_controller_yaw_ki};
       const math::Vector3 rate_gains_d{rate_controller_roll_kd, rate_controller_pitch_kd, rate_controller_yaw_kd};
+      const math::Vector3 rate_gains_ff{rate_controller_roll_kff, rate_controller_pitch_kff, rate_controller_yaw_kff};
       const math::Vector3 rate_integrator_limits{rate_controller_roll_integrator_limit, rate_controller_pitch_integrator_limit, rate_controller_yaw_integrator_limit};
 
       aeromight_control::RateController rate_controller{rate_gains_p,
                                                         rate_gains_i,
                                                         rate_gains_d,
+                                                        rate_gains_ff,
                                                         rate_integrator_limits,
                                                         torque_limit};
 

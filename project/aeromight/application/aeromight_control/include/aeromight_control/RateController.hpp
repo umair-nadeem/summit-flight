@@ -15,11 +15,13 @@ public:
    explicit RateController(const math::Vector3& gains_p,
                            const math::Vector3& gains_i,
                            const math::Vector3& gains_d,
+                           const math::Vector3& gains_ff,
                            const math::Vector3& integrator_limit,
                            const float          torque_output_limit)
        : m_gains_p{gains_p},
          m_gains_i{gains_i},
          m_gains_d{gains_d},
+         m_gains_ff{gains_ff},
          m_integrator_limit{integrator_limit},
          m_torque_output_limit{torque_output_limit}
    {
@@ -42,8 +44,9 @@ public:
       const math::Vector3 p          = m_gains_p.emul(rate_error);
       const math::Vector3 i          = m_rate_integrator;
       const math::Vector3 d          = m_gains_d.emul(gyro_derivative_radps2);
+      const math::Vector3 ff         = m_gains_ff.emul(rate_setpoint_radps);
 
-      math::Vector3 torque_cmd = p + i - d;
+      math::Vector3 torque_cmd = p + i - d + ff;
 
       torque_cmd[0] = std::clamp(torque_cmd[0], -m_torque_output_limit, m_torque_output_limit);
       torque_cmd[1] = std::clamp(torque_cmd[1], -m_torque_output_limit, m_torque_output_limit);
@@ -101,6 +104,7 @@ private:
    const math::Vector3        m_gains_p;
    const math::Vector3        m_gains_i;
    const math::Vector3        m_gains_d;
+   const math::Vector3        m_gains_ff;
    const math::Vector3        m_integrator_limit;
    const float                m_torque_output_limit;
    math::Vector3              m_rate_integrator{};
