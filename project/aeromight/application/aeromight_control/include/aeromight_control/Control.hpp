@@ -25,6 +25,7 @@ template <typename AttitudeController,
           typename StickInputFilter,
           typename GyroFilter,
           typename DtermFilter,
+          typename Led,
           interfaces::IClockSource ClockSource,
           typename Logger>
 class Control
@@ -52,6 +53,7 @@ public:
                     DtermFilter&                                 pid_dterm_x_lpf,
                     DtermFilter&                                 pid_dterm_y_lpf,
                     DtermFilter&                                 pid_dterm_z_lpf,
+                    Led&                                         led,
                     const std::array<uint8_t, num_actuators>&    motor_mapping,
                     ControlHealthPublisher&                      control_health_publisher,
                     const SystemStateSubscriber&                 system_state_subscriber,
@@ -76,6 +78,7 @@ public:
          m_stick_input_lpf{roll_input_lpf, pitch_input_lpf, yaw_input_lpf},
          m_gyro_lpf{gyro_x_lpf, gyro_y_lpf, gyro_z_lpf},
          m_pid_dterm_lpf{pid_dterm_x_lpf, pid_dterm_y_lpf, pid_dterm_z_lpf},
+         m_led{led},
          m_motor_mapping{motor_mapping},
          m_control_health_publisher{control_health_publisher},
          m_system_state_subscriber{system_state_subscriber},
@@ -101,6 +104,7 @@ public:
       m_control_status.enabled = true;
       get_time();
       publish_health();
+      m_led.turn_off();
       m_logger.print("started");
    }
 
@@ -125,6 +129,7 @@ public:
       {
          m_control_status.error.set(static_cast<types::ErrorBitsType>(Error::invalid_estimation_sample));
          reset_everything();
+         m_led.toggle(control_led_period_ms);
       }
       else
       {
@@ -141,15 +146,29 @@ public:
                reset_everything();
                m_logger.print("disarmed");
             }
+
+            m_led.turn_on();
          }
          else
          {
-            if (m_system_state_setpoints.armed && (m_flight_control_setpoints.throttle < m_throttle_arming))
+            if (m_system_state_setpoints.armed)
             {
+               if (m_flight_control_setpoints.throttle < m_throttle_arming)
+               {
+                  m_armed = true;
+                  m_logger.print("armed");
+               }
+               else
+               {
+                  m_led.toggle(control_led_period_ms);
+               }
+
                reset();
                reset_filters();
-               m_armed = true;
-               m_logger.print("armed");
+            }
+            else
+            {
+               m_led.turn_off();
             }
 
             m_actuator_setpoints.zero();
@@ -382,6 +401,8 @@ private:
       return (m_state_estimation.attitude_estimation_valid && (state_estimation_data_age_ms <= m_max_age_state_estimation_data_ms));
    }
 
+   static constexpr uint32_t control_led_period_ms = 100u;
+
    AttitudeController&                                            m_attitude_controller;
    RateController&                                                m_rate_controller;
    ControlAllocator&                                              m_control_allocator;
@@ -390,6 +411,7 @@ private:
    std::array<std::reference_wrapper<StickInputFilter>, num_axis> m_stick_input_lpf;
    std::array<std::reference_wrapper<GyroFilter>, num_axis>       m_gyro_lpf;
    std::array<std::reference_wrapper<DtermFilter>, num_axis>      m_pid_dterm_lpf;
+   Led&                                                           m_led;
    const std::array<uint8_t, num_actuators>&                      m_motor_mapping;
    ControlHealthPublisher&                                        m_control_health_publisher;
    const SystemStateSubscriber&                                   m_system_state_subscriber;

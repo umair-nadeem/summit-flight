@@ -129,12 +129,10 @@ public:
             break;
 
          case SystemManagerState::imu_calibration:
-            turn_off_status_led();
             m_logger.print("entered state->imu_calibration");
             break;
 
          case SystemManagerState::disarming:
-            turn_off_status_led();
             m_logger.print("entered state->disarming");
             break;
 
@@ -143,17 +141,14 @@ public:
             break;
 
          case SystemManagerState::arming:
-            turn_off_status_led();
             m_logger.print("entered state->arming");
             break;
 
          case SystemManagerState::armed:
-            turn_on_status_led();
             m_logger.print("entered state->armed");
             break;
 
          case SystemManagerState::fault:
-            turn_off_status_led();
             m_logger.print("entered state->fault");
             break;
 
@@ -163,9 +158,29 @@ public:
       }
    }
 
-   void show_disarm_led()
+   void set_calibration_led()
    {
-      toggle_status_led();
+      toggle_status_led(calibration_led_period_ms);
+   }
+
+   void set_disarmed_led()
+   {
+      turn_on_status_led();
+   }
+
+   void set_arming_led()
+   {
+      turn_off_status_led();
+   }
+
+   void set_armed_led()
+   {
+      toggle_status_led(armed_led_period_ms);
+   }
+
+   void set_fault_led()
+   {
+      turn_off_status_led();
    }
 
    SystemManagerState get_state() const
@@ -303,23 +318,10 @@ private:
       m_led.turn_off();
    }
 
-   void toggle_status_led()
+   // cppcheck-suppress functionStatic
+   void toggle_status_led(const uint32_t period)
    {
-      if ((m_current_time_ms - m_status_led_timer) >= led_state_duration)
-      {
-         if (m_status_led_on)
-         {
-            m_led.turn_off();
-            m_status_led_on    = false;
-            m_status_led_timer = m_current_time_ms;
-         }
-         else
-         {
-            m_led.turn_on();
-            m_status_led_on    = true;
-            m_status_led_timer = m_current_time_ms;
-         }
-      }
+      m_led.toggle(period);
    }
 
    bool is_imu_operational() const
@@ -337,7 +339,8 @@ private:
       return (m_health_summary.control_health == aeromight_boundaries::SubsystemHealth::operational);
    }
 
-   static constexpr uint32_t led_state_duration = 750u;
+   static constexpr uint32_t calibration_led_period_ms = 150u;
+   static constexpr uint32_t armed_led_period_ms       = 400u;
 
    QueueReceiver&                           m_health_summary_queue_receiver;
    Notifier&                                m_control_start_notifier;
@@ -360,8 +363,6 @@ private:
    SystemManagerState                       m_state{SystemManagerState::init};
    uint32_t                                 m_current_time_ms{0};
    uint32_t                                 m_reference_time_ms{0};
-   uint32_t                                 m_status_led_timer{0};
-   bool                                     m_status_led_on{false};
 };
 
 }   // namespace aeromight_system

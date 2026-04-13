@@ -6,7 +6,6 @@
 #include "hardware_bindings.hpp"
 #include "hw/gpio/DigitalOutput.hpp"
 #include "hw/pcb_component/Enabler.hpp"
-#include "hw/pcb_component/Led.hpp"
 #include "hw/spi/SpiMasterWithDma.hpp"
 #include "hw/timer/Timer.hpp"
 #include "imu_sensor/ImuSensorStatus.hpp"
@@ -25,8 +24,6 @@ namespace controller
 
 struct ImuTaskData
 {
-   hw::pcb_component::Led blue_led{global_data.gpios.blue_led, true};
-
    // TIM3
    hw::timer::Timer imu_task_tick_timer{global_data.timer.tim3_config};
 

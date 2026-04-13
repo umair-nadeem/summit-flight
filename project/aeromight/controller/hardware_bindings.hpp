@@ -13,8 +13,8 @@ struct GlobalData
 {
    struct Gpio
    {
-      hw::HwPin blue_led{GPIOC, LL_GPIO_PIN_13};
-      hw::HwPin armed_status_led{GPIOB, LL_GPIO_PIN_12};
+      hw::HwPin system_led{GPIOB, LL_GPIO_PIN_12};
+      hw::HwPin control_led{GPIOC, LL_GPIO_PIN_13};
    } gpios;
 
    struct Spi

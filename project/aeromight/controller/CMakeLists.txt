@@ -42,9 +42,10 @@ target_link_libraries(aeromight_lib INTERFACE
    error
    imu
    interfaces
+   led
+   logging
    mpu6500
    radio_control
-   logging
 )
 
 target_compile_options(aeromight_lib INTERFACE

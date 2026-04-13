@@ -22,7 +22,7 @@ namespace controller
 struct SystemManagerTaskData
 {
    // armed status led
-   hw::pcb_component::Led armed_status_led{global_data.gpios.armed_status_led};
+   hw::pcb_component::Led system_status_led{global_data.gpios.system_led};
 
    rtos::QueueReceiver<aeromight_boundaries::HealthSummary> health_summary_queue_receiver{};
 

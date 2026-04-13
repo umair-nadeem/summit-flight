@@ -11,6 +11,7 @@
 #include "error/error_handler.hpp"
 #include "estimation/AttitudeEstimator.hpp"
 #include "event_handling/event_check.hpp"
+#include "led/Led.hpp"
 #include "logging/LogClient.hpp"
 #include "math/ButterworthFilter.hpp"
 #include "math/FirstOrderLpf.hpp"
@@ -189,6 +190,8 @@ extern "C"
       auto pid_dterm_z_lpf = math::make_filter<DtermFilterType>(pid_dterm_filter_cutoff_frequency_hz,
                                                                 controller::task::control_task_period_in_ms / 1000.0f);
 
+      led::Led<hw::pcb_component::Led, sys_time::ClockSource> led{data->control_status_led};
+
       aeromight_control::Control<decltype(attitude_controller),
                                  decltype(rate_controller),
                                  decltype(control_allocator),
@@ -197,6 +200,7 @@ extern "C"
                                  decltype(roll_input_lpf),
                                  decltype(gyro_x_lpf),
                                  decltype(pid_dterm_x_lpf),
+                                 decltype(led),
                                  sys_time::ClockSource,
                                  LogClient>
           control{attitude_controller,
@@ -213,6 +217,7 @@ extern "C"
                   pid_dterm_x_lpf,
                   pid_dterm_y_lpf,
                   pid_dterm_z_lpf,
+                  led,
                   data->motor_output_map,
                   aeromight_boundaries::aeromight_data.control_health,
                   aeromight_boundaries::aeromight_data.system_state_info,

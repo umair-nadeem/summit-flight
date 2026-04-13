@@ -9,6 +9,7 @@
 #include "hardware_bindings.hpp"
 #include "hw/dshot/Dshot.hpp"
 #include "hw/dshot/DshotConfig.hpp"
+#include "hw/pcb_component/Led.hpp"
 #include "hw/timer/Timer.hpp"
 #include "rtos/NotificationWaiter.hpp"
 #include "utilities/enum_to_bit_mask.hpp"
@@ -75,6 +76,8 @@ struct ControlTaskData
        1u,   // motor 3
        2u    // motor 4
    };
+
+   hw::pcb_component::Led control_status_led{global_data.gpios.control_led, true};
 
    aeromight_boundaries::StateEstimation state_estimation{};
 
