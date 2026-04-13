@@ -41,12 +41,13 @@ public:
    {
       m_clock_ms = ClockSource::now_ms();
 
-      if (!process_sensor_status(sensor_status))
+      if (!sensor_available(sensor_status))
       {
          if (m_calibration.state != Calibration::State::stopped)
          {
-            m_calibration.state              = Calibration::State::stopped;
-            m_imu_status.calibration_failure = true;
+            m_calibration.state                   = Calibration::State::stopped;
+            m_imu_status.calibration_failure      = true;
+            m_imu_data.status.calibration_ongoing = false;
             m_logger.print("sensor error - stopping calibration");
          }
          reset_data();
@@ -64,7 +65,6 @@ public:
       if (m_calibration.state == Calibration::State::stopped)
       {
          process_raw_sensor_data(raw_sensor_data);
-         publish_data();
       }
       else
       {
@@ -72,6 +72,7 @@ public:
          reset_data();
       }
 
+      publish_data();
       publish_health();
       m_previous_raw_sensor_data = raw_sensor_data;
    }
@@ -80,8 +81,11 @@ public:
    {
       if (m_calibration.state == Calibration::State::stopped)
       {
-         m_calibration.state = Calibration::State::started;
+         m_calibration.state                   = Calibration::State::started;
+         m_imu_data.status.calibration_ongoing = true;
+         m_imu_status.calibration_done         = false;
          m_logger.print("starting calibration");
+         publish_health();
       }
    }
 
@@ -97,7 +101,7 @@ private:
       m_imu_data.temperature_c = raw_data.temperature_c;
    }
 
-   bool process_sensor_status(const imu_sensor::ImuSensorStatus& sensor_status)
+   bool sensor_available(const imu_sensor::ImuSensorStatus& sensor_status)
    {
       m_imu_status.available = !sensor_status.fault && sensor_status.validation_ok && sensor_status.config_ok;
       return m_imu_status.available;
@@ -145,7 +149,6 @@ private:
       {
          case Calibration::State::started:
 
-            m_imu_status.calibration_done = false;
             m_calibration.reset();
             m_calibration.state = Calibration::State::running;
             break;
@@ -176,7 +179,8 @@ private:
                m_imu_status.calibration_failure = true;
                m_logger.print("calibration failed");
             }
-            m_calibration.state = Calibration::State::stopped;
+            m_imu_data.status.calibration_ongoing = false;
+            m_calibration.state                   = Calibration::State::stopped;
             break;
 
          case Calibration::State::stopped:

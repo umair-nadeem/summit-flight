@@ -120,39 +120,40 @@ public:
       get_state_estimation();
 
       m_control_status.error.reset();
-      m_degraded_mode = false;
 
       if (!is_state_estimation_valid())
       {
-         m_degraded_mode = true;
          m_control_status.error.set(static_cast<types::ErrorBitsType>(Error::invalid_estimation_sample));
-      }
-
-      get_rate_setpoints();
-
-      get_torque_setpoints();
-
-      update_actuator_setpoints();
-
-      if (m_armed)
-      {
-         if (!m_system_state_setpoints.armed)
-         {
-            reset_everything();
-            m_logger.print("disarmed");
-         }
+         reset_everything();
       }
       else
       {
-         if (m_system_state_setpoints.armed && (m_flight_control_setpoints.throttle < m_throttle_arming))
-         {
-            reset();
-            reset_filters();
-            m_armed = true;
-            m_logger.print("armed");
-         }
+         get_rate_setpoints();
 
-         m_actuator_setpoints.zero();
+         get_torque_setpoints();
+
+         update_actuator_setpoints();
+
+         if (m_armed)
+         {
+            if (!m_system_state_setpoints.armed)
+            {
+               reset_everything();
+               m_logger.print("disarmed");
+            }
+         }
+         else
+         {
+            if (m_system_state_setpoints.armed && (m_flight_control_setpoints.throttle < m_throttle_arming))
+            {
+               reset();
+               reset_filters();
+               m_armed = true;
+               m_logger.print("armed");
+            }
+
+            m_actuator_setpoints.zero();
+         }
       }
 
       update_motor_commands();
@@ -201,7 +202,7 @@ private:
    {
       using Axis = aeromight_boundaries::ControlAxis;
 
-      if (m_run_attitude_controller && !m_degraded_mode)
+      if (m_run_attitude_controller)
       {
          math::Vector2 manual_setpoints{m_stick_input_lpf[Axis::roll].get().apply(m_flight_control_setpoints.roll * m_max_tilt_angle_rad, m_dt_s),
                                         m_stick_input_lpf[Axis::pitch].get().apply(m_flight_control_setpoints.pitch * m_max_tilt_angle_rad, m_dt_s)};
@@ -251,8 +252,7 @@ private:
 
       const math::Vector3 gyro_derivative_radps2{(m_dterm_gyro_radps - m_previous_dterm_gyro_radps) / m_dt_s};
 
-      const bool run_integrator{m_system_state_setpoints.armed &&
-                                !m_degraded_mode &&
+      const bool run_integrator{m_armed &&
                                 (m_flight_control_setpoints.throttle > m_throttle_gate_integrator)};
 
       m_torque_setpoints = m_rate_controller.update(m_angular_rate_setpoints,
@@ -418,7 +418,6 @@ private:
    math::Vector3                                                  m_torque_setpoints{};
    float                                                          m_dt_s{0.0f};
    bool                                                           m_armed{false};
-   bool                                                           m_degraded_mode{false};
    uint32_t                                                       m_current_time_ms{0};
    uint32_t                                                       m_current_time_us{0};
    uint32_t                                                       m_last_execution_time_us{0};

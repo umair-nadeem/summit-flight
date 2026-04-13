@@ -109,14 +109,24 @@ private:
       }
       else
       {
-         if (!imu_valid)
+         if (imu_sample.data.status.calibration_ongoing)
          {
-            m_estimation_status.error.set(static_cast<types::ErrorBitsType>(Error::missing_valid_imu_data));
+            m_state_estimation.raw_accel_mps2.zero();
+            m_state_estimation.raw_gyro_radps.zero();
+            m_state_estimation.gyro_bias.zero();
+            m_state_estimation.euler.zero();
          }
-
-         if (!imu_current)
+         else
          {
-            m_estimation_status.error.set(static_cast<types::ErrorBitsType>(Error::stale_imu_sensor_data));
+            if (!imu_valid)
+            {
+               m_estimation_status.error.set(static_cast<types::ErrorBitsType>(Error::missing_valid_imu_data));
+            }
+
+            if (!imu_current)
+            {
+               m_estimation_status.error.set(static_cast<types::ErrorBitsType>(Error::stale_imu_sensor_data));
+            }
          }
 
          m_state_estimation.attitude_estimation_valid = false;

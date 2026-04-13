@@ -12,24 +12,25 @@ struct SystemManagerStateMachine
 {
 
    // leaf states
-   static constexpr auto s_init                       = boost::sml::state<class StateInit>;
-   static constexpr auto s_init_checkpoint            = boost::sml::state<class StateInitCheckpoint>;
-   static constexpr auto s_wait_sensors               = boost::sml::state<class StateWaitSensors>;
-   static constexpr auto s_wait_sensors_checkpoint    = boost::sml::state<class StateWaitSensorsCheckpoint>;
-   static constexpr auto s_wait_control               = boost::sml::state<class StateWaitControl>;
-   static constexpr auto s_wait_control_checkpoint    = boost::sml::state<class StateWaitControlCheckpoint>;
-   static constexpr auto s_disarmed                   = boost::sml::state<class StateIdle>;
-   static constexpr auto s_disarmed_checkpoint        = boost::sml::state<class StateIdleCheckpoint>;
-   static constexpr auto s_arming                     = boost::sml::state<class StateArming>;
-   static constexpr auto s_arming_checkpoint          = boost::sml::state<class StateArmingCheckpoint>;
-   static constexpr auto s_armed                      = boost::sml::state<class StateArmed>;
-   static constexpr auto s_armed_checkpoint           = boost::sml::state<class StateArmedCheckpoint>;
-   static constexpr auto s_disarming                  = boost::sml::state<class StateDisarming>;
-   static constexpr auto s_disarming_checkpoint       = boost::sml::state<class StateDisarmingCheckpoint>;
-   static constexpr auto s_imu_calibration            = boost::sml::state<class StateImuCalibration>;
-   static constexpr auto s_imu_calibration_checkpoint = boost::sml::state<class StateImuCalibrationCheckpoint>;
-   static constexpr auto s_to_fault                   = boost::sml::state<class StateToFault>;
-   static constexpr auto s_fault                      = boost::sml::state<class StateFault>;
+   static constexpr auto s_init                    = boost::sml::state<class StateInit>;
+   static constexpr auto s_init_checkpoint         = boost::sml::state<class StateInitCheckpoint>;
+   static constexpr auto s_wait_sensors            = boost::sml::state<class StateWaitSensors>;
+   static constexpr auto s_wait_sensors_checkpoint = boost::sml::state<class StateWaitSensorsCheckpoint>;
+   static constexpr auto s_wait_control            = boost::sml::state<class StateWaitControl>;
+   static constexpr auto s_wait_control_checkpoint = boost::sml::state<class StateWaitControlCheckpoint>;
+   static constexpr auto s_disarmed                = boost::sml::state<class StateIdle>;
+   static constexpr auto s_disarmed_checkpoint     = boost::sml::state<class StateIdleCheckpoint>;
+   static constexpr auto s_arming                  = boost::sml::state<class StateArming>;
+   static constexpr auto s_arming_checkpoint       = boost::sml::state<class StateArmingCheckpoint>;
+   static constexpr auto s_armed                   = boost::sml::state<class StateArmed>;
+   static constexpr auto s_armed_checkpoint        = boost::sml::state<class StateArmedCheckpoint>;
+   static constexpr auto s_disarming               = boost::sml::state<class StateDisarming>;
+   static constexpr auto s_disarming_checkpoint    = boost::sml::state<class StateDisarmingCheckpoint>;
+   static constexpr auto s_imu_calibration         = boost::sml::state<class StateImuCalibration>;
+   static constexpr auto s_imu_calib_running       = boost::sml::state<class StateImuCalibrationRunning>;
+   static constexpr auto s_imu_calib_checkpoint    = boost::sml::state<class StateImuCalibrationCheckpoint>;
+   static constexpr auto s_to_fault                = boost::sml::state<class StateToFault>;
+   static constexpr auto s_fault                   = boost::sml::state<class StateFault>;
 
    // events
    struct EventTick
@@ -153,9 +154,14 @@ struct SystemManagerStateMachine
          return state.disarm();
       };
 
-      constexpr auto imu_calibration = [](StateHandler& state)
+      constexpr auto run_imu_calibration = [](StateHandler& state)
       {
          return state.imu_calibration();
+      };
+
+      constexpr auto imu_calibration_started = [](StateHandler& state)
+      {
+         return !state.imu_calibration_finished();
       };
 
       constexpr auto imu_calibration_finished = [](StateHandler& state)
@@ -178,47 +184,47 @@ struct SystemManagerStateMachine
 
       // clang-format off
       return make_transition_table(
-          // From State       | Event | Guard                                       | Action                                                      | To State
-          *s_init             + e_tick                                                                                                            = s_init_checkpoint,
-          s_init_checkpoint           [health_summary_received]                     / (set_wait_sensors_state, set_reference_time)                = s_wait_sensors,
-          s_init_checkpoint                                                                                                                       = s_init,
+          // From State       | Event  | Guard                                       | Action                                                      | To State
+          *s_init             + e_tick                                                                                                             = s_init_checkpoint,
+          s_init_checkpoint            [health_summary_received]                     / (set_wait_sensors_state, set_reference_time)                = s_wait_sensors,
+          s_init_checkpoint                                                                                                                        = s_init,
 
-          s_wait_sensors      + e_tick                                                                                                            = s_wait_sensors_checkpoint,
-          s_wait_sensors_checkpoint   [sensors_ready]                               / (start_control, set_wait_control_state, set_reference_time) = s_wait_control,
-          s_wait_sensors_checkpoint   [timeout_sensors_readiness]                                                                                 = s_to_fault,
-          s_wait_sensors_checkpoint                                                                                                               = s_wait_sensors,
+          s_wait_sensors      + e_tick                                                                                                             = s_wait_sensors_checkpoint,
+          s_wait_sensors_checkpoint    [sensors_ready]                               / (start_control, set_wait_control_state, set_reference_time) = s_wait_control,
+          s_wait_sensors_checkpoint    [timeout_sensors_readiness]                                                                                 = s_to_fault,
+          s_wait_sensors_checkpoint                                                                                                                = s_wait_sensors,
 
-          s_wait_control      + e_tick                                                                                                            = s_wait_control_checkpoint,
-          s_wait_control_checkpoint   [control_ready]                               / set_disarmed_state                                          = s_disarmed,
-          s_wait_control_checkpoint   [timeout_control_readiness]                                                                                 = s_to_fault,
-          s_wait_control_checkpoint                                                                                                               = s_wait_control,
+          s_wait_control      + e_tick                                                                                                             = s_wait_control_checkpoint,
+          s_wait_control_checkpoint    [control_ready]                               / set_disarmed_state                                          = s_disarmed,
+          s_wait_control_checkpoint    [timeout_control_readiness]                                                                                 = s_to_fault,
+          s_wait_control_checkpoint                                                                                                                = s_wait_control,
 
-          s_disarmed          + e_tick                                              / show_disarm_led                                             = s_disarmed_checkpoint,
-          s_disarmed_checkpoint       [arm && is_health_good && is_radio_link_good] / (set_arming_state, set_reference_time)                      = s_arming,
-          s_disarmed_checkpoint       [imu_calibration && is_health_good]           / (start_imu_calibration, set_imu_calibration_state)          = s_imu_calibration,
-          s_disarmed_checkpoint                                                                                                                   = s_disarmed,
+          s_disarmed          + e_tick                                               / show_disarm_led                                             = s_disarmed_checkpoint,
+          s_disarmed_checkpoint        [arm && is_health_good && is_radio_link_good] / (set_arming_state, set_reference_time)                      = s_arming,
+          s_disarmed_checkpoint        [run_imu_calibration && is_health_good]       / (start_imu_calibration, set_imu_calibration_state)          = s_imu_calibration,
+          s_disarmed_checkpoint                                                                                                                    = s_disarmed,
 
-          s_imu_calibration          + e_tick                                                                                                     = s_imu_calibration_checkpoint,
-          s_imu_calibration_checkpoint[imu_calibration_finished]                    / set_disarmed_state                                          = s_disarmed,
-          s_imu_calibration_checkpoint                                                                                                            = s_imu_calibration,
+          s_imu_calibration   + e_tick [imu_calibration_started]                                                                                   = s_imu_calib_running,
+          s_imu_calib_running + e_tick                                                                                                             = s_imu_calib_checkpoint,
+          s_imu_calib_checkpoint       [imu_calibration_finished]                    / set_disarmed_state                                          = s_disarmed,
+          s_imu_calib_checkpoint                                                                                                                   = s_imu_calib_running,
 
-          s_arming            + e_tick                                                                                                            = s_arming_checkpoint,
-          s_arming_checkpoint         [disarm || !is_health_good || !is_radio_link_good] / set_disarmed_state                                     = s_disarmed,
-          s_arming_checkpoint         [is_state_change_persistent && is_health_good && is_radio_link_good] / (arm_system, set_armed_state)        = s_armed,
-          s_arming_checkpoint                                                                                                                     = s_arming,
+          s_arming            + e_tick                                                                                                             = s_arming_checkpoint,
+          s_arming_checkpoint          [disarm || !is_health_good || !is_radio_link_good] / set_disarmed_state                                     = s_disarmed,
+          s_arming_checkpoint          [is_state_change_persistent && is_health_good && is_radio_link_good] / (arm_system, set_armed_state)        = s_armed,
+          s_arming_checkpoint                                                                                                                      = s_arming,
 
-          s_armed             + e_tick                                                                                                            = s_armed_checkpoint,
-          s_armed_checkpoint          [disarm]                                      / (set_disarming_state, set_reference_time)                   = s_disarming,
-          s_armed_checkpoint          [!is_health_good || !is_radio_link_good]      / disarm_system                                               = s_to_fault,
-          s_armed_checkpoint                                                                                                                      = s_armed,
+          s_armed             + e_tick                                                                                                             = s_armed_checkpoint,
+          s_armed_checkpoint           [disarm]                                      / (set_disarming_state, set_reference_time)                   = s_disarming,
+          s_armed_checkpoint           [!is_health_good || !is_radio_link_good]      / disarm_system                                               = s_to_fault,
+          s_armed_checkpoint                                                                                                                       = s_armed,
 
-          s_disarming         + e_tick                                                                                                            = s_disarming_checkpoint,
-          s_disarming_checkpoint      [arm && is_health_good && is_radio_link_good]                                                               = s_armed,
-          s_disarming_checkpoint      [is_state_change_persistent]                  / (disarm_system, set_disarmed_state)                         = s_disarmed,
-          s_disarming_checkpoint                                                                                                                  = s_disarming,
+          s_disarming         + e_tick                                                                                                             = s_disarming_checkpoint,
+          s_disarming_checkpoint       [arm && is_health_good && is_radio_link_good]                                                               = s_armed,
+          s_disarming_checkpoint       [is_state_change_persistent]                  / (disarm_system, set_disarmed_state)                         = s_disarmed,
+          s_disarming_checkpoint                                                                                                                   = s_disarming,
 
-          s_to_fault                                                                / set_fault_state                                             = s_fault
-
+          s_to_fault                                                                 / set_fault_state                                             = s_fault
       );
       // clang-format on
    }
