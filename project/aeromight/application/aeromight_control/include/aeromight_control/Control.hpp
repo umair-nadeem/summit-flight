@@ -22,8 +22,9 @@ template <typename AttitudeController,
           typename ControlAllocator,
           typename ControlInput,
           typename Dshot,
-          typename FirstOrderLpf,
-          typename ButterworthLpf2,
+          typename StickInputFilter,
+          typename GyroFilter,
+          typename DtermFilter,
           interfaces::IClockSource ClockSource,
           typename Logger>
 class Control
@@ -42,15 +43,15 @@ public:
                     ControlAllocator&                            control_allocator,
                     ControlInput&                                control_input,
                     Dshot&                                       dshot,
-                    FirstOrderLpf&                               roll_input_lpf,
-                    FirstOrderLpf&                               pitch_input_lpf,
-                    FirstOrderLpf&                               yaw_input_lpf,
-                    FirstOrderLpf&                               gyro_x_lpf,
-                    FirstOrderLpf&                               gyro_y_lpf,
-                    FirstOrderLpf&                               gyro_z_lpf,
-                    ButterworthLpf2&                             pid_dterm_x_lpf,
-                    ButterworthLpf2&                             pid_dterm_y_lpf,
-                    ButterworthLpf2&                             pid_dterm_z_lpf,
+                    StickInputFilter&                            roll_input_lpf,
+                    StickInputFilter&                            pitch_input_lpf,
+                    StickInputFilter&                            yaw_input_lpf,
+                    GyroFilter&                                  gyro_x_lpf,
+                    GyroFilter&                                  gyro_y_lpf,
+                    GyroFilter&                                  gyro_z_lpf,
+                    DtermFilter&                                 pid_dterm_x_lpf,
+                    DtermFilter&                                 pid_dterm_y_lpf,
+                    DtermFilter&                                 pid_dterm_z_lpf,
                     const std::array<uint8_t, num_actuators>&    motor_mapping,
                     ControlHealthPublisher&                      control_health_publisher,
                     const SystemStateSubscriber&                 system_state_subscriber,
@@ -381,45 +382,45 @@ private:
       return (m_state_estimation.attitude_estimation_valid && (state_estimation_data_age_ms <= m_max_age_state_estimation_data_ms));
    }
 
-   AttitudeController&                                           m_attitude_controller;
-   RateController&                                               m_rate_controller;
-   ControlAllocator&                                             m_control_allocator;
-   ControlInput&                                                 m_control_input;
-   Dshot&                                                        m_dshot;
-   std::array<std::reference_wrapper<FirstOrderLpf>, num_axis>   m_stick_input_lpf;
-   std::array<std::reference_wrapper<FirstOrderLpf>, num_axis>   m_gyro_lpf;
-   std::array<std::reference_wrapper<ButterworthLpf2>, num_axis> m_pid_dterm_lpf;
-   const std::array<uint8_t, num_actuators>&                     m_motor_mapping;
-   ControlHealthPublisher&                                       m_control_health_publisher;
-   const SystemStateSubscriber&                                  m_system_state_subscriber;
-   const aeromight_boundaries::StateEstimation&                  m_state_estimation_subscriber;
-   Logger&                                                       m_logger;
-   const uint32_t                                                m_max_age_state_estimation_data_ms;
-   const float                                                   m_min_dt_s;
-   const float                                                   m_max_dt_s;
-   const bool                                                    m_run_attitude_controller;
-   const float                                                   m_max_tilt_angle_rad;
-   const math::Vector3                                           m_max_rate_radps;
-   const float                                                   m_actuator_min;
-   const float                                                   m_actuator_max;
-   const float                                                   m_throttle_arming;
-   const float                                                   m_throttle_gate_integrator;
-   const float                                                   m_thrust_linearization_factor;
-   aeromight_boundaries::ActuatorControl                         m_actuator_control_setpoint{};
-   aeromight_boundaries::ControlStatus                           m_control_status{};
-   aeromight_boundaries::FlightControlSetpoints                  m_flight_control_setpoints{};
-   aeromight_boundaries::SystemState                             m_system_state_setpoints{};
-   aeromight_boundaries::StateEstimation                         m_state_estimation{};
-   math::Vector3                                                 m_gyro_radps{};
-   math::Vector3                                                 m_dterm_gyro_radps{};
-   math::Vector3                                                 m_previous_dterm_gyro_radps{};
-   math::Vector3                                                 m_angular_rate_setpoints{};
-   math::Vector3                                                 m_torque_setpoints{};
-   float                                                         m_dt_s{0.0f};
-   bool                                                          m_degraded_mode{false};
-   uint32_t                                                      m_current_time_ms{0};
-   uint32_t                                                      m_current_time_us{0};
-   uint32_t                                                      m_last_execution_time_us{0};
+   AttitudeController&                                            m_attitude_controller;
+   RateController&                                                m_rate_controller;
+   ControlAllocator&                                              m_control_allocator;
+   ControlInput&                                                  m_control_input;
+   Dshot&                                                         m_dshot;
+   std::array<std::reference_wrapper<StickInputFilter>, num_axis> m_stick_input_lpf;
+   std::array<std::reference_wrapper<GyroFilter>, num_axis>       m_gyro_lpf;
+   std::array<std::reference_wrapper<DtermFilter>, num_axis>      m_pid_dterm_lpf;
+   const std::array<uint8_t, num_actuators>&                      m_motor_mapping;
+   ControlHealthPublisher&                                        m_control_health_publisher;
+   const SystemStateSubscriber&                                   m_system_state_subscriber;
+   const aeromight_boundaries::StateEstimation&                   m_state_estimation_subscriber;
+   Logger&                                                        m_logger;
+   const uint32_t                                                 m_max_age_state_estimation_data_ms;
+   const float                                                    m_min_dt_s;
+   const float                                                    m_max_dt_s;
+   const bool                                                     m_run_attitude_controller;
+   const float                                                    m_max_tilt_angle_rad;
+   const math::Vector3                                            m_max_rate_radps;
+   const float                                                    m_actuator_min;
+   const float                                                    m_actuator_max;
+   const float                                                    m_throttle_arming;
+   const float                                                    m_throttle_gate_integrator;
+   const float                                                    m_thrust_linearization_factor;
+   aeromight_boundaries::ActuatorControl                          m_actuator_control_setpoint{};
+   aeromight_boundaries::ControlStatus                            m_control_status{};
+   aeromight_boundaries::FlightControlSetpoints                   m_flight_control_setpoints{};
+   aeromight_boundaries::SystemState                              m_system_state_setpoints{};
+   aeromight_boundaries::StateEstimation                          m_state_estimation{};
+   math::Vector3                                                  m_gyro_radps{};
+   math::Vector3                                                  m_dterm_gyro_radps{};
+   math::Vector3                                                  m_previous_dterm_gyro_radps{};
+   math::Vector3                                                  m_angular_rate_setpoints{};
+   math::Vector3                                                  m_torque_setpoints{};
+   float                                                          m_dt_s{0.0f};
+   bool                                                           m_degraded_mode{false};
+   uint32_t                                                       m_current_time_ms{0};
+   uint32_t                                                       m_current_time_us{0};
+   uint32_t                                                       m_last_execution_time_us{0};
 };
 
 }   // namespace aeromight_control

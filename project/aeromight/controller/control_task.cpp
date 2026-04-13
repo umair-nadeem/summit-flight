@@ -14,7 +14,9 @@
 #include "logging/LogClient.hpp"
 #include "math/ButterworthFilter.hpp"
 #include "math/FirstOrderLpf.hpp"
+#include "math/NullFilter.hpp"
 #include "math/constants.hpp"
+#include "math/make_filter.hpp"
 #include "radio_control/ThrottleCurve.hpp"
 #include "rtos/QueueSender.hpp"
 #include "rtos/constants.hpp"
@@ -37,7 +39,10 @@ extern "C"
       error::verify(params != nullptr);
       auto* data = static_cast<controller::ControlTaskData*>(params);
 
-      using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
+      using LogClient       = logging::LogClient<decltype(logging::logging_queue_sender)>;
+      using StickFilterType = math::FirstOrderLpf;
+      using GyroFilterType  = math::FirstOrderLpf;
+      using DtermFilterType = math::NullFilter;
 
       // complimentary/mahony filter parameters
       constexpr float    accelerometer_weight                   = 0.2f;
@@ -163,25 +168,29 @@ extern "C"
                                                                               throttle_min,
                                                                               throttle_max};
 
-      math::FirstOrderLpf roll_input_lpf{stick_input_lpf_cutoff_hz};
-      math::FirstOrderLpf pitch_input_lpf{stick_input_lpf_cutoff_hz};
-      math::FirstOrderLpf yaw_input_lpf{stick_input_lpf_cutoff_hz};
+      auto roll_input_lpf  = math::make_filter<StickFilterType>(stick_input_lpf_cutoff_hz);
+      auto pitch_input_lpf = math::make_filter<StickFilterType>(stick_input_lpf_cutoff_hz);
+      auto yaw_input_lpf   = math::make_filter<StickFilterType>(stick_input_lpf_cutoff_hz);
 
-      math::FirstOrderLpf gyro_x_lpf{gyro_lpf_cutoff_hz};
-      math::FirstOrderLpf gyro_y_lpf{gyro_lpf_cutoff_hz};
-      math::FirstOrderLpf gyro_z_lpf{gyro_lpf_cutoff_hz};
+      auto gyro_x_lpf = math::make_filter<GyroFilterType>(gyro_lpf_cutoff_hz);
+      auto gyro_y_lpf = math::make_filter<GyroFilterType>(gyro_lpf_cutoff_hz);
+      auto gyro_z_lpf = math::make_filter<GyroFilterType>(gyro_lpf_cutoff_hz);
 
-      math::ButterworthFilter pid_dterm_x_lpf{pid_dterm_filter_cutoff_frequency_hz, controller::task::control_task_period_in_ms / 1000.0f};
-      math::ButterworthFilter pid_dterm_y_lpf{pid_dterm_filter_cutoff_frequency_hz, controller::task::control_task_period_in_ms / 1000.0f};
-      math::ButterworthFilter pid_dterm_z_lpf{pid_dterm_filter_cutoff_frequency_hz, controller::task::control_task_period_in_ms / 1000.0f};
+      auto pid_dterm_x_lpf = math::make_filter<DtermFilterType>(pid_dterm_filter_cutoff_frequency_hz,
+                                                                controller::task::control_task_period_in_ms / 1000.0f);
+      auto pid_dterm_y_lpf = math::make_filter<DtermFilterType>(pid_dterm_filter_cutoff_frequency_hz,
+                                                                controller::task::control_task_period_in_ms / 1000.0f);
+      auto pid_dterm_z_lpf = math::make_filter<DtermFilterType>(pid_dterm_filter_cutoff_frequency_hz,
+                                                                controller::task::control_task_period_in_ms / 1000.0f);
 
       aeromight_control::Control<decltype(attitude_controller),
                                  decltype(rate_controller),
                                  decltype(control_allocator),
                                  decltype(control_input),
                                  decltype(data->dshot),
-                                 math::FirstOrderLpf,
-                                 math::ButterworthFilter,
+                                 decltype(roll_input_lpf),
+                                 decltype(gyro_x_lpf),
+                                 decltype(pid_dterm_x_lpf),
                                  sys_time::ClockSource,
                                  LogClient>
           control{attitude_controller,
