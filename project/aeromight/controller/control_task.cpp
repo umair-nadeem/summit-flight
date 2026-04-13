@@ -72,13 +72,13 @@ extern "C"
       constexpr float    throttle_max                           = actuator_max;
       constexpr float    throttle_arming                        = 0.01f;
       constexpr float    throttle_hover                         = 0.3f;
-      constexpr float    throttle_curve_factor                  = 0.5f;
+      constexpr float    throttle_curve_factor                  = 0.7f;
       constexpr float    throttle_gate_integrator               = 0.15f;
       // attitude controller
       constexpr bool     run_attitude_controller                = true;
       constexpr float    max_tilt_angle_rad                     = 30 * math::constants::deg_to_rad;
-      constexpr float    attitude_controller_roll_kp            = 5.0f;
-      constexpr float    attitude_controller_pitch_kp           = 5.0f;
+      constexpr float    attitude_controller_roll_kp            = 6.0f;
+      constexpr float    attitude_controller_pitch_kp           = 6.0f;
       constexpr float    attitude_controller_yaw_kp             = 0.0f;
       constexpr float    max_roll_rate_radps                    = 3.0f;
       constexpr float    max_pitch_rate_radps                   = 3.0f;
