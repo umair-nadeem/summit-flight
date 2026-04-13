@@ -134,7 +134,7 @@ public:
 
       update_actuator_setpoints();
 
-      if (m_actuator_control_setpoint.armed)
+      if (m_armed)
       {
          if (!m_system_state_setpoints.armed)
          {
@@ -148,11 +148,11 @@ public:
          {
             reset();
             reset_filters();
-            m_actuator_control_setpoint.armed = true;
+            m_armed = true;
             m_logger.print("armed");
          }
 
-         m_actuator_control_setpoint.setpoints.zero();
+         m_actuator_setpoints.zero();
       }
 
       update_motor_commands();
@@ -275,7 +275,7 @@ private:
 
       m_control_allocator.clip_actuator_setpoints();
 
-      m_actuator_control_setpoint.setpoints = m_control_allocator.get_actuator_setpoints();
+      m_actuator_setpoints = m_control_allocator.get_actuator_setpoints();
 
       // determine allocator saturation
       m_control_allocator.estimate_saturation();
@@ -291,7 +291,7 @@ private:
       DshotVector   dshot_frames{};
 
       // apply motor permutation
-      motor::apply_motor_permutation(motor_values, m_actuator_control_setpoint.setpoints, m_motor_mapping);
+      motor::apply_motor_permutation(motor_values, m_actuator_setpoints, m_motor_mapping);
 
       motor::apply_thrust_linearization(motor_values, m_thrust_linearization_factor, m_actuator_min, m_actuator_max);
 
@@ -317,8 +317,8 @@ private:
    {
       reset();
       reset_filters();
-      m_actuator_control_setpoint.armed = false;
-      m_actuator_control_setpoint.setpoints.zero();
+      m_armed = false;
+      m_actuator_setpoints.zero();
    }
 
    void reset()
@@ -369,10 +369,10 @@ private:
                          m_torque_setpoints[1],
                          m_torque_setpoints[2],
                          m_flight_control_setpoints.throttle,
-                         m_actuator_control_setpoint.setpoints[0],
-                         m_actuator_control_setpoint.setpoints[1],
-                         m_actuator_control_setpoint.setpoints[2],
-                         m_actuator_control_setpoint.setpoints[3]);
+                         m_actuator_setpoints[0],
+                         m_actuator_setpoints[1],
+                         m_actuator_setpoints[2],
+                         m_actuator_setpoints[3]);
       }
    }
 
@@ -406,7 +406,7 @@ private:
    const float                                                    m_throttle_arming;
    const float                                                    m_throttle_gate_integrator;
    const float                                                    m_thrust_linearization_factor;
-   aeromight_boundaries::ActuatorControl                          m_actuator_control_setpoint{};
+   aeromight_boundaries::ActuatorSetpoints                        m_actuator_setpoints{};
    aeromight_boundaries::ControlStatus                            m_control_status{};
    aeromight_boundaries::FlightControlSetpoints                   m_flight_control_setpoints{};
    aeromight_boundaries::SystemState                              m_system_state_setpoints{};
@@ -417,6 +417,7 @@ private:
    math::Vector3                                                  m_angular_rate_setpoints{};
    math::Vector3                                                  m_torque_setpoints{};
    float                                                          m_dt_s{0.0f};
+   bool                                                           m_armed{false};
    bool                                                           m_degraded_mode{false};
    uint32_t                                                       m_current_time_ms{0};
    uint32_t                                                       m_current_time_us{0};

@@ -17,12 +17,6 @@ struct ActuatorParams
    static constexpr std::size_t num_actuators = 4u;
 };
 
-struct ActuatorControl
-{
-   ActuatorSetpoints setpoints{0.0f};
-   bool              armed{false};
-};
-
 struct ControlAxis
 {
    static constexpr uint8_t roll   = 0;
