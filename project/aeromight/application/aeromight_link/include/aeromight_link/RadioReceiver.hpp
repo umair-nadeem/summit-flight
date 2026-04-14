@@ -2,12 +2,12 @@
 
 #include <cmath>
 
-#include "aeromight_boundaries/FlightControlSetpoints.hpp"
 #include "aeromight_boundaries/RadioLinkActuals.hpp"
 #include "aeromight_boundaries/SystemControlSetpoints.hpp"
 #include "boundaries/BufferWithOwnershipIndex.hpp"
 #include "boundaries/SharedData.hpp"
 #include "channel_mappings.hpp"
+#include "control/attitude/StickCommand.hpp"
 #include "crsf/CrsfPacket.hpp"
 #include "error/error_handler.hpp"
 #include "interfaces/IClockSource.hpp"
@@ -19,14 +19,14 @@ template <typename QueueReceiver, typename QueueSender, typename Crsf, interface
 class RadioReceiver
 {
 
-   using FlightControlSetpointsPublisher = boundaries::SharedData<aeromight_boundaries::FlightControlSetpoints>;
+   using StickCommandPublisher           = boundaries::SharedData<control::attitude::StickCommand>;
    using SystemControlSetpointsPublisher = boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints>;
    using RadioLinkActualsPublisher       = boundaries::SharedData<aeromight_boundaries::RadioLinkActuals>;
 
 public:
    explicit RadioReceiver(QueueReceiver&                   radio_input_queue_receiver,
                           QueueSender&                     free_index_queue_sender,
-                          FlightControlSetpointsPublisher& flight_control_setpoints_publisher,
+                          StickCommandPublisher&           stick_command_publisher,
                           SystemControlSetpointsPublisher& system_control_setpoints_publisher,
                           RadioLinkActualsPublisher&       radio_link_actuals_publisher,
                           Logger&                          logger,
@@ -34,7 +34,7 @@ public:
                           const uint8_t                    good_uplink_quality_threshold)
        : m_radio_input_queue_receiver{radio_input_queue_receiver},
          m_free_index_queue_sender(free_index_queue_sender),
-         m_flight_control_setpoints_publisher(flight_control_setpoints_publisher),
+         m_stick_command_publisher(stick_command_publisher),
          m_system_control_setpoints_publisher(system_control_setpoints_publisher),
          m_radio_link_actuals_publisher(radio_link_actuals_publisher),
          m_logger(logger),
@@ -94,10 +94,10 @@ private:
    void publish_rc_channels(const crsf::CrsfRcChannels& rc_data)
    {
       // update flight stick input setpoints
-      m_flight_control_setpoints.roll     = apply_deadband(normalize_channel(rc_data.channels[rc_channel_roll]), m_rc_channel_deadband);
-      m_flight_control_setpoints.pitch    = apply_deadband(normalize_channel(rc_data.channels[rc_channel_pitch]), m_rc_channel_deadband);
-      m_flight_control_setpoints.yaw      = apply_deadband(normalize_channel(rc_data.channels[rc_channel_yaw]), m_rc_channel_deadband);
-      m_flight_control_setpoints.throttle = normalize_throttle(rc_data.channels[rc_channel_throttle]);
+      m_stick_command.roll     = apply_deadband(normalize_channel(rc_data.channels[rc_channel_roll]), m_rc_channel_deadband);
+      m_stick_command.pitch    = apply_deadband(normalize_channel(rc_data.channels[rc_channel_pitch]), m_rc_channel_deadband);
+      m_stick_command.yaw      = apply_deadband(normalize_channel(rc_data.channels[rc_channel_yaw]), m_rc_channel_deadband);
+      m_stick_command.throttle = normalize_throttle(rc_data.channels[rc_channel_throttle]);
 
       // update system control setpoints
       m_system_control_setpoints.state           = get_arm_state(normalize_channel(rc_data.channels[rc_channel_arm_state]));
@@ -106,7 +106,7 @@ private:
       // publish to shared buffers
       const auto clock_ms = ClockSource::now_ms();
       m_system_control_setpoints_publisher.update_latest(m_system_control_setpoints, clock_ms);
-      m_flight_control_setpoints_publisher.update_latest(m_flight_control_setpoints, clock_ms);
+      m_stick_command_publisher.update_latest(m_stick_command, clock_ms);
    }
 
    void publish_link_stats(const crsf::CrsfLinkStatistics& stats)
@@ -158,13 +158,13 @@ private:
 
    QueueReceiver&                               m_radio_input_queue_receiver;
    QueueSender&                                 m_free_index_queue_sender;
-   FlightControlSetpointsPublisher&             m_flight_control_setpoints_publisher;
+   StickCommandPublisher&                       m_stick_command_publisher;
    SystemControlSetpointsPublisher&             m_system_control_setpoints_publisher;
    RadioLinkActualsPublisher&                   m_radio_link_actuals_publisher;
    Logger&                                      m_logger;
    const float                                  m_rc_channel_deadband;
    const uint8_t                                m_good_uplink_quality_threshold;
-   aeromight_boundaries::FlightControlSetpoints m_flight_control_setpoints{};
+   control::attitude::StickCommand              m_stick_command{};
    aeromight_boundaries::SystemControlSetpoints m_system_control_setpoints{};
    aeromight_boundaries::RadioLinkActuals       m_radio_link_actuals{};
    crsf::CrsfPacket                             m_crsf_packet{};

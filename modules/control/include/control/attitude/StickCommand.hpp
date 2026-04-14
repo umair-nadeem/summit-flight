@@ -2,10 +2,10 @@
 
 #include <cstdint>
 
-namespace aeromight_boundaries
+namespace control::attitude
 {
 
-struct FlightControlSetpoints
+struct StickCommand
 {
    // normalized
    float throttle{};   // 0.0 to 1.0
@@ -14,4 +14,4 @@ struct FlightControlSetpoints
    float yaw{};        // -1.0 (CCW) to +1.0 (CW)
 };
 
-}   // namespace aeromight_boundaries
+}   // namespace control::attitude

@@ -115,6 +115,7 @@ private:
             m_state_estimation.raw_gyro_radps.zero();
             m_state_estimation.gyro_bias.zero();
             m_state_estimation.euler.zero();
+            m_attitude_estimator.reset();
          }
          else
          {

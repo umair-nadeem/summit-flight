@@ -2,11 +2,11 @@
 #include "aeromight_boundaries/AeromightData.hpp"
 #include "aeromight_control/Control.hpp"
 #include "aeromight_control/ControlAllocator.hpp"
-#include "aeromight_control/ControlInput.hpp"
 #include "aeromight_control/EstimationAndControl.hpp"
 #include "aeromight_estimation/AltitudeEkf.hpp"
 #include "aeromight_estimation/Estimation.hpp"
 #include "control/attitude/AttitudeController.hpp"
+#include "control/attitude/StickCommandSource.hpp"
 #include "control/rate/RateController.hpp"
 #include "error/error_handler.hpp"
 #include "estimation/AttitudeEstimator.hpp"
@@ -170,10 +170,10 @@ extern "C"
 
       radio_control::ThrottleCurve throttle_curve{throttle_hover, throttle_curve_factor};
 
-      aeromight_control::ControlInput<decltype(throttle_curve)> control_input{throttle_curve,
-                                                                              aeromight_boundaries::aeromight_data.flight_control_setpoints,
-                                                                              throttle_min,
-                                                                              throttle_max};
+      control::attitude::StickCommandSource<decltype(throttle_curve)> stick_command_source{throttle_curve,
+                                                                                           aeromight_boundaries::aeromight_data.stick_command,
+                                                                                           throttle_min,
+                                                                                           throttle_max};
 
       auto roll_input_lpf  = math::make_filter<StickFilterType>(stick_input_lpf_cutoff_hz);
       auto pitch_input_lpf = math::make_filter<StickFilterType>(stick_input_lpf_cutoff_hz);
@@ -197,7 +197,7 @@ extern "C"
       aeromight_control::Control<decltype(attitude_controller),
                                  decltype(rate_controller),
                                  decltype(control_allocator),
-                                 decltype(control_input),
+                                 decltype(stick_command_source),
                                  decltype(data->dshot),
                                  decltype(roll_input_lpf),
                                  decltype(gyro_x_lpf),
@@ -208,7 +208,7 @@ extern "C"
           control{attitude_controller,
                   rate_controller,
                   control_allocator,
-                  control_input,
+                  stick_command_source,
                   data->dshot,
                   roll_input_lpf,
                   pitch_input_lpf,

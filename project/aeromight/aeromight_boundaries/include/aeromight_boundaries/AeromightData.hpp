@@ -2,13 +2,13 @@
 
 #include "ControlStatus.hpp"
 #include "EstimatorStatus.hpp"
-#include "FlightControlSetpoints.hpp"
 #include "RadioLinkActuals.hpp"
 #include "SystemControlSetpoints.hpp"
 #include "SystemState.hpp"
 #include "barometer/BarometerData.hpp"
 #include "barometer/BarometerStatus.hpp"
 #include "boundaries/SharedData.hpp"
+#include "control/attitude/StickCommand.hpp"
 #include "imu/ImuData.hpp"
 #include "imu/ImuStatus.hpp"
 
@@ -29,8 +29,8 @@ struct AeromightData
    boundaries::SharedData<EstimatorStatus> estimator_health{};
 
    // Control
-   boundaries::SharedData<ControlStatus>          control_health{};
-   boundaries::SharedData<FlightControlSetpoints> flight_control_setpoints{};
+   boundaries::SharedData<ControlStatus>                   control_health{};
+   boundaries::SharedData<control::attitude::StickCommand> stick_command{};
 
    // System Manager
    boundaries::SharedData<SystemState>            system_state_info{};

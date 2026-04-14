@@ -5,11 +5,11 @@
 
 #include "aeromight_boundaries/ControlAxis.hpp"
 #include "aeromight_boundaries/ControlStatus.hpp"
-#include "aeromight_boundaries/FlightControlSetpoints.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
 #include "aeromight_boundaries/SystemState.hpp"
 #include "aeromight_boundaries/actuator.hpp"
 #include "boundaries/SharedData.hpp"
+#include "control/attitude/StickCommand.hpp"
 #include "dshot/dshot.hpp"
 #include "interfaces/IClockSource.hpp"
 #include "math/Vector2.hpp"
@@ -22,7 +22,7 @@ namespace aeromight_control
 template <typename AttitudeController,
           typename RateController,
           typename ControlAllocator,
-          typename ControlInput,
+          typename StickCommandSource,
           typename Dshot,
           typename StickInputFilter,
           typename GyroFilter,
@@ -44,7 +44,7 @@ public:
    explicit Control(AttitudeController&                          attitude_controller,
                     RateController&                              rate_controller,
                     ControlAllocator&                            control_allocator,
-                    ControlInput&                                control_input,
+                    StickCommandSource&                          stick_command_source,
                     Dshot&                                       dshot,
                     StickInputFilter&                            roll_input_lpf,
                     StickInputFilter&                            pitch_input_lpf,
@@ -75,7 +75,7 @@ public:
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
          m_control_allocator{control_allocator},
-         m_control_input{control_input},
+         m_stick_command_source{stick_command_source},
          m_dshot{dshot},
          m_stick_input_lpf{roll_input_lpf, pitch_input_lpf, yaw_input_lpf},
          m_gyro_lpf{gyro_x_lpf, gyro_y_lpf, gyro_z_lpf},
@@ -121,7 +121,7 @@ public:
 
       get_system_state_info();
 
-      get_flight_control_setpoints();
+      get_stick_command();
 
       get_state_estimation();
 
@@ -155,7 +155,7 @@ public:
          {
             if (m_system_state_setpoints.armed)
             {
-               if (m_flight_control_setpoints.throttle < m_throttle_arming)
+               if (m_stick_command.throttle < m_throttle_arming)
                {
                   m_armed = true;
                   m_logger.print("armed");
@@ -209,9 +209,9 @@ private:
       m_system_state_setpoints = m_system_state_subscriber.get_latest().data;
    }
 
-   void get_flight_control_setpoints()
+   void get_stick_command()
    {
-      m_flight_control_setpoints = m_control_input.get_flight_control_setpoints();
+      m_stick_command = m_stick_command_source.get();
    }
 
    void get_state_estimation()
@@ -225,8 +225,8 @@ private:
 
       if (m_run_attitude_controller)
       {
-         math::Vec2f manual_setpoints{m_stick_input_lpf[idx(Axis::roll)].get().apply(m_flight_control_setpoints.roll * m_max_tilt_angle_rad, m_dt_s),
-                                      m_stick_input_lpf[idx(Axis::pitch)].get().apply(m_flight_control_setpoints.pitch * m_max_tilt_angle_rad, m_dt_s)};
+         math::Vec2f manual_setpoints{m_stick_input_lpf[idx(Axis::roll)].get().apply(m_stick_command.roll * m_max_tilt_angle_rad, m_dt_s),
+                                      m_stick_input_lpf[idx(Axis::pitch)].get().apply(m_stick_command.pitch * m_max_tilt_angle_rad, m_dt_s)};
 
          const float tilt_norm = manual_setpoints.norm();
 
@@ -248,12 +248,12 @@ private:
       }
       else   // generate rate setpoints from sticks
       {
-         m_angular_rate_setpoints[idx(Axis::roll)]  = m_stick_input_lpf[idx(Axis::roll)].get().apply(m_flight_control_setpoints.roll * m_max_rate_radps[idx(Axis::roll)], m_dt_s);
-         m_angular_rate_setpoints[idx(Axis::pitch)] = m_stick_input_lpf[idx(Axis::pitch)].get().apply(m_flight_control_setpoints.pitch * m_max_rate_radps[idx(Axis::pitch)], m_dt_s);
+         m_angular_rate_setpoints[idx(Axis::roll)]  = m_stick_input_lpf[idx(Axis::roll)].get().apply(m_stick_command.roll * m_max_rate_radps[idx(Axis::roll)], m_dt_s);
+         m_angular_rate_setpoints[idx(Axis::pitch)] = m_stick_input_lpf[idx(Axis::pitch)].get().apply(m_stick_command.pitch * m_max_rate_radps[idx(Axis::pitch)], m_dt_s);
       }
 
       // yaw rate from manual setpoint
-      m_angular_rate_setpoints[idx(Axis::yaw)] = m_stick_input_lpf[idx(Axis::yaw)].get().apply(m_flight_control_setpoints.yaw * m_max_rate_radps[idx(Axis::yaw)], m_dt_s);
+      m_angular_rate_setpoints[idx(Axis::yaw)] = m_stick_input_lpf[idx(Axis::yaw)].get().apply(m_stick_command.yaw * m_max_rate_radps[idx(Axis::yaw)], m_dt_s);
    }
 
    void get_torque_setpoints()
@@ -274,7 +274,7 @@ private:
       }
 
       const bool run_integrator{m_armed &&
-                                (m_flight_control_setpoints.throttle > m_throttle_gate_integrator)};
+                                (m_stick_command.throttle > m_throttle_gate_integrator)};
 
       m_torque_setpoints = m_rate_controller.update(m_angular_rate_setpoints,
                                                     gyro_rate,
@@ -290,7 +290,7 @@ private:
       const math::Vec4f control_setpoints{m_torque_setpoints[idx(Axis::roll)],
                                           m_torque_setpoints[idx(Axis::pitch)],
                                           m_torque_setpoints[idx(Axis::yaw)],
-                                          m_flight_control_setpoints.throttle};
+                                          m_stick_command.throttle};
 
       m_control_allocator.set_control_setpoints(control_setpoints);
 
@@ -307,11 +307,9 @@ private:
 
    void update_motor_commands()
    {
-      using DshotVector = math::Vec4<uint16_t>;
-
-      math::Vec4f motor_values{};
-      DshotVector dshot_throttle{};
-      DshotVector dshot_frames{};
+      math::Vec4f          motor_values{};
+      math::Vec4<uint16_t> dshot_throttle{};
+      math::Vec4<uint16_t> dshot_frames{};
 
       // apply motor permutation
       motor::apply_motor_permutation(motor_values, m_actuator_setpoints, m_motor_mapping);
@@ -391,7 +389,7 @@ private:
                          m_torque_setpoints[0],
                          m_torque_setpoints[1],
                          m_torque_setpoints[2],
-                         m_flight_control_setpoints.throttle,
+                         m_stick_command.throttle,
                          m_actuator_setpoints[0],
                          m_actuator_setpoints[1],
                          m_actuator_setpoints[2],
@@ -410,7 +408,7 @@ private:
    AttitudeController&                                            m_attitude_controller;
    RateController&                                                m_rate_controller;
    ControlAllocator&                                              m_control_allocator;
-   ControlInput&                                                  m_control_input;
+   StickCommandSource&                                            m_stick_command_source;
    Dshot&                                                         m_dshot;
    std::array<std::reference_wrapper<StickInputFilter>, num_axis> m_stick_input_lpf;
    std::array<std::reference_wrapper<GyroFilter>, num_axis>       m_gyro_lpf;
@@ -433,7 +431,7 @@ private:
    const float                                                    m_throttle_gate_integrator;
    const float                                                    m_thrust_linearization_factor;
    aeromight_boundaries::ControlStatus                            m_control_status{};
-   aeromight_boundaries::FlightControlSetpoints                   m_flight_control_setpoints{};
+   control::attitude::StickCommand                                m_stick_command{};
    aeromight_boundaries::SystemState                              m_system_state_setpoints{};
    aeromight_boundaries::StateEstimation                          m_state_estimation{};
    math::Vec3f                                                    m_angular_rate_setpoints{};

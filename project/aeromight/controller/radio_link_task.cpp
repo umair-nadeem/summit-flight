@@ -72,7 +72,7 @@ extern "C"
           radio_receiver{
               data->radio_link_uart.radio_input_receiver,
               data->radio_link_uart.radio_queue_buffer_index_sender,
-              aeromight_boundaries::aeromight_data.flight_control_setpoints,
+              aeromight_boundaries::aeromight_data.stick_command,
               aeromight_boundaries::aeromight_data.system_control_setpoints,
               aeromight_boundaries::aeromight_data.radio_link_actuals,
               logger_radio_link,
