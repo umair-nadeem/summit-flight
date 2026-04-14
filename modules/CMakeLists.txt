@@ -1,5 +1,6 @@
 add_subdirectory(boundaries)
 add_subdirectory(barometer)
+add_subdirectory(control)
 add_subdirectory(estimation)
 add_subdirectory(event_handling)
 add_subdirectory(imu)

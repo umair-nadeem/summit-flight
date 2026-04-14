@@ -38,7 +38,8 @@ class Control
    using Axis                   = aeromight_boundaries::ControlAxis;
 
 public:
-   static constexpr std::size_t num_axis = aeromight_boundaries::num_axis;
+   static constexpr std::size_t num_axis      = aeromight_boundaries::num_axis;
+   static constexpr std::size_t num_actuators = ControlAllocator::num_actuators;
 
    explicit Control(AttitudeController&                          attitude_controller,
                     RateController&                              rate_controller,
@@ -317,12 +318,12 @@ private:
 
       motor::apply_thrust_linearization(motor_values, m_thrust_linearization_factor, m_actuator_min, m_actuator_max);
 
-      for (std::size_t i = 0; i < aeromight_boundaries::num_actuators; i++)
+      for (std::size_t i = 0; i < num_actuators; i++)
       {
          dshot_throttle[i] = dshot::thrust_to_dshot_throttle(motor_values[i]);
       }
 
-      for (std::size_t i = 0; i < aeromight_boundaries::num_actuators; i++)
+      for (std::size_t i = 0; i < num_actuators; i++)
       {
          dshot_frames[i] = dshot::get_dshot_frame(dshot_throttle[i], false);
       }

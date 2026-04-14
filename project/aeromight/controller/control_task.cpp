@@ -1,6 +1,5 @@
 #include "ControlTaskData.hpp"
 #include "aeromight_boundaries/AeromightData.hpp"
-#include "aeromight_control/AttitudeController.hpp"
 #include "aeromight_control/Control.hpp"
 #include "aeromight_control/ControlAllocator.hpp"
 #include "aeromight_control/ControlInput.hpp"
@@ -8,6 +7,7 @@
 #include "aeromight_control/RateController.hpp"
 #include "aeromight_estimation/AltitudeEkf.hpp"
 #include "aeromight_estimation/Estimation.hpp"
+#include "control/attitude/AttitudeController.hpp"
 #include "error/error_handler.hpp"
 #include "estimation/AttitudeEstimator.hpp"
 #include "event_handling/event_check.hpp"
@@ -146,7 +146,7 @@ extern "C"
 
       const math::Vec3f attitude_gains_p{attitude_controller_roll_kp, attitude_controller_pitch_kp, attitude_controller_yaw_kp};
 
-      aeromight_control::AttitudeController attitude_controller{attitude_gains_p};
+      control::attitude::AttitudeController attitude_controller{attitude_gains_p};
 
       const math::Vec3f rate_gains_p{rate_controller_roll_kp, rate_controller_pitch_kp, rate_controller_yaw_kp};
       const math::Vec3f rate_gains_i{rate_controller_roll_ki, rate_controller_pitch_ki, rate_controller_yaw_ki};

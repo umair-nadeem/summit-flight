@@ -15,6 +15,8 @@ class ControlAllocator
    using SaturationFlags = std::array<bool, 3u>;
 
 public:
+   static constexpr std::size_t num_actuators = aeromight_boundaries::num_actuators;
+
    explicit ControlAllocator(const float actuator_min,
                              const float actuator_max,
                              const float actuator_idle,

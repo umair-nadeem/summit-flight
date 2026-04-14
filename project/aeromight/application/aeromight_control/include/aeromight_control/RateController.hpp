@@ -41,16 +41,17 @@ public:
       }
 
       const math::Vec3f rate_error = rate_setpoint_radps - gyro_radps;
-      const math::Vec3f p          = m_gains_p.emul(rate_error);
-      const math::Vec3f i          = m_rate_integrator;
-      const math::Vec3f d          = m_gains_d.emul(gyro_derivative_radps2);
-      const math::Vec3f ff         = m_gains_ff.emul(rate_setpoint_radps);
+      const math::Vec3f p_term     = m_gains_p.emul(rate_error);
+      const math::Vec3f i_term     = m_rate_integrator;
+      const math::Vec3f d_term     = m_gains_d.emul(gyro_derivative_radps2);
+      const math::Vec3f ff_term    = m_gains_ff.emul(rate_setpoint_radps);
 
-      math::Vec3f torque_cmd = p + i - d + ff;
+      math::Vec3f torque_cmd = p_term + i_term - d_term + ff_term;
 
-      torque_cmd[0] = std::clamp(torque_cmd[0], -m_torque_output_limit, m_torque_output_limit);
-      torque_cmd[1] = std::clamp(torque_cmd[1], -m_torque_output_limit, m_torque_output_limit);
-      torque_cmd[2] = std::clamp(torque_cmd[2], -m_torque_output_limit, m_torque_output_limit);
+      for (std::size_t i = 0; i < torque_cmd.size; i++)
+      {
+         torque_cmd[i] = std::clamp(torque_cmd[i], -m_torque_output_limit, m_torque_output_limit);
+      }
 
       if (run_integrator)
       {
@@ -96,9 +97,11 @@ private:
       }
 
       m_rate_integrator += m_gains_i.emul(integrator_error) * dt_s;
-      m_rate_integrator[0] = std::clamp(m_rate_integrator[0], -m_integrator_limit[0], m_integrator_limit[0]);
-      m_rate_integrator[1] = std::clamp(m_rate_integrator[1], -m_integrator_limit[1], m_integrator_limit[1]);
-      m_rate_integrator[2] = std::clamp(m_rate_integrator[2], -m_integrator_limit[2], m_integrator_limit[2]);
+
+      for (std::size_t i = 0; i < m_rate_integrator.size; i++)
+      {
+         m_rate_integrator[i] = std::clamp(m_rate_integrator[i], -m_integrator_limit[i], m_integrator_limit[i]);
+      }
    }
 
    const math::Vec3f          m_gains_p;

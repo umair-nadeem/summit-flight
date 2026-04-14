@@ -2,7 +2,7 @@
 
 #include "math/Vector3.hpp"
 
-namespace aeromight_control
+namespace control::attitude
 {
 
 class AttitudeController
@@ -22,4 +22,4 @@ private:
    const math::Vec3f m_gains_p;
 };
 
-}   // namespace aeromight_control
+}   // namespace control::attitude
