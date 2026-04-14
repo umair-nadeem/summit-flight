@@ -2,7 +2,8 @@
 
 #include <array>
 
-#include "aeromight_boundaries/ActuatorSetpoints.hpp"
+#include "aeromight_boundaries/ControlAxis.hpp"
+#include "aeromight_boundaries/actuator.hpp"
 #include "error/error_handler.hpp"
 
 namespace aeromight_control
@@ -10,6 +11,7 @@ namespace aeromight_control
 
 class ControlAllocator
 {
+   using Axis            = aeromight_boundaries::ControlAxis;
    using SaturationFlags = std::array<bool, 3u>;
 
 public:
@@ -27,8 +29,8 @@ public:
          m_slew_rate_limit_s{slew_rate_limit_s}
    {
       error::verify((actuator_min < actuator_idle) && (actuator_idle < actuator_max));
-      error::verify(aeromight_boundaries::ActuatorParams::min <= actuator_min);
-      error::verify(actuator_max <= aeromight_boundaries::ActuatorParams::max);
+      error::verify(aeromight_boundaries::actuator_min <= actuator_min);
+      error::verify(actuator_max <= aeromight_boundaries::actuator_max);
       error::verify(m_slew_rate_limit_s > math::constants::epsilon);
    }
 
@@ -46,17 +48,19 @@ public:
 
    void allocate()
    {
+      using namespace aeromight_boundaries;
+
       m_last_actuator_setpoints = m_actuator_setpoints;
 
       math::Vector4 actuator_torque{};
       mix(actuator_torque,
-          m_control_setpoints[aeromight_boundaries::ControlAxis::roll],
-          m_control_setpoints[aeromight_boundaries::ControlAxis::pitch],
-          apply_yaw_limit(m_control_setpoints[aeromight_boundaries::ControlAxis::yaw]));
+          m_control_setpoints[idx(Axis::roll)],
+          m_control_setpoints[idx(Axis::pitch)],
+          apply_yaw_limit(m_control_setpoints[idx(Axis::yaw)]));
 
-      perform_desaturation(actuator_torque, m_control_setpoints[aeromight_boundaries::ControlAxis::thrust]);
+      perform_desaturation(actuator_torque, m_control_setpoints[idx(Axis::thrust)]);
 
-      m_actuator_setpoints = actuator_torque + m_control_setpoints[aeromight_boundaries::ControlAxis::thrust];
+      m_actuator_setpoints = actuator_torque + m_control_setpoints[idx(Axis::thrust)];
 
       apply_deadband_to_actuator_outputs();
    }
@@ -69,16 +73,16 @@ public:
       m_control_saturation_negative = {false, false, false};
 
       // estimate yaw saturation
-      const float yaw_control_sp = m_control_setpoints[ControlAxis::yaw];
-      const float yaw_limit      = get_yaw_limit(m_control_setpoints[ControlAxis::thrust]);
+      const float yaw_control_sp = m_control_setpoints[idx(Axis::yaw)];
+      const float yaw_limit      = get_yaw_limit(m_control_setpoints[idx(Axis::thrust)]);
 
       if ((0.0f < yaw_control_sp) && (yaw_limit < yaw_control_sp))   // positive yaw saturation
       {
-         m_control_saturation_positive[ControlAxis::yaw] = true;
+         m_control_saturation_positive[idx(Axis::yaw)] = true;
       }
       else if ((yaw_control_sp < 0.0f) && (yaw_control_sp < -yaw_limit))   // negative yaw saturation
       {
-         m_control_saturation_negative[ControlAxis::yaw] = true;
+         m_control_saturation_negative[idx(Axis::yaw)] = true;
       }
 
       if (!m_actuator_saturation)
@@ -87,9 +91,9 @@ public:
       }
 
       // find axis with max torque magnitude
-      float   max_mag       = 0.0f;
-      uint8_t dominant_axis = ControlAxis::roll;
-      for (uint8_t axis = ControlAxis::roll; axis <= ControlAxis::yaw; axis++)
+      float       max_mag       = 0.0f;
+      std::size_t dominant_axis = idx(Axis::roll);
+      for (std::size_t axis = idx(Axis::roll); axis <= idx(Axis::yaw); axis++)
       {
          const float absolute_magnitude = std::fabs(m_control_setpoints[axis]);
          if (max_mag < absolute_magnitude)
@@ -231,7 +235,7 @@ private:
 
    float apply_yaw_limit(const float yaw_control_sp) const noexcept
    {
-      const float yaw_limit = get_yaw_limit(m_control_setpoints[aeromight_boundaries::ControlAxis::thrust]);
+      const float yaw_limit = get_yaw_limit(m_control_setpoints[aeromight_boundaries::idx(Axis::thrust)]);
       return std::clamp(yaw_control_sp, -yaw_limit, yaw_limit);
    }
 

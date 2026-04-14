@@ -21,4 +21,5 @@ public:
 private:
    const math::Vector3 m_gains_p;
 };
+
 }   // namespace aeromight_control

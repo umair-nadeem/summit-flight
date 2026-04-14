@@ -3,15 +3,17 @@
 #include <algorithm>
 #include <span>
 
-#include "aeromight_boundaries/ActuatorSetpoints.hpp"
+#include "aeromight_boundaries/ControlAxis.hpp"
 #include "aeromight_boundaries/ControlStatus.hpp"
 #include "aeromight_boundaries/FlightControlSetpoints.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
 #include "aeromight_boundaries/SystemState.hpp"
+#include "aeromight_boundaries/actuator.hpp"
 #include "boundaries/SharedData.hpp"
 #include "dshot/dshot.hpp"
 #include "interfaces/IClockSource.hpp"
 #include "math/Vector2.hpp"
+#include "math/Vector4.hpp"
 #include "motor/motor.hpp"
 
 namespace aeromight_control
@@ -33,11 +35,10 @@ class Control
    using ControlHealthPublisher = boundaries::SharedData<aeromight_boundaries::ControlStatus>;
    using SystemStateSubscriber  = boundaries::SharedData<aeromight_boundaries::SystemState>;
    using Error                  = aeromight_boundaries::ControlStatus::Error;
-   using ControlAxis            = aeromight_boundaries::ControlAxis;
+   using Axis                   = aeromight_boundaries::ControlAxis;
 
 public:
-   static constexpr std::size_t num_axis      = 3u;
-   static constexpr std::size_t num_actuators = aeromight_boundaries::ActuatorParams::num_actuators;
+   static constexpr std::size_t num_axis = aeromight_boundaries::num_axis;
 
    explicit Control(AttitudeController&                          attitude_controller,
                     RateController&                              rate_controller,
@@ -54,7 +55,7 @@ public:
                     DtermFilter&                                 pid_dterm_y_lpf,
                     DtermFilter&                                 pid_dterm_z_lpf,
                     Led&                                         led,
-                    const std::array<uint8_t, num_actuators>&    motor_mapping,
+                    const math::Vec4<uint8_t>&                   motor_mapping,
                     ControlHealthPublisher&                      control_health_publisher,
                     const SystemStateSubscriber&                 system_state_subscriber,
                     const aeromight_boundaries::StateEstimation& state_estimation_subscriber,
@@ -219,12 +220,12 @@ private:
 
    void get_rate_setpoints()
    {
-      using Axis = aeromight_boundaries::ControlAxis;
+      using namespace aeromight_boundaries;
 
       if (m_run_attitude_controller)
       {
-         math::Vector2 manual_setpoints{m_stick_input_lpf[Axis::roll].get().apply(m_flight_control_setpoints.roll * m_max_tilt_angle_rad, m_dt_s),
-                                        m_stick_input_lpf[Axis::pitch].get().apply(m_flight_control_setpoints.pitch * m_max_tilt_angle_rad, m_dt_s)};
+         math::Vector2 manual_setpoints{m_stick_input_lpf[idx(Axis::roll)].get().apply(m_flight_control_setpoints.roll * m_max_tilt_angle_rad, m_dt_s),
+                                        m_stick_input_lpf[idx(Axis::pitch)].get().apply(m_flight_control_setpoints.pitch * m_max_tilt_angle_rad, m_dt_s)};
 
          const float tilt_norm = manual_setpoints.norm();
 
@@ -237,21 +238,21 @@ private:
                                                   m_state_estimation.euler.pitch(),
                                                   m_state_estimation.euler.yaw()};
 
-         const math::Vector3 angle_setpoints{manual_setpoints[Axis::roll], manual_setpoints[Axis::pitch], 0.0f};
+         const math::Vector3 angle_setpoints{manual_setpoints[idx(Axis::roll)], manual_setpoints[idx(Axis::pitch)], 0.0f};
 
          m_angular_rate_setpoints = m_attitude_controller.update(angle_setpoints, angle_estimation_rad);
 
-         m_angular_rate_setpoints[Axis::roll]  = std::clamp(m_angular_rate_setpoints[Axis::roll], -m_max_rate_radps[Axis::roll], m_max_rate_radps[Axis::roll]);
-         m_angular_rate_setpoints[Axis::pitch] = std::clamp(m_angular_rate_setpoints[Axis::pitch], -m_max_rate_radps[Axis::pitch], m_max_rate_radps[Axis::pitch]);
+         m_angular_rate_setpoints[idx(Axis::roll)]  = std::clamp(m_angular_rate_setpoints[idx(Axis::roll)], -m_max_rate_radps[idx(Axis::roll)], m_max_rate_radps[idx(Axis::roll)]);
+         m_angular_rate_setpoints[idx(Axis::pitch)] = std::clamp(m_angular_rate_setpoints[idx(Axis::pitch)], -m_max_rate_radps[idx(Axis::pitch)], m_max_rate_radps[idx(Axis::pitch)]);
       }
       else   // generate rate setpoints from sticks
       {
-         m_angular_rate_setpoints[Axis::roll]  = m_stick_input_lpf[Axis::roll].get().apply(m_flight_control_setpoints.roll * m_max_rate_radps[Axis::roll], m_dt_s);
-         m_angular_rate_setpoints[Axis::pitch] = m_stick_input_lpf[Axis::pitch].get().apply(m_flight_control_setpoints.pitch * m_max_rate_radps[Axis::pitch], m_dt_s);
+         m_angular_rate_setpoints[idx(Axis::roll)]  = m_stick_input_lpf[idx(Axis::roll)].get().apply(m_flight_control_setpoints.roll * m_max_rate_radps[idx(Axis::roll)], m_dt_s);
+         m_angular_rate_setpoints[idx(Axis::pitch)] = m_stick_input_lpf[idx(Axis::pitch)].get().apply(m_flight_control_setpoints.pitch * m_max_rate_radps[idx(Axis::pitch)], m_dt_s);
       }
 
       // yaw rate from manual setpoint
-      m_angular_rate_setpoints[Axis::yaw] = m_stick_input_lpf[Axis::yaw].get().apply(m_flight_control_setpoints.yaw * m_max_rate_radps[Axis::yaw], m_dt_s);
+      m_angular_rate_setpoints[idx(Axis::yaw)] = m_stick_input_lpf[idx(Axis::yaw)].get().apply(m_flight_control_setpoints.yaw * m_max_rate_radps[idx(Axis::yaw)], m_dt_s);
    }
 
    void get_torque_setpoints()
@@ -283,9 +284,11 @@ private:
 
    void update_actuator_setpoints()
    {
-      const math::Vector4 control_setpoints{m_torque_setpoints[ControlAxis::roll],
-                                            m_torque_setpoints[ControlAxis::pitch],
-                                            m_torque_setpoints[ControlAxis::yaw],
+      using namespace aeromight_boundaries;
+
+      const math::Vector4 control_setpoints{m_torque_setpoints[idx(Axis::roll)],
+                                            m_torque_setpoints[idx(Axis::pitch)],
+                                            m_torque_setpoints[idx(Axis::yaw)],
                                             m_flight_control_setpoints.throttle};
 
       m_control_allocator.set_control_setpoints(control_setpoints);
@@ -303,7 +306,7 @@ private:
 
    void update_motor_commands()
    {
-      using DshotVector = math::Vector<uint16_t, num_actuators>;
+      using DshotVector = math::Vec4<uint16_t>;
 
       math::Vector4 motor_values{};
       DshotVector   dshot_throttle{};
@@ -314,12 +317,12 @@ private:
 
       motor::apply_thrust_linearization(motor_values, m_thrust_linearization_factor, m_actuator_min, m_actuator_max);
 
-      for (std::size_t i = 0; i < num_actuators; i++)
+      for (std::size_t i = 0; i < aeromight_boundaries::num_actuators; i++)
       {
          dshot_throttle[i] = dshot::thrust_to_dshot_throttle(motor_values[i]);
       }
 
-      for (std::size_t i = 0; i < num_actuators; i++)
+      for (std::size_t i = 0; i < aeromight_boundaries::num_actuators; i++)
       {
          dshot_frames[i] = dshot::get_dshot_frame(dshot_throttle[i], false);
       }
@@ -412,7 +415,7 @@ private:
    std::array<std::reference_wrapper<GyroFilter>, num_axis>       m_gyro_lpf;
    std::array<std::reference_wrapper<DtermFilter>, num_axis>      m_pid_dterm_lpf;
    Led&                                                           m_led;
-   const std::array<uint8_t, num_actuators>&                      m_motor_mapping;
+   const math::Vec4<uint8_t>&                                     m_motor_mapping;
    ControlHealthPublisher&                                        m_control_health_publisher;
    const SystemStateSubscriber&                                   m_system_state_subscriber;
    const aeromight_boundaries::StateEstimation&                   m_state_estimation_subscriber;
@@ -428,7 +431,6 @@ private:
    const float                                                    m_throttle_arming;
    const float                                                    m_throttle_gate_integrator;
    const float                                                    m_thrust_linearization_factor;
-   aeromight_boundaries::ActuatorSetpoints                        m_actuator_setpoints{};
    aeromight_boundaries::ControlStatus                            m_control_status{};
    aeromight_boundaries::FlightControlSetpoints                   m_flight_control_setpoints{};
    aeromight_boundaries::SystemState                              m_system_state_setpoints{};
@@ -438,6 +440,7 @@ private:
    math::Vector3                                                  m_previous_dterm_gyro_radps{};
    math::Vector3                                                  m_angular_rate_setpoints{};
    math::Vector3                                                  m_torque_setpoints{};
+   math::Vector4                                                  m_actuator_setpoints{};
    float                                                          m_dt_s{0.0f};
    bool                                                           m_armed{false};
    uint32_t                                                       m_current_time_ms{0};

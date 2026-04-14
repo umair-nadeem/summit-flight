@@ -1,6 +1,5 @@
 #pragma once
 
-#include "ActuatorSetpoints.hpp"
 #include "ControlStatus.hpp"
 #include "EstimatorStatus.hpp"
 #include "FlightControlSetpoints.hpp"

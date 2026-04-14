@@ -1,16 +1,15 @@
 #pragma once
 
-#include <array>
-
-#include "aeromight_boundaries/ActuatorSetpoints.hpp"
 #include "aeromight_boundaries/ControlTaskEvents.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
+#include "aeromight_boundaries/actuator.hpp"
 #include "dshot/params.hpp"
 #include "hardware_bindings.hpp"
 #include "hw/dshot/Dshot.hpp"
 #include "hw/dshot/DshotConfig.hpp"
 #include "hw/pcb_component/Led.hpp"
 #include "hw/timer/Timer.hpp"
+#include "math/Vector4.hpp"
 #include "rtos/NotificationWaiter.hpp"
 #include "utilities/enum_to_bit_mask.hpp"
 
@@ -40,7 +39,7 @@ struct ControlTaskData
    hw::timer::Timer slave_pwm_timer{global_data.timer.tim4_config};
 
    // dshot configs
-   std::array<hw::dshot::DshotConfig, aeromight_boundaries::ActuatorParams::num_actuators>
+   std::array<hw::dshot::DshotConfig, aeromight_boundaries::num_actuators>
        dshot_configs{
            {{DMA2, LL_DMA_STREAM_1,
              global_data.timer.tim1_config.timer_handle,
@@ -63,14 +62,14 @@ struct ControlTaskData
              &global_data.timer.tim4_config.timer_handle->CCR3}}};
 
    // dshot frame buffers
-   std::array<std::array<uint16_t, dshot::frame_len>, aeromight_boundaries::ActuatorParams::num_actuators> dshot_buffers{};
+   std::array<std::array<uint16_t, dshot::frame_len>, aeromight_boundaries::num_actuators> dshot_buffers{};
 
-   hw::dshot::Dshot<aeromight_boundaries::ActuatorParams::num_actuators> dshot{dshot_buffers,
-                                                                               dshot_configs,
-                                                                               static_cast<uint16_t>(global_data.timer.tim1_config.autoreload)};
+   hw::dshot::Dshot<aeromight_boundaries::num_actuators> dshot{dshot_buffers,
+                                                               dshot_configs,
+                                                               static_cast<uint16_t>(global_data.timer.tim1_config.autoreload)};
 
    // motor output mapping
-   std::array<uint8_t, 4> motor_output_map{
+   math::Vec4<uint8_t> motor_output_map{
        0u,   // motor 1
        3u,   // motor 2
        1u,   // motor 3
