@@ -4,10 +4,10 @@
 #include "aeromight_control/ControlAllocator.hpp"
 #include "aeromight_control/ControlInput.hpp"
 #include "aeromight_control/EstimationAndControl.hpp"
-#include "aeromight_control/RateController.hpp"
 #include "aeromight_estimation/AltitudeEkf.hpp"
 #include "aeromight_estimation/Estimation.hpp"
 #include "control/attitude/AttitudeController.hpp"
+#include "control/rate/RateController.hpp"
 #include "error/error_handler.hpp"
 #include "estimation/AttitudeEstimator.hpp"
 #include "event_handling/event_check.hpp"
@@ -154,12 +154,12 @@ extern "C"
       const math::Vec3f rate_gains_ff{rate_controller_roll_kff, rate_controller_pitch_kff, rate_controller_yaw_kff};
       const math::Vec3f rate_integrator_limits{rate_controller_roll_integrator_limit, rate_controller_pitch_integrator_limit, rate_controller_yaw_integrator_limit};
 
-      aeromight_control::RateController rate_controller{rate_gains_p,
-                                                        rate_gains_i,
-                                                        rate_gains_d,
-                                                        rate_gains_ff,
-                                                        rate_integrator_limits,
-                                                        torque_limit};
+      control::rate::RateController rate_controller{rate_gains_p,
+                                                    rate_gains_i,
+                                                    rate_gains_d,
+                                                    rate_gains_ff,
+                                                    rate_integrator_limits,
+                                                    torque_limit};
 
       aeromight_control::ControlAllocator control_allocator{actuator_min,
                                                             actuator_max,

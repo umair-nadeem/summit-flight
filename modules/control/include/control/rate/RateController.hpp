@@ -4,7 +4,7 @@
 
 #include "math/Vector3.hpp"
 
-namespace aeromight_control
+namespace control::rate
 {
 
 class RateController
@@ -122,4 +122,4 @@ private:
    bool                       initialized{false};
 };
 
-}   // namespace aeromight_control
+}   // namespace control::rate
