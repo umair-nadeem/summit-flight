@@ -15,7 +15,7 @@ class Imu
 {
    using ImuDataPublisher   = boundaries::SharedData<imu::ImuData>;
    using ImuStatusPublisher = boundaries::SharedData<imu::ImuStatus>;
-   using Vec3               = math::Vector3;
+   using Vec3               = math::Vec3f;
 
 public:
    explicit Imu(ImuDataPublisher&   imu_data_publisher,
@@ -193,9 +193,9 @@ private:
    }
 
    // assumes Front-Left-Up and converts to Front-Right-Down body frame
-   static constexpr auto convert_to_front_right_down_frame(const math::Vector3& vector3_flu)
+   static constexpr auto convert_to_front_right_down_frame(const math::Vec3f& vector3_flu)
    {
-      return math::Vector3{vector3_flu[0], -vector3_flu[1], -vector3_flu[2]};
+      return math::Vec3f{vector3_flu[0], -vector3_flu[1], -vector3_flu[2]};
    }
 
    void add_calibration_sample(const Vec3& accel, const Vec3& gyro)

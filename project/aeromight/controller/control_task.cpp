@@ -144,15 +144,15 @@ extern "C"
                      max_valid_imu_sample_dt_s,
                      max_valid_barometer_sample_dt_s};
 
-      const math::Vector3 attitude_gains_p{attitude_controller_roll_kp, attitude_controller_pitch_kp, attitude_controller_yaw_kp};
+      const math::Vec3f attitude_gains_p{attitude_controller_roll_kp, attitude_controller_pitch_kp, attitude_controller_yaw_kp};
 
       aeromight_control::AttitudeController attitude_controller{attitude_gains_p};
 
-      const math::Vector3 rate_gains_p{rate_controller_roll_kp, rate_controller_pitch_kp, rate_controller_yaw_kp};
-      const math::Vector3 rate_gains_i{rate_controller_roll_ki, rate_controller_pitch_ki, rate_controller_yaw_ki};
-      const math::Vector3 rate_gains_d{rate_controller_roll_kd, rate_controller_pitch_kd, rate_controller_yaw_kd};
-      const math::Vector3 rate_gains_ff{rate_controller_roll_kff, rate_controller_pitch_kff, rate_controller_yaw_kff};
-      const math::Vector3 rate_integrator_limits{rate_controller_roll_integrator_limit, rate_controller_pitch_integrator_limit, rate_controller_yaw_integrator_limit};
+      const math::Vec3f rate_gains_p{rate_controller_roll_kp, rate_controller_pitch_kp, rate_controller_yaw_kp};
+      const math::Vec3f rate_gains_i{rate_controller_roll_ki, rate_controller_pitch_ki, rate_controller_yaw_ki};
+      const math::Vec3f rate_gains_d{rate_controller_roll_kd, rate_controller_pitch_kd, rate_controller_yaw_kd};
+      const math::Vec3f rate_gains_ff{rate_controller_roll_kff, rate_controller_pitch_kff, rate_controller_yaw_kff};
+      const math::Vec3f rate_integrator_limits{rate_controller_roll_integrator_limit, rate_controller_pitch_integrator_limit, rate_controller_yaw_integrator_limit};
 
       aeromight_control::RateController rate_controller{rate_gains_p,
                                                         rate_gains_i,
@@ -192,6 +192,8 @@ extern "C"
 
       led::Led<hw::pcb_component::Led, sys_time::ClockSource> led{data->control_status_led};
 
+      const math::Vec3f max_rate{max_roll_rate_radps, max_pitch_rate_radps, max_yaw_rate_radps};
+
       aeromight_control::Control<decltype(attitude_controller),
                                  decltype(rate_controller),
                                  decltype(control_allocator),
@@ -228,7 +230,7 @@ extern "C"
                   max_dt_s,
                   run_attitude_controller,
                   max_tilt_angle_rad,
-                  math::Vector3{max_roll_rate_radps, max_pitch_rate_radps, max_yaw_rate_radps},
+                  max_rate,
                   actuator_min,
                   actuator_max,
                   throttle_arming,

@@ -105,6 +105,6 @@ public:
    }
 };
 
-using Vector3 = Vec3<float>;
+using Vec3f = Vec3<float>;
 
 }   // namespace math

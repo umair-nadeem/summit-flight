@@ -14,9 +14,9 @@ struct StateEstimation
    bool     attitude_estimation_valid{};
    bool     altitude_estimation_valid{};
 
-   math::Vector3 raw_accel_mps2{};
-   math::Vector3 raw_gyro_radps{};
-   math::Vector3 gyro_bias{};
+   math::Vec3f raw_accel_mps2{};
+   math::Vec3f raw_gyro_radps{};
+   math::Vec3f gyro_bias{};
 
    math::Euler euler{};
 

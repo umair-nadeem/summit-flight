@@ -17,7 +17,7 @@ public:
                         const float tilt_gating_attitude_angle_rad,
                         const float tilt_gating_accel_weight);
 
-   void predict(const math::Vector3& accel_body_mps2, const math::Quaternion& attitude, const float dt_s);
+   void predict(const math::Vec3f& accel_body_mps2, const math::Quaternion& attitude, const float dt_s);
    void update(const float baro_altitude_m);
    void reset();
 

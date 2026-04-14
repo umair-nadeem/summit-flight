@@ -10,17 +10,17 @@
 class AttitudeEstimatorMock
 {
 public:
-   MOCK_METHOD(void, update, (const math::Vector3&, const math::Vector3&, const float&), ());
+   MOCK_METHOD(void, update, (const math::Vec3f&, const math::Vec3f&, const float&), ());
    MOCK_METHOD(void, reset, ());
    MOCK_METHOD(math::Quaternion, get_quaternion, (), (const));
-   MOCK_METHOD(math::Vector3, get_unbiased_gyro_data, (const math::Vector3&), ());
-   MOCK_METHOD(math::Vector3, get_gyro_bias, (), (const));
+   MOCK_METHOD(math::Vec3f, get_unbiased_gyro_data, (const math::Vec3f&), ());
+   MOCK_METHOD(math::Vec3f, get_gyro_bias, (), (const));
 };
 
 class EkfMock
 {
 public:
-   MOCK_METHOD(void, predict, (const math::Vector3&, const math::Quaternion&, const float), ());
+   MOCK_METHOD(void, predict, (const math::Vec3f&, const math::Quaternion&, const float), ());
    MOCK_METHOD(void, update, (const float), ());
    MOCK_METHOD(void, reset, ());
    MOCK_METHOD(aeromight_estimation::EkfState, get_ekf_state, (), (const));
@@ -41,7 +41,7 @@ protected:
       }
    }
 
-   void prepare_imu_sample(const std::optional<math::Vector3> accel_mps2, std::optional<math::Vector3> gyro_radps, const uint32_t timestamp_ms)
+   void prepare_imu_sample(const std::optional<math::Vec3f> accel_mps2, std::optional<math::Vec3f> gyro_radps, const uint32_t timestamp_ms)
    {
       imu::ImuData data{accel_mps2, gyro_radps, std::nullopt};
       imu_data.update_latest(data, timestamp_ms);
@@ -214,7 +214,7 @@ TEST_F(EstimationTest, filters_reset_due_to_large_time_gap_in_imu_samples)
    provide_valid_reference_pressure();
 
    // provide one valid imu and baro sample
-   prepare_imu_sample(math::Vector3{}, math::Vector3{}, current_ms);
+   prepare_imu_sample(math::Vec3f{}, math::Vec3f{}, current_ms);
    prepare_baro_sample(bmp390::params::max_plauisble_range_pressure_pa, current_ms);
    sys_clock.m_sec = current_ms++;
    estimation.execute();
@@ -230,7 +230,7 @@ TEST_F(EstimationTest, filters_reset_due_to_large_time_gap_in_imu_samples)
    EXPECT_CALL(ahrs_filter_mock, reset());
    EXPECT_CALL(ekf_mock, reset());
 
-   prepare_imu_sample(math::Vector3{}, math::Vector3{}, current_ms);
+   prepare_imu_sample(math::Vec3f{}, math::Vec3f{}, current_ms);
    sys_clock.m_sec = current_ms++;
    estimation.execute();
 
@@ -244,7 +244,7 @@ TEST_F(EstimationTest, filters_reset_due_to_large_time_gap_in_barometer_samples)
    provide_valid_reference_pressure();
 
    // provide one valid imu and baro sample
-   prepare_imu_sample(math::Vector3{}, math::Vector3{}, current_ms);
+   prepare_imu_sample(math::Vec3f{}, math::Vec3f{}, current_ms);
    prepare_baro_sample(bmp390::params::max_plauisble_range_pressure_pa, current_ms);
    sys_clock.m_sec = current_ms++;
    estimation.execute();
@@ -252,7 +252,7 @@ TEST_F(EstimationTest, filters_reset_due_to_large_time_gap_in_barometer_samples)
    const uint32_t ticks_needed = static_cast<uint32_t>(max_valid_barometer_sample_dt_s * 1000.0f);
    for (uint32_t i = 0; i < ticks_needed; i++)
    {
-      prepare_imu_sample(math::Vector3{}, math::Vector3{}, current_ms);   // normal update for imu
+      prepare_imu_sample(math::Vec3f{}, math::Vec3f{}, current_ms);   // normal update for imu
       sys_clock.m_sec = current_ms++;
       estimation.execute();
    }
@@ -273,15 +273,15 @@ TEST_F(EstimationTest, run_attitude_estimation)
    provide_valid_reference_pressure();
 
    // provide one valid imu sample
-   prepare_imu_sample(math::Vector3{}, math::Vector3{}, current_ms);
+   prepare_imu_sample(math::Vec3f{}, math::Vec3f{}, current_ms);
    sys_clock.m_sec = current_ms++;
    estimation.execute();
 
-   const auto  accel_enu     = math::Vector3{1, 2, 3};
-   const auto  gyro_enu      = math::Vector3{4, 5, 6};
-   const auto  accel_ned     = math::Vector3{-2, -1, -3};
-   const auto  gyro_ned      = math::Vector3{-5, -4, -6};
-   const auto  unbiased_gyro = math::Vector3{6, 45, -6};
+   const auto  accel_enu     = math::Vec3f{1, 2, 3};
+   const auto  gyro_enu      = math::Vec3f{4, 5, 6};
+   const auto  accel_ned     = math::Vec3f{-2, -1, -3};
+   const auto  gyro_ned      = math::Vec3f{-5, -4, -6};
+   const auto  unbiased_gyro = math::Vec3f{6, 45, -6};
    const auto  quat          = math::Quaternion{1, 0, 9, 17};
    const float dt_s          = static_cast<float>(current_ms - (current_ms - 1u)) * 0.001f;
 
@@ -325,7 +325,7 @@ TEST_F(EstimationTest, run_altitude_estimation)
 
    EXPECT_EQ(estimation.get_state(), aeromight_boundaries::EstimatorState::running);
    EXPECT_EQ(state_estimation_storage.attitude, math::Quaternion{});   // attitude estimation hasn't run
-   EXPECT_EQ(state_estimation_storage.gyro_radps, math::Vector3{});    // attitude estimation hasn't run
+   EXPECT_EQ(state_estimation_storage.gyro_radps, math::Vec3f{});      // attitude estimation hasn't run
    EXPECT_NEAR(state_estimation_storage.altitude, 10.0f, 0.001f);
    EXPECT_NEAR(state_estimation_storage.vertical_velocity, 15.0f, 0.001f);
    EXPECT_EQ(state_estimation_storage.timestamp_ms, current_ms);
@@ -338,7 +338,7 @@ TEST_F(EstimationTest, fault_due_to_stale_imu_data)
    provide_valid_reference_pressure();
 
    // provide normal sample for both sensors once
-   prepare_imu_sample(math::Vector3{}, math::Vector3{}, current_ms);
+   prepare_imu_sample(math::Vec3f{}, math::Vec3f{}, current_ms);
    prepare_baro_sample(bmp390::params::max_plauisble_range_pressure_pa, current_ms);
    sys_clock.m_sec = current_ms++;
    estimation.execute();
@@ -367,7 +367,7 @@ TEST_F(EstimationTest, no_fault_due_to_stale_baro_data)
    provide_valid_reference_pressure();
 
    // provide normal sample for both sensors once
-   prepare_imu_sample(math::Vector3{}, math::Vector3{}, current_ms);
+   prepare_imu_sample(math::Vec3f{}, math::Vec3f{}, current_ms);
    prepare_baro_sample(bmp390::params::max_plauisble_range_pressure_pa, current_ms);
    sys_clock.m_sec = current_ms++;
    estimation.execute();
@@ -376,7 +376,7 @@ TEST_F(EstimationTest, no_fault_due_to_stale_baro_data)
    for (; current_ms < ticks_to_execute; current_ms++)
    {
       sys_clock.m_sec = current_ms;
-      prepare_imu_sample(math::Vector3{}, math::Vector3{}, current_ms);   // keep providing valid imu data
+      prepare_imu_sample(math::Vec3f{}, math::Vec3f{}, current_ms);   // keep providing valid imu data
       estimation.execute();
    }
 
@@ -415,7 +415,7 @@ TEST_F(EstimationTest, fault_recovery_after_reference_pressure_acquisition)
    provide_valid_reference_pressure();
 
    // provide normal sample for both sensors once
-   prepare_imu_sample(math::Vector3{}, math::Vector3{}, current_ms);
+   prepare_imu_sample(math::Vec3f{}, math::Vec3f{}, current_ms);
    prepare_baro_sample(bmp390::params::max_plauisble_range_pressure_pa, current_ms);
    sys_clock.m_sec = current_ms++;
    estimation.execute();
@@ -449,7 +449,7 @@ TEST_F(EstimationTest, successful_recovery_after_reference_pressure_acquisition)
    provide_valid_reference_pressure();
 
    // provide normal sample for both sensors once
-   prepare_imu_sample(math::Vector3{}, math::Vector3{}, current_ms);
+   prepare_imu_sample(math::Vec3f{}, math::Vec3f{}, current_ms);
    prepare_baro_sample(bmp390::params::max_plauisble_range_pressure_pa, current_ms);
    sys_clock.m_sec = current_ms++;
    estimation.execute();
@@ -475,7 +475,7 @@ TEST_F(EstimationTest, successful_recovery_after_reference_pressure_acquisition)
    EXPECT_CALL(ekf_mock, update(altitude));
    EXPECT_CALL(ekf_mock, get_ekf_state()).WillOnce(testing::Return(ekf_state));
 
-   prepare_imu_sample(math::Vector3{}, math::Vector3{}, current_ms);
+   prepare_imu_sample(math::Vec3f{}, math::Vec3f{}, current_ms);
    prepare_baro_sample(bmp390::params::max_plauisble_range_pressure_pa, current_ms);
    sys_clock.m_sec = current_ms;
    estimation.execute();
@@ -485,7 +485,7 @@ TEST_F(EstimationTest, successful_recovery_after_reference_pressure_acquisition)
    EXPECT_EQ(health.state, aeromight_boundaries::EstimatorState::running);
 
    EXPECT_EQ(state_estimation_storage.attitude, math::Quaternion{});   // attitude estimation hasn't run
-   EXPECT_EQ(state_estimation_storage.gyro_radps, math::Vector3{});    // attitude estimation hasn't run
+   EXPECT_EQ(state_estimation_storage.gyro_radps, math::Vec3f{});      // attitude estimation hasn't run
    EXPECT_NEAR(state_estimation_storage.altitude, 10.0f, 0.001f);
    EXPECT_NEAR(state_estimation_storage.vertical_velocity, 15.0f, 0.001f);
    EXPECT_EQ(state_estimation_storage.timestamp_ms, current_ms);

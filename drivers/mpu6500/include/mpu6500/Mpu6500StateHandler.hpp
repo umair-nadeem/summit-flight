@@ -18,7 +18,7 @@ namespace mpu6500
 template <typename SpiMaster, typename Logger>
 class Mpu6500StateHandler
 {
-   using Vec3 = math::Vector3;
+   using Vec3 = math::Vec3f;
 
 public:
    explicit Mpu6500StateHandler(SpiMaster&                    spi_master,

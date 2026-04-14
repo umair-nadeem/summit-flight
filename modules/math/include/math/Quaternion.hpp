@@ -71,7 +71,7 @@ struct Quaternion final : public Vector<float, 4u>
    }
 
    // derivative when rotated with angular velocity expressed in frame 1 (typically body frame)
-   Quaternion derivative1(const Vector3& other) const noexcept
+   Quaternion derivative1(const Vec3f& other) const noexcept
    {
       const Quaternion& q = *this;
       Quaternion        v(0, other[0], other[1], other[2]);
@@ -79,7 +79,7 @@ struct Quaternion final : public Vector<float, 4u>
    }
 
    // derivative when rotated with angular velocity expressed in frame 2 (typically reference frame)
-   Quaternion derivative2(const Vector3& other) const noexcept
+   Quaternion derivative2(const Vec3f& other) const noexcept
    {
       const Quaternion& q = *this;
       Quaternion        v(0, other[0], other[1], other[2]);

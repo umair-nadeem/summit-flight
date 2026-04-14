@@ -65,7 +65,7 @@ public:
                     const float                                  max_dt_s,
                     const bool                                   run_attitude_controller,
                     const float                                  max_tilt_angle_rad,
-                    const math::Vector3                          max_rate_radps,
+                    const math::Vec3f                            max_rate_radps,
                     const float                                  actuator_min,
                     const float                                  actuator_max,
                     const float                                  throttle_arming,
@@ -224,8 +224,8 @@ private:
 
       if (m_run_attitude_controller)
       {
-         math::Vector2 manual_setpoints{m_stick_input_lpf[idx(Axis::roll)].get().apply(m_flight_control_setpoints.roll * m_max_tilt_angle_rad, m_dt_s),
-                                        m_stick_input_lpf[idx(Axis::pitch)].get().apply(m_flight_control_setpoints.pitch * m_max_tilt_angle_rad, m_dt_s)};
+         math::Vec2f manual_setpoints{m_stick_input_lpf[idx(Axis::roll)].get().apply(m_flight_control_setpoints.roll * m_max_tilt_angle_rad, m_dt_s),
+                                      m_stick_input_lpf[idx(Axis::pitch)].get().apply(m_flight_control_setpoints.pitch * m_max_tilt_angle_rad, m_dt_s)};
 
          const float tilt_norm = manual_setpoints.norm();
 
@@ -234,11 +234,11 @@ private:
             manual_setpoints *= (m_max_tilt_angle_rad / tilt_norm);
          }
 
-         const math::Vector3 angle_estimation_rad{m_state_estimation.euler.roll(),
-                                                  m_state_estimation.euler.pitch(),
-                                                  m_state_estimation.euler.yaw()};
+         const math::Vec3f angle_estimation_rad{m_state_estimation.euler.roll(),
+                                                m_state_estimation.euler.pitch(),
+                                                m_state_estimation.euler.yaw()};
 
-         const math::Vector3 angle_setpoints{manual_setpoints[idx(Axis::roll)], manual_setpoints[idx(Axis::pitch)], 0.0f};
+         const math::Vec3f angle_setpoints{manual_setpoints[idx(Axis::roll)], manual_setpoints[idx(Axis::pitch)], 0.0f};
 
          m_angular_rate_setpoints = m_attitude_controller.update(angle_setpoints, angle_estimation_rad);
 
@@ -270,7 +270,7 @@ private:
          m_dterm_gyro_radps[i] = m_pid_dterm_lpf[i].get().apply(m_gyro_radps[i]);
       }
 
-      const math::Vector3 gyro_derivative_radps2{(m_dterm_gyro_radps - m_previous_dterm_gyro_radps) / m_dt_s};
+      const math::Vec3f gyro_derivative_radps2{(m_dterm_gyro_radps - m_previous_dterm_gyro_radps) / m_dt_s};
 
       const bool run_integrator{m_armed &&
                                 (m_flight_control_setpoints.throttle > m_throttle_gate_integrator)};
@@ -286,10 +286,10 @@ private:
    {
       using namespace aeromight_boundaries;
 
-      const math::Vector4 control_setpoints{m_torque_setpoints[idx(Axis::roll)],
-                                            m_torque_setpoints[idx(Axis::pitch)],
-                                            m_torque_setpoints[idx(Axis::yaw)],
-                                            m_flight_control_setpoints.throttle};
+      const math::Vec4f control_setpoints{m_torque_setpoints[idx(Axis::roll)],
+                                          m_torque_setpoints[idx(Axis::pitch)],
+                                          m_torque_setpoints[idx(Axis::yaw)],
+                                          m_flight_control_setpoints.throttle};
 
       m_control_allocator.set_control_setpoints(control_setpoints);
 
@@ -308,9 +308,9 @@ private:
    {
       using DshotVector = math::Vec4<uint16_t>;
 
-      math::Vector4 motor_values{};
-      DshotVector   dshot_throttle{};
-      DshotVector   dshot_frames{};
+      math::Vec4f motor_values{};
+      DshotVector dshot_throttle{};
+      DshotVector dshot_frames{};
 
       // apply motor permutation
       motor::apply_motor_permutation(motor_values, m_actuator_setpoints, m_motor_mapping);
@@ -425,7 +425,7 @@ private:
    const float                                                    m_max_dt_s;
    const bool                                                     m_run_attitude_controller;
    const float                                                    m_max_tilt_angle_rad;
-   const math::Vector3                                            m_max_rate_radps;
+   const math::Vec3f                                              m_max_rate_radps;
    const float                                                    m_actuator_min;
    const float                                                    m_actuator_max;
    const float                                                    m_throttle_arming;
@@ -435,12 +435,12 @@ private:
    aeromight_boundaries::FlightControlSetpoints                   m_flight_control_setpoints{};
    aeromight_boundaries::SystemState                              m_system_state_setpoints{};
    aeromight_boundaries::StateEstimation                          m_state_estimation{};
-   math::Vector3                                                  m_gyro_radps{};
-   math::Vector3                                                  m_dterm_gyro_radps{};
-   math::Vector3                                                  m_previous_dterm_gyro_radps{};
-   math::Vector3                                                  m_angular_rate_setpoints{};
-   math::Vector3                                                  m_torque_setpoints{};
-   math::Vector4                                                  m_actuator_setpoints{};
+   math::Vec3f                                                    m_gyro_radps{};
+   math::Vec3f                                                    m_dterm_gyro_radps{};
+   math::Vec3f                                                    m_previous_dterm_gyro_radps{};
+   math::Vec3f                                                    m_angular_rate_setpoints{};
+   math::Vec3f                                                    m_torque_setpoints{};
+   math::Vec4f                                                    m_actuator_setpoints{};
    float                                                          m_dt_s{0.0f};
    bool                                                           m_armed{false};
    uint32_t                                                       m_current_time_ms{0};

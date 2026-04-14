@@ -5,7 +5,7 @@
 namespace
 {
 
-constexpr float transform_accel_to_world_z(const math::Vector3& accel_body, const math::Quaternion& q)
+constexpr float transform_accel_to_world_z(const math::Vec3f& accel_body, const math::Quaternion& q)
 {
    // third row of rotation matrix R (body -> world)
    const float r31 = 2.0f * ((q[1] * q[3]) - (q[0] * q[2]));
@@ -37,11 +37,11 @@ AltitudeEkf::AltitudeEkf(const float process_noise_z,
    reset();
 }
 
-void AltitudeEkf::predict(const math::Vector3&    accel_body_mps2,
+void AltitudeEkf::predict(const math::Vec3f&      accel_body_mps2,
                           const math::Quaternion& attitude,
                           const float             dt_s)
 {
-   math::Vector3 accel_body = accel_body_mps2;
+   math::Vec3f accel_body = accel_body_mps2;
 
    // remove bias
    accel_body[2] -= m_state.a_z_bias;

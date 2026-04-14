@@ -177,8 +177,8 @@ private:
       }
 
       // update attitude state estimation
-      const math::Vector3 accel_mps2 = imu_sample.data.accel_mps2.value();
-      const math::Vector3 gyro_radps = imu_sample.data.gyro_radps.value();
+      const math::Vec3f accel_mps2 = imu_sample.data.accel_mps2.value();
+      const math::Vec3f gyro_radps = imu_sample.data.gyro_radps.value();
       m_attitude_estimator.update(accel_mps2, gyro_radps, dt_s);
 
       const auto attitude_q             = m_attitude_estimator.get_quaternion();

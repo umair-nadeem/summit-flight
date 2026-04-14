@@ -34,7 +34,7 @@ public:
       error::verify(m_slew_rate_limit_s > math::constants::epsilon);
    }
 
-   void set_control_setpoints(const math::Vector4& control_setpoints)
+   void set_control_setpoints(const math::Vec4f& control_setpoints)
    {
       m_control_setpoints = control_setpoints;
       for (std::size_t i = 0; i < m_control_setpoints.size; i++)
@@ -52,7 +52,7 @@ public:
 
       m_last_actuator_setpoints = m_actuator_setpoints;
 
-      math::Vector4 actuator_torque{};
+      math::Vec4f actuator_torque{};
       mix(actuator_torque,
           m_control_setpoints[idx(Axis::roll)],
           m_control_setpoints[idx(Axis::pitch)],
@@ -150,7 +150,7 @@ public:
       m_control_saturation_negative.fill(false);
    }
 
-   const math::Vector4& get_actuator_setpoints() const
+   const math::Vec4f& get_actuator_setpoints() const
    {
       return m_actuator_setpoints;
    }
@@ -166,7 +166,7 @@ public:
    }
 
 private:
-   void perform_desaturation(math::Vector4& actuator_torque, const float collective_thrust)
+   void perform_desaturation(math::Vec4f& actuator_torque, const float collective_thrust)
    {
       const float upper_margin   = m_actuator_max - collective_thrust;
       const float lower_margin   = std::max((collective_thrust - m_actuator_idle), 0.0f);
@@ -202,7 +202,7 @@ private:
       }
    }
 
-   static constexpr void estimate_actuator_min_max(const math::Vector4& actuator_sp, float& actuator_min, float& actuator_max)
+   static constexpr void estimate_actuator_min_max(const math::Vec4f& actuator_sp, float& actuator_min, float& actuator_max)
    {
       actuator_min = actuator_sp[0];
       actuator_max = actuator_sp[0];
@@ -220,7 +220,7 @@ private:
       }
    }
 
-   static void mix(math::Vector4& actuator_torque, const float roll, const float pitch, const float yaw) noexcept
+   static void mix(math::Vec4f& actuator_torque, const float roll, const float pitch, const float yaw) noexcept
    {
       actuator_torque[0] = roll + pitch + yaw;    // front-left CCW
       actuator_torque[1] = -roll + pitch - yaw;   // front-right CW
@@ -247,9 +247,9 @@ private:
    const float     m_thrust_deadband;
    const float     m_yaw_saturation_limit_factor;
    const float     m_slew_rate_limit_s;
-   math::Vector4   m_control_setpoints{0.0f};
-   math::Vector4   m_actuator_setpoints{0.0f};
-   math::Vector4   m_last_actuator_setpoints{0.0f};
+   math::Vec4f     m_control_setpoints{0.0f};
+   math::Vec4f     m_actuator_setpoints{0.0f};
+   math::Vec4f     m_last_actuator_setpoints{0.0f};
    bool            m_actuator_saturation{false};
    SaturationFlags m_control_saturation_positive{};
    SaturationFlags m_control_saturation_negative{};

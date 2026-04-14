@@ -11,9 +11,9 @@ protected:
 
 TEST_F(Vector3Test, check_in_place_addition)
 {
-   math::Vector3 a{-100.1f, 100.0f, 10.1f};
+   math::Vec3f a{-100.1f, 100.0f, 10.1f};
 
-   math::Vector3 b{51.1f, 14.0f, 1.0f};
+   math::Vec3f b{51.1f, 14.0f, 1.0f};
 
    a += b;
 
@@ -24,9 +24,9 @@ TEST_F(Vector3Test, check_in_place_addition)
 
 TEST_F(Vector3Test, check_addition)
 {
-   math::Vector3 a{-100.1f, 100.0f, 10.1f};
+   math::Vec3f a{-100.1f, 100.0f, 10.1f};
 
-   math::Vector3 b{51.1f, 14.0f, 1.0f};
+   math::Vec3f b{51.1f, 14.0f, 1.0f};
 
    const auto c = a + b;
 
@@ -37,9 +37,9 @@ TEST_F(Vector3Test, check_addition)
 
 TEST_F(Vector3Test, check_in_place_subtraction)
 {
-   math::Vector3 a{-100.1f, 100.0f, 10.1f};
+   math::Vec3f a{-100.1f, 100.0f, 10.1f};
 
-   math::Vector3 b{51.1f, 14.0f, 1.0f};
+   math::Vec3f b{51.1f, 14.0f, 1.0f};
 
    a -= b;
 
@@ -50,9 +50,9 @@ TEST_F(Vector3Test, check_in_place_subtraction)
 
 TEST_F(Vector3Test, check_subtraction)
 {
-   math::Vector3 a{-100.1f, 100.0f, 10.1f};
+   math::Vec3f a{-100.1f, 100.0f, 10.1f};
 
-   math::Vector3 b{51.1f, 14.0f, 1.0f};
+   math::Vec3f b{51.1f, 14.0f, 1.0f};
 
    const auto c = a - b;
 
@@ -63,11 +63,11 @@ TEST_F(Vector3Test, check_subtraction)
 
 TEST_F(Vector3Test, check_multiplication)
 {
-   math::Vector3 a{-100.1f, 100.0f, 10.1f};
+   math::Vec3f a{-100.1f, 100.0f, 10.1f};
 
-   math::Vector3 b{51.1f, 14.0f, 1.0f};
+   math::Vec3f b{51.1f, 14.0f, 1.0f};
 
-   const math::Vector3 c = a.emul(b);
+   const math::Vec3f c = a.emul(b);
 
    EXPECT_NEAR(c[0], -5115.11f, tolerance);
    EXPECT_NEAR(c[1], 1400.0f, tolerance);
@@ -76,7 +76,7 @@ TEST_F(Vector3Test, check_multiplication)
 
 TEST_F(Vector3Test, check_multiplication_with_scalar)
 {
-   math::Vector3 a{-100.1f, 100.0f, 10.1f};
+   math::Vec3f a{-100.1f, 100.0f, 10.1f};
 
    const auto c = a * 3.0f;
 
@@ -87,7 +87,7 @@ TEST_F(Vector3Test, check_multiplication_with_scalar)
 
 TEST_F(Vector3Test, check_division_by_scalar)
 {
-   math::Vector3 a{-100.1f, 100.0f, 10.1f};
+   math::Vec3f a{-100.1f, 100.0f, 10.1f};
 
    const auto c = a / 2.0f;
 
@@ -98,7 +98,7 @@ TEST_F(Vector3Test, check_division_by_scalar)
 
 TEST_F(Vector3Test, check_normalization)
 {
-   math::Vector3 a{-100.1f, 100.0f, 10.1f};
+   math::Vec3f a{-100.1f, 100.0f, 10.1f};
 
    a.normalize();
 

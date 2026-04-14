@@ -10,8 +10,8 @@ namespace imu_sensor
 struct RawImuSensorData
 {
    std::size_t          count;
-   math::Vector3        accel_mps2;
-   math::Vector3        gyro_radps;
+   math::Vec3f          accel_mps2;
+   math::Vec3f          gyro_radps;
    std::optional<float> temperature_c;
 };
 

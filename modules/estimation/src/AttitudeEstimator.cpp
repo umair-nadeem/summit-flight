@@ -12,14 +12,14 @@ AttitudeEstimator::AttitudeEstimator(const float accelerometer_weight,
 {
 }
 
-void AttitudeEstimator::update(const math::Vector3& accel_mps2, const math::Vector3& gyro_radps, const float dt_s)
+void AttitudeEstimator::update(const math::Vec3f& accel_mps2, const math::Vec3f& gyro_radps, const float dt_s)
 {
    using namespace math;
 
    Quaternion q_last = m_q;
 
    // Angular rate of correction
-   Vector3     corr{};
+   Vec3f       corr{};
    const float spinRate = gyro_radps.norm();
 
    m_q.normalize();
@@ -27,7 +27,7 @@ void AttitudeEstimator::update(const math::Vector3& accel_mps2, const math::Vect
    // Accelerometer correction
    // Project 'k' unit vector of earth frame to body frame
    // Optimized version with dropped zeros
-   Vector3 k{
+   Vec3f k{
        2.0f * (m_q[1] * m_q[3] - m_q[0] * m_q[2]),
        2.0f * (m_q[2] * m_q[3] + m_q[0] * m_q[1]),
        (m_q[0] * m_q[0] - m_q[1] * m_q[1] - m_q[2] * m_q[2] + m_q[3] * m_q[3])};
@@ -37,7 +37,7 @@ void AttitudeEstimator::update(const math::Vector3& accel_mps2, const math::Vect
    if ((accel_norm_sq > lower_accel_limit * lower_accel_limit) &&
        (accel_norm_sq < upper_accel_limit * upper_accel_limit))
    {
-      const Vector3 accel_dir = accel_mps2.normalized();
+      const Vec3f accel_dir = accel_mps2.normalized();
       corr += (k.cross(accel_dir)) * m_accelerometer_weight;
    }
 
@@ -82,14 +82,14 @@ math::Quaternion AttitudeEstimator::get_quaternion() const
    return m_q;
 }
 
-math::Vector3 AttitudeEstimator::get_gyro_bias() const
+math::Vec3f AttitudeEstimator::get_gyro_bias() const
 {
    return m_gyro_bias;
 }
 
-math::Vector3 AttitudeEstimator::get_unbiased_gyro_data(const math::Vector3& raw_gyro) const
+math::Vec3f AttitudeEstimator::get_unbiased_gyro_data(const math::Vec3f& raw_gyro) const
 {
-   return math::Vector3{raw_gyro - m_gyro_bias};
+   return math::Vec3f{raw_gyro - m_gyro_bias};
 }
 
 }   // namespace estimation

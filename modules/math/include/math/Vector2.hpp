@@ -96,6 +96,6 @@ public:
    }
 };
 
-using Vector2 = Vec2<float>;
+using Vec2f = Vec2<float>;
 
 }   // namespace math

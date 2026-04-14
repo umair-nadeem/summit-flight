@@ -9,7 +9,7 @@
 class AttitudeControllerMock
 {
 public:
-   MOCK_METHOD(math::Vector3, update, (const math::Vector3&, const math::Vector3&), ());
+   MOCK_METHOD(math::Vec3f, update, (const math::Vec3f&, const math::Vec3f&), ());
 };
 
 class RateControllerMock
@@ -17,7 +17,7 @@ class RateControllerMock
 public:
    static constexpr std::size_t num_axis = 3u;
 
-   MOCK_METHOD(math::Vector3, update, (const math::Vector3&, const math::Vector3&, const float, const bool), ());
+   MOCK_METHOD(math::Vec3f, update, (const math::Vec3f&, const math::Vec3f&, const float, const bool), ());
    MOCK_METHOD(void, set_saturation_status, ((const std::array<bool, 3u>&), (const std::array<bool, 3u>&)), ());
    MOCK_METHOD(void, reset, (), ());
 };
@@ -25,7 +25,7 @@ public:
 class ControlAllocatorMock
 {
 public:
-   MOCK_METHOD(aeromight_boundaries::ActuatorSetpoints, allocate, (const math::Vector4&), ());
+   MOCK_METHOD(aeromight_boundaries::ActuatorSetpoints, allocate, (const math::Vec4f&), ());
    MOCK_METHOD(float, estimate_collective_thrust, (float), ());
    MOCK_METHOD((const std::array<bool, 3u>&), get_actuator_saturation_positive, (), ());
    MOCK_METHOD((const std::array<bool, 3u>&), get_actuator_saturation_negative, (), ());

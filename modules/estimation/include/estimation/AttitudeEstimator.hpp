@@ -14,12 +14,12 @@ class AttitudeEstimator
 public:
    explicit AttitudeEstimator(const float accelerometer_weight, const float gyro_bias_weight);
 
-   void update(const math::Vector3& accel_mps2, const math::Vector3& gyro_radps, const float dt_s);
+   void update(const math::Vec3f& accel_mps2, const math::Vec3f& gyro_radps, const float dt_s);
    void reset();
 
    math::Quaternion get_quaternion() const;
-   math::Vector3    get_gyro_bias() const;
-   math::Vector3    get_unbiased_gyro_data(const math::Vector3& raw_gyro) const;
+   math::Vec3f      get_gyro_bias() const;
+   math::Vec3f      get_unbiased_gyro_data(const math::Vec3f& raw_gyro) const;
 
 private:
    static constexpr float max_gyro_bias_radps = 0.1f;
@@ -30,8 +30,8 @@ private:
    const float      m_accelerometer_weight;
    const float      m_gyro_bias_weight;
    math::Quaternion m_q{};
-   math::Vector3    m_gyro_bias{};
-   math::Vector3    m_rates{};
+   math::Vec3f      m_gyro_bias{};
+   math::Vec3f      m_rates{};
 };
 
 }   // namespace estimation

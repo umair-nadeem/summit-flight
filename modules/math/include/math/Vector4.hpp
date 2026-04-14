@@ -98,6 +98,6 @@ public:
    }
 };
 
-using Vector4 = Vec4<float>;
+using Vec4f = Vec4<float>;
 
 }   // namespace math
