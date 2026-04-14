@@ -27,24 +27,29 @@ public:
    {
    }
 
-   math::Vec3f update(const math::Vec3f& rate_setpoint_radps,
-                      const math::Vec3f& gyro_radps,
-                      const math::Vec3f& gyro_derivative_radps2,
+   math::Vec3f update(const math::Vec3f& rate_setpoints,
+                      const math::Vec3f& gyro_rate,
+                      const math::Vec3f& gyro_rate_dterm,
                       const float        dt_s,
                       const bool         run_integrator)
    {
 
       if (!initialized)
       {
-         initialized = true;
+         initialized                = true;
+         m_previous_gyro_rate_dterm = gyro_rate_dterm;
+         m_rate_integrator.zero();
          return {};
       }
 
-      const math::Vec3f rate_error = rate_setpoint_radps - gyro_radps;
-      const math::Vec3f p_term     = m_gains_p.emul(rate_error);
-      const math::Vec3f i_term     = m_rate_integrator;
-      const math::Vec3f d_term     = m_gains_d.emul(gyro_derivative_radps2);
-      const math::Vec3f ff_term    = m_gains_ff.emul(rate_setpoint_radps);
+      const math::Vec3f rate_error      = rate_setpoints - gyro_rate;
+      const math::Vec3f gyro_derivative = {(gyro_rate_dterm - m_previous_gyro_rate_dterm) / dt_s};
+      m_previous_gyro_rate_dterm        = gyro_rate_dterm;
+
+      const math::Vec3f p_term  = m_gains_p.emul(rate_error);
+      const math::Vec3f i_term  = m_rate_integrator;
+      const math::Vec3f d_term  = m_gains_d.emul(gyro_derivative);
+      const math::Vec3f ff_term = m_gains_ff.emul(rate_setpoints);
 
       math::Vec3f torque_cmd = p_term + i_term - d_term + ff_term;
 
@@ -111,6 +116,7 @@ private:
    const math::Vec3f          m_integrator_limit;
    const float                m_torque_output_limit;
    math::Vec3f                m_rate_integrator{};
+   math::Vec3f                m_previous_gyro_rate_dterm{};
    std::array<bool, num_axis> m_control_saturation_positive{};
    std::array<bool, num_axis> m_control_saturation_negative{};
    bool                       initialized{false};

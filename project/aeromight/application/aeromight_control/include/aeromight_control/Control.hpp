@@ -79,7 +79,7 @@ public:
          m_dshot{dshot},
          m_stick_input_lpf{roll_input_lpf, pitch_input_lpf, yaw_input_lpf},
          m_gyro_lpf{gyro_x_lpf, gyro_y_lpf, gyro_z_lpf},
-         m_pid_dterm_lpf{pid_dterm_x_lpf, pid_dterm_y_lpf, pid_dterm_z_lpf},
+         m_gyro_dterm_lpf{pid_dterm_x_lpf, pid_dterm_y_lpf, pid_dterm_z_lpf},
          m_led{led},
          m_motor_mapping{motor_mapping},
          m_control_health_publisher{control_health_publisher},
@@ -258,27 +258,27 @@ private:
 
    void get_torque_setpoints()
    {
+      math::Vec3f gyro_rate{};
+      math::Vec3f gyro_rate_dterm{};
+
       // gyro LPF
       for (std::size_t i = 0; i < num_axis; i++)
       {
-         m_gyro_radps[i] = m_gyro_lpf[i].get().apply(m_state_estimation.raw_gyro_radps[i], m_dt_s);
+         gyro_rate[i] = m_gyro_lpf[i].get().apply(m_state_estimation.raw_gyro_radps[i], m_dt_s);
       }
 
-      // PID d-term LPF
-      m_previous_dterm_gyro_radps = m_dterm_gyro_radps;
+      // gyro d-term LPF
       for (std::size_t i = 0; i < num_axis; i++)
       {
-         m_dterm_gyro_radps[i] = m_pid_dterm_lpf[i].get().apply(m_gyro_radps[i]);
+         gyro_rate_dterm[i] = m_gyro_dterm_lpf[i].get().apply(gyro_rate[i]);
       }
-
-      const math::Vec3f gyro_derivative_radps2{(m_dterm_gyro_radps - m_previous_dterm_gyro_radps) / m_dt_s};
 
       const bool run_integrator{m_armed &&
                                 (m_flight_control_setpoints.throttle > m_throttle_gate_integrator)};
 
       m_torque_setpoints = m_rate_controller.update(m_angular_rate_setpoints,
-                                                    m_gyro_radps,
-                                                    gyro_derivative_radps2,
+                                                    gyro_rate,
+                                                    gyro_rate_dterm,
                                                     m_dt_s,
                                                     run_integrator);
    }
@@ -364,7 +364,7 @@ private:
          filter.get().reset();
       }
 
-      for (auto& filter : m_pid_dterm_lpf)
+      for (auto& filter : m_gyro_dterm_lpf)
       {
          filter.get().reset();
       }
@@ -414,7 +414,7 @@ private:
    Dshot&                                                         m_dshot;
    std::array<std::reference_wrapper<StickInputFilter>, num_axis> m_stick_input_lpf;
    std::array<std::reference_wrapper<GyroFilter>, num_axis>       m_gyro_lpf;
-   std::array<std::reference_wrapper<DtermFilter>, num_axis>      m_pid_dterm_lpf;
+   std::array<std::reference_wrapper<DtermFilter>, num_axis>      m_gyro_dterm_lpf;
    Led&                                                           m_led;
    const math::Vec4<uint8_t>&                                     m_motor_mapping;
    ControlHealthPublisher&                                        m_control_health_publisher;
@@ -436,9 +436,6 @@ private:
    aeromight_boundaries::FlightControlSetpoints                   m_flight_control_setpoints{};
    aeromight_boundaries::SystemState                              m_system_state_setpoints{};
    aeromight_boundaries::StateEstimation                          m_state_estimation{};
-   math::Vec3f                                                    m_gyro_radps{};
-   math::Vec3f                                                    m_dterm_gyro_radps{};
-   math::Vec3f                                                    m_previous_dterm_gyro_radps{};
    math::Vec3f                                                    m_angular_rate_setpoints{};
    math::Vec3f                                                    m_torque_setpoints{};
    math::Vec4f                                                    m_actuator_setpoints{};
