@@ -24,7 +24,6 @@ template <typename AttitudeController,
           typename ControlAllocator,
           typename StickCommandSource,
           typename Dshot,
-          typename StickInputFilter,
           typename GyroFilter,
           typename DtermFilter,
           typename Led,
@@ -46,9 +45,6 @@ public:
                     ControlAllocator&                            control_allocator,
                     StickCommandSource&                          stick_command_source,
                     Dshot&                                       dshot,
-                    StickInputFilter&                            roll_input_lpf,
-                    StickInputFilter&                            pitch_input_lpf,
-                    StickInputFilter&                            yaw_input_lpf,
                     GyroFilter&                                  gyro_x_lpf,
                     GyroFilter&                                  gyro_y_lpf,
                     GyroFilter&                                  gyro_z_lpf,
@@ -77,7 +73,6 @@ public:
          m_control_allocator{control_allocator},
          m_stick_command_source{stick_command_source},
          m_dshot{dshot},
-         m_stick_input_lpf{roll_input_lpf, pitch_input_lpf, yaw_input_lpf},
          m_gyro_lpf{gyro_x_lpf, gyro_y_lpf, gyro_z_lpf},
          m_gyro_dterm_lpf{pid_dterm_x_lpf, pid_dterm_y_lpf, pid_dterm_z_lpf},
          m_led{led},
@@ -211,7 +206,8 @@ private:
 
    void get_stick_command()
    {
-      m_stick_command = m_stick_command_source.get();
+      const auto raw_stick_command = m_stick_command_source.get_raw();
+      m_stick_command              = m_stick_command_source.apply_filter(raw_stick_command, m_dt_s);
    }
 
    void get_state_estimation()
@@ -225,8 +221,8 @@ private:
 
       if (m_run_attitude_controller)
       {
-         math::Vec2f manual_setpoints{m_stick_input_lpf[idx(Axis::roll)].get().apply(m_stick_command.roll * m_max_tilt_angle_rad, m_dt_s),
-                                      m_stick_input_lpf[idx(Axis::pitch)].get().apply(m_stick_command.pitch * m_max_tilt_angle_rad, m_dt_s)};
+         math::Vec2f manual_setpoints{m_stick_command.roll * m_max_tilt_angle_rad,
+                                      m_stick_command.pitch * m_max_tilt_angle_rad};
 
          const float tilt_norm = manual_setpoints.norm();
 
@@ -248,12 +244,12 @@ private:
       }
       else   // generate rate setpoints from sticks
       {
-         m_angular_rate_setpoints[idx(Axis::roll)]  = m_stick_input_lpf[idx(Axis::roll)].get().apply(m_stick_command.roll * m_max_rate_radps[idx(Axis::roll)], m_dt_s);
-         m_angular_rate_setpoints[idx(Axis::pitch)] = m_stick_input_lpf[idx(Axis::pitch)].get().apply(m_stick_command.pitch * m_max_rate_radps[idx(Axis::pitch)], m_dt_s);
+         m_angular_rate_setpoints[idx(Axis::roll)]  = m_stick_command.roll * m_max_rate_radps[idx(Axis::roll)];
+         m_angular_rate_setpoints[idx(Axis::pitch)] = m_stick_command.pitch * m_max_rate_radps[idx(Axis::pitch)];
       }
 
       // yaw rate from manual setpoint
-      m_angular_rate_setpoints[idx(Axis::yaw)] = m_stick_input_lpf[idx(Axis::yaw)].get().apply(m_stick_command.yaw * m_max_rate_radps[idx(Axis::yaw)], m_dt_s);
+      m_angular_rate_setpoints[idx(Axis::yaw)] = m_stick_command.yaw * m_max_rate_radps[idx(Axis::yaw)];
    }
 
    void get_torque_setpoints()
@@ -338,6 +334,7 @@ private:
    {
       reset();
       reset_filters();
+      m_stick_command_source.reset();
       m_armed = false;
       m_actuator_setpoints.zero();
    }
@@ -352,11 +349,6 @@ private:
 
    void reset_filters()
    {
-      for (auto& filter : m_stick_input_lpf)
-      {
-         filter.get().reset();
-      }
-
       for (auto& filter : m_gyro_lpf)
       {
          filter.get().reset();
@@ -405,43 +397,42 @@ private:
 
    static constexpr uint32_t control_led_period_ms = 100u;
 
-   AttitudeController&                                            m_attitude_controller;
-   RateController&                                                m_rate_controller;
-   ControlAllocator&                                              m_control_allocator;
-   StickCommandSource&                                            m_stick_command_source;
-   Dshot&                                                         m_dshot;
-   std::array<std::reference_wrapper<StickInputFilter>, num_axis> m_stick_input_lpf;
-   std::array<std::reference_wrapper<GyroFilter>, num_axis>       m_gyro_lpf;
-   std::array<std::reference_wrapper<DtermFilter>, num_axis>      m_gyro_dterm_lpf;
-   Led&                                                           m_led;
-   const math::Vec4<uint8_t>&                                     m_motor_mapping;
-   ControlHealthPublisher&                                        m_control_health_publisher;
-   const SystemStateSubscriber&                                   m_system_state_subscriber;
-   const aeromight_boundaries::StateEstimation&                   m_state_estimation_subscriber;
-   Logger&                                                        m_logger;
-   const uint32_t                                                 m_max_age_state_estimation_data_ms;
-   const float                                                    m_min_dt_s;
-   const float                                                    m_max_dt_s;
-   const bool                                                     m_run_attitude_controller;
-   const float                                                    m_max_tilt_angle_rad;
-   const math::Vec3f                                              m_max_rate_radps;
-   const float                                                    m_actuator_min;
-   const float                                                    m_actuator_max;
-   const float                                                    m_throttle_arming;
-   const float                                                    m_throttle_gate_integrator;
-   const float                                                    m_thrust_linearization_factor;
-   aeromight_boundaries::ControlStatus                            m_control_status{};
-   control::attitude::StickCommand                                m_stick_command{};
-   aeromight_boundaries::SystemState                              m_system_state_setpoints{};
-   aeromight_boundaries::StateEstimation                          m_state_estimation{};
-   math::Vec3f                                                    m_angular_rate_setpoints{};
-   math::Vec3f                                                    m_torque_setpoints{};
-   math::Vec4f                                                    m_actuator_setpoints{};
-   float                                                          m_dt_s{0.0f};
-   bool                                                           m_armed{false};
-   uint32_t                                                       m_current_time_ms{0};
-   uint32_t                                                       m_current_time_us{0};
-   uint32_t                                                       m_last_execution_time_us{0};
+   AttitudeController&                                       m_attitude_controller;
+   RateController&                                           m_rate_controller;
+   ControlAllocator&                                         m_control_allocator;
+   StickCommandSource&                                       m_stick_command_source;
+   Dshot&                                                    m_dshot;
+   std::array<std::reference_wrapper<GyroFilter>, num_axis>  m_gyro_lpf;
+   std::array<std::reference_wrapper<DtermFilter>, num_axis> m_gyro_dterm_lpf;
+   Led&                                                      m_led;
+   const math::Vec4<uint8_t>&                                m_motor_mapping;
+   ControlHealthPublisher&                                   m_control_health_publisher;
+   const SystemStateSubscriber&                              m_system_state_subscriber;
+   const aeromight_boundaries::StateEstimation&              m_state_estimation_subscriber;
+   Logger&                                                   m_logger;
+   const uint32_t                                            m_max_age_state_estimation_data_ms;
+   const float                                               m_min_dt_s;
+   const float                                               m_max_dt_s;
+   const bool                                                m_run_attitude_controller;
+   const float                                               m_max_tilt_angle_rad;
+   const math::Vec3f                                         m_max_rate_radps;
+   const float                                               m_actuator_min;
+   const float                                               m_actuator_max;
+   const float                                               m_throttle_arming;
+   const float                                               m_throttle_gate_integrator;
+   const float                                               m_thrust_linearization_factor;
+   aeromight_boundaries::ControlStatus                       m_control_status{};
+   control::attitude::StickCommand                           m_stick_command{};
+   aeromight_boundaries::SystemState                         m_system_state_setpoints{};
+   aeromight_boundaries::StateEstimation                     m_state_estimation{};
+   math::Vec3f                                               m_angular_rate_setpoints{};
+   math::Vec3f                                               m_torque_setpoints{};
+   math::Vec4f                                               m_actuator_setpoints{};
+   float                                                     m_dt_s{0.0f};
+   bool                                                      m_armed{false};
+   uint32_t                                                  m_current_time_ms{0};
+   uint32_t                                                  m_current_time_us{0};
+   uint32_t                                                  m_last_execution_time_us{0};
 };
 
 }   // namespace aeromight_control

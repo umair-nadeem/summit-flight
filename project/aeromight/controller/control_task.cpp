@@ -170,14 +170,19 @@ extern "C"
 
       radio_control::ThrottleCurve throttle_curve{throttle_hover, throttle_curve_factor};
 
-      control::attitude::StickCommandSource<decltype(throttle_curve)> stick_command_source{throttle_curve,
-                                                                                           aeromight_boundaries::aeromight_data.stick_command,
-                                                                                           throttle_min,
-                                                                                           throttle_max};
-
       auto roll_input_lpf  = math::make_filter<StickFilterType>(stick_input_lpf_cutoff_hz);
       auto pitch_input_lpf = math::make_filter<StickFilterType>(stick_input_lpf_cutoff_hz);
       auto yaw_input_lpf   = math::make_filter<StickFilterType>(stick_input_lpf_cutoff_hz);
+
+      control::attitude::StickCommandSource<decltype(roll_input_lpf),
+                                            decltype(throttle_curve)>
+          stick_command_source{roll_input_lpf,
+                               pitch_input_lpf,
+                               yaw_input_lpf,
+                               throttle_curve,
+                               aeromight_boundaries::aeromight_data.stick_command,
+                               throttle_min,
+                               throttle_max};
 
       auto gyro_x_lpf = math::make_filter<GyroFilterType>(gyro_lpf_cutoff_hz);
       auto gyro_y_lpf = math::make_filter<GyroFilterType>(gyro_lpf_cutoff_hz);
@@ -199,7 +204,6 @@ extern "C"
                                  decltype(control_allocator),
                                  decltype(stick_command_source),
                                  decltype(data->dshot),
-                                 decltype(roll_input_lpf),
                                  decltype(gyro_x_lpf),
                                  decltype(pid_dterm_x_lpf),
                                  decltype(led),
@@ -210,9 +214,6 @@ extern "C"
                   control_allocator,
                   stick_command_source,
                   data->dshot,
-                  roll_input_lpf,
-                  pitch_input_lpf,
-                  yaw_input_lpf,
                   gyro_x_lpf,
                   gyro_y_lpf,
                   gyro_z_lpf,
