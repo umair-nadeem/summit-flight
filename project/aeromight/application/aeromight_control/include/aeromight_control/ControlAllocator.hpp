@@ -36,23 +36,11 @@ public:
       error::verify(m_slew_rate_limit_s > math::constants::epsilon);
    }
 
-   void set_control_setpoints(const math::Vec4f& control_setpoints)
-   {
-      m_control_setpoints = control_setpoints;
-      for (std::size_t i = 0; i < m_control_setpoints.size; i++)
-      {
-         if (std::fabs(m_control_setpoints[i]) < control_setpoint_min)
-         {
-            m_control_setpoints[i] = 0.0f;
-         }
-      }
-   }
-
-   void allocate()
+   const math::Vec4f& update(const math::Vec4f& control_setpoints)
    {
       using namespace aeromight_boundaries;
 
-      m_last_actuator_setpoints = m_actuator_setpoints;
+      set_control_setpoints(control_setpoints);
 
       math::Vec4f actuator_torque{};
       mix(actuator_torque,
@@ -65,6 +53,10 @@ public:
       m_actuator_setpoints = actuator_torque + m_control_setpoints[idx(Axis::thrust)];
 
       apply_deadband_to_actuator_outputs();
+
+      clip_actuator_setpoints();
+
+      return m_actuator_setpoints;
    }
 
    void estimate_saturation()
@@ -132,6 +124,8 @@ public:
             m_actuator_setpoints[i] = m_last_actuator_setpoints[i] - max_delta_sp;
          }
       }
+
+      m_last_actuator_setpoints = m_actuator_setpoints;
    }
 
    void clip_actuator_setpoints()
@@ -152,11 +146,6 @@ public:
       m_control_saturation_negative.fill(false);
    }
 
-   const math::Vec4f& get_actuator_setpoints() const
-   {
-      return m_actuator_setpoints;
-   }
-
    constexpr const SaturationFlags& get_actuator_saturation_positive() const noexcept
    {
       return m_control_saturation_positive;
@@ -168,6 +157,18 @@ public:
    }
 
 private:
+   void set_control_setpoints(const math::Vec4f& control_setpoints)
+   {
+      m_control_setpoints = control_setpoints;
+      for (std::size_t i = 0; i < m_control_setpoints.size; i++)
+      {
+         if (std::fabs(m_control_setpoints[i]) < control_setpoint_min)
+         {
+            m_control_setpoints[i] = 0.0f;
+         }
+      }
+   }
+
    void perform_desaturation(math::Vec4f& actuator_torque, const float collective_thrust)
    {
       const float upper_margin   = m_actuator_max - collective_thrust;

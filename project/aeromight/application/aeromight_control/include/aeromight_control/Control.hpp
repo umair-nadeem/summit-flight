@@ -130,11 +130,11 @@ public:
       }
       else
       {
-         get_rate_setpoints();
+         update_attitude_control();
 
-         get_torque_setpoints();
+         update_rate_control();
 
-         update_actuator_setpoints();
+         update_control_allocation();
 
          if (m_armed)
          {
@@ -215,7 +215,7 @@ private:
       m_state_estimation = m_state_estimation_subscriber;
    }
 
-   void get_rate_setpoints()
+   void update_attitude_control()
    {
       using namespace aeromight_boundaries;
 
@@ -231,13 +231,13 @@ private:
             manual_setpoints *= (m_max_tilt_angle_rad / tilt_norm);
          }
 
-         const math::Vec3f angle_estimation_rad{m_state_estimation.euler.roll(),
-                                                m_state_estimation.euler.pitch(),
-                                                m_state_estimation.euler.yaw()};
+         const math::Vec3f attitude_setpoints{manual_setpoints[idx(Axis::roll)], manual_setpoints[idx(Axis::pitch)], 0.0f};
 
-         const math::Vec3f angle_setpoints{manual_setpoints[idx(Axis::roll)], manual_setpoints[idx(Axis::pitch)], 0.0f};
+         const math::Vec3f attitude_estimation{m_state_estimation.euler.roll(),
+                                               m_state_estimation.euler.pitch(),
+                                               m_state_estimation.euler.yaw()};
 
-         m_angular_rate_setpoints = m_attitude_controller.update(angle_setpoints, angle_estimation_rad);
+         m_angular_rate_setpoints = m_attitude_controller.update(attitude_setpoints, attitude_estimation);
 
          m_angular_rate_setpoints[idx(Axis::roll)]  = std::clamp(m_angular_rate_setpoints[idx(Axis::roll)], -m_max_rate_radps[idx(Axis::roll)], m_max_rate_radps[idx(Axis::roll)]);
          m_angular_rate_setpoints[idx(Axis::pitch)] = std::clamp(m_angular_rate_setpoints[idx(Axis::pitch)], -m_max_rate_radps[idx(Axis::pitch)], m_max_rate_radps[idx(Axis::pitch)]);
@@ -252,7 +252,7 @@ private:
       m_angular_rate_setpoints[idx(Axis::yaw)] = m_stick_command.yaw * m_max_rate_radps[idx(Axis::yaw)];
    }
 
-   void get_torque_setpoints()
+   void update_rate_control()
    {
       math::Vec3f gyro_rate{};
       math::Vec3f gyro_rate_dterm{};
@@ -279,7 +279,7 @@ private:
                                                     run_integrator);
    }
 
-   void update_actuator_setpoints()
+   void update_control_allocation()
    {
       using namespace aeromight_boundaries;
 
@@ -288,15 +288,9 @@ private:
                                           m_torque_setpoints[idx(Axis::yaw)],
                                           m_stick_command.throttle};
 
-      m_control_allocator.set_control_setpoints(control_setpoints);
+      m_actuator_setpoints = m_control_allocator.update(control_setpoints);
 
-      m_control_allocator.allocate();
-
-      m_control_allocator.clip_actuator_setpoints();
-
-      m_actuator_setpoints = m_control_allocator.get_actuator_setpoints();
-
-      // determine allocator saturation
+      // provide allocator saturation feedback to rate control
       m_control_allocator.estimate_saturation();
       m_rate_controller.set_saturation_status(m_control_allocator.get_actuator_saturation_positive(), m_control_allocator.get_actuator_saturation_negative());
    }
