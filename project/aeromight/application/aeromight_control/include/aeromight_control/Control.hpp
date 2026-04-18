@@ -125,7 +125,8 @@ public:
       if (!is_state_estimation_valid())
       {
          m_control_status.error.set(static_cast<types::ErrorBitsType>(Error::invalid_estimation_sample));
-         reset_everything();
+         reset();
+         m_armed = false;
          m_led.toggle(control_led_period_ms);
       }
       else
@@ -138,15 +139,16 @@ public:
 
          if (m_armed)
          {
+            m_led.turn_on();
+
             if (!m_system_state_setpoints.armed)
             {
-               reset_everything();
+               reset();
+               m_armed = false;
                m_logger.print("disarmed");
             }
-
-            m_led.turn_on();
          }
-         else
+         else   // disarmed
          {
             if (m_system_state_setpoints.armed)
             {
@@ -159,16 +161,13 @@ public:
                {
                   m_led.toggle(control_led_period_ms);
                }
-
-               reset();
-               reset_filters();
             }
             else
             {
                m_led.turn_off();
             }
 
-            m_actuator_setpoints.zero();
+            reset();
          }
       }
 
@@ -221,35 +220,34 @@ private:
 
       if (m_run_attitude_controller)
       {
-         math::Vec2f manual_setpoints{m_stick_command.roll * m_max_tilt_angle_rad,
-                                      m_stick_command.pitch * m_max_tilt_angle_rad};
+         math::Vec2f stick_setpoints{m_stick_command.roll * m_max_tilt_angle_rad, m_stick_command.pitch * m_max_tilt_angle_rad};
 
-         const float tilt_norm = manual_setpoints.norm();
+         const float tilt_norm = stick_setpoints.norm();
 
          if (tilt_norm > m_max_tilt_angle_rad)
          {
-            manual_setpoints *= (m_max_tilt_angle_rad / tilt_norm);
+            stick_setpoints *= (m_max_tilt_angle_rad / tilt_norm);
          }
 
-         const math::Vec3f attitude_setpoints{manual_setpoints[idx(Axis::roll)], manual_setpoints[idx(Axis::pitch)], 0.0f};
+         const math::Vec3f attitude_setpoints{stick_setpoints[idx(Axis::roll)], stick_setpoints[idx(Axis::pitch)], 0.0f};
 
          const math::Vec3f attitude_estimation{m_state_estimation.euler.roll(),
                                                m_state_estimation.euler.pitch(),
                                                m_state_estimation.euler.yaw()};
 
-         m_angular_rate_setpoints = m_attitude_controller.update(attitude_setpoints, attitude_estimation);
+         m_rate_setpoints = m_attitude_controller.update(attitude_setpoints, attitude_estimation);
 
-         m_angular_rate_setpoints[idx(Axis::roll)]  = std::clamp(m_angular_rate_setpoints[idx(Axis::roll)], -m_max_rate_radps[idx(Axis::roll)], m_max_rate_radps[idx(Axis::roll)]);
-         m_angular_rate_setpoints[idx(Axis::pitch)] = std::clamp(m_angular_rate_setpoints[idx(Axis::pitch)], -m_max_rate_radps[idx(Axis::pitch)], m_max_rate_radps[idx(Axis::pitch)]);
+         m_rate_setpoints[idx(Axis::roll)]  = std::clamp(m_rate_setpoints[idx(Axis::roll)], -m_max_rate_radps[idx(Axis::roll)], m_max_rate_radps[idx(Axis::roll)]);
+         m_rate_setpoints[idx(Axis::pitch)] = std::clamp(m_rate_setpoints[idx(Axis::pitch)], -m_max_rate_radps[idx(Axis::pitch)], m_max_rate_radps[idx(Axis::pitch)]);
       }
       else   // generate rate setpoints from sticks
       {
-         m_angular_rate_setpoints[idx(Axis::roll)]  = m_stick_command.roll * m_max_rate_radps[idx(Axis::roll)];
-         m_angular_rate_setpoints[idx(Axis::pitch)] = m_stick_command.pitch * m_max_rate_radps[idx(Axis::pitch)];
+         m_rate_setpoints[idx(Axis::roll)]  = m_stick_command.roll * m_max_rate_radps[idx(Axis::roll)];
+         m_rate_setpoints[idx(Axis::pitch)] = m_stick_command.pitch * m_max_rate_radps[idx(Axis::pitch)];
       }
 
-      // yaw rate from manual setpoint
-      m_angular_rate_setpoints[idx(Axis::yaw)] = m_stick_command.yaw * m_max_rate_radps[idx(Axis::yaw)];
+      // yaw rate from stick setpoint
+      m_rate_setpoints[idx(Axis::yaw)] = m_stick_command.yaw * m_max_rate_radps[idx(Axis::yaw)];
    }
 
    void update_rate_control()
@@ -272,7 +270,7 @@ private:
       const bool run_integrator{m_armed &&
                                 (m_stick_command.throttle > m_throttle_gate_integrator)};
 
-      m_torque_setpoints = m_rate_controller.update(m_angular_rate_setpoints,
+      m_torque_setpoints = m_rate_controller.update(m_rate_setpoints,
                                                     gyro_rate,
                                                     gyro_rate_dterm,
                                                     m_dt_s,
@@ -324,25 +322,11 @@ private:
       m_control_health_publisher.update_latest(m_control_status, m_current_time_ms);
    }
 
-   void reset_everything()
-   {
-      reset();
-      reset_filters();
-      m_stick_command_source.reset();
-      m_armed = false;
-      m_actuator_setpoints.zero();
-   }
-
    void reset()
    {
-      m_angular_rate_setpoints.zero();
-      m_torque_setpoints.zero();
       m_rate_controller.reset();
       m_control_allocator.reset();
-   }
 
-   void reset_filters()
-   {
       for (auto& filter : m_gyro_lpf)
       {
          filter.get().reset();
@@ -352,12 +336,16 @@ private:
       {
          filter.get().reset();
       }
+
+      m_rate_setpoints.zero();
+      m_torque_setpoints.zero();
+      m_actuator_setpoints.zero();
    }
 
    void print_log()
    {
       static uint32_t m_counter{0};
-      if ((m_counter++ % 125) == 0)
+      if ((m_counter++ % 125u) == 0)
       {
          m_logger.printf("acc %.2f %.2f %.2f | gyr %.2f %.2f %.2f | est %.3f %.3f %.3f | rate %.2f %.2f %.2f | trq %.4f %.4f %.4f | t %.2f | pwm %.4f %.4f %.4f %.4f",
                          m_state_estimation.raw_accel_mps2[0],
@@ -369,9 +357,9 @@ private:
                          m_state_estimation.euler.roll(),
                          m_state_estimation.euler.pitch(),
                          m_state_estimation.euler.yaw(),
-                         m_angular_rate_setpoints[0],
-                         m_angular_rate_setpoints[1],
-                         m_angular_rate_setpoints[2],
+                         m_rate_setpoints[0],
+                         m_rate_setpoints[1],
+                         m_rate_setpoints[2],
                          m_torque_setpoints[0],
                          m_torque_setpoints[1],
                          m_torque_setpoints[2],
@@ -419,7 +407,7 @@ private:
    control::attitude::StickCommand                           m_stick_command{};
    aeromight_boundaries::SystemState                         m_system_state_setpoints{};
    aeromight_boundaries::StateEstimation                     m_state_estimation{};
-   math::Vec3f                                               m_angular_rate_setpoints{};
+   math::Vec3f                                               m_rate_setpoints{};
    math::Vec3f                                               m_torque_setpoints{};
    math::Vec4f                                               m_actuator_setpoints{};
    float                                                     m_dt_s{0.0f};
