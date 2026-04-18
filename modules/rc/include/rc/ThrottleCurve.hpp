@@ -1,6 +1,6 @@
 #pragma once
 
-namespace radio_control
+namespace rc
 {
 
 class ThrottleCurve
@@ -19,4 +19,4 @@ private:
    float       m_inv_range{};
 };
 
-}   // namespace radio_control
+}   // namespace rc

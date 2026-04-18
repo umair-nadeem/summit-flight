@@ -46,7 +46,7 @@ target_link_libraries(aeromight_lib INTERFACE
    led
    logging
    mpu6500
-   radio_control
+   rc
 )
 
 target_compile_options(aeromight_lib INTERFACE

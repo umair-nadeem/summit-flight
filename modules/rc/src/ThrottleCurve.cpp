@@ -1,11 +1,11 @@
-#include "radio_control/ThrottleCurve.hpp"
+#include "rc/ThrottleCurve.hpp"
 
 #include <algorithm>
 
 #include "error/error_handler.hpp"
 #include "math/constants.hpp"
 
-namespace radio_control
+namespace rc
 {
 
 ThrottleCurve::ThrottleCurve(const float throttle_hover, const float exponential)
@@ -40,4 +40,4 @@ float ThrottleCurve::apply(const float throttle) const
    return (y - m_f0) * m_inv_range;
 }
 
-}   // namespace radio_control
+}   // namespace rc

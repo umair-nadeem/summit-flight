@@ -18,7 +18,7 @@
 #include "math/NullFilter.hpp"
 #include "math/constants.hpp"
 #include "math/make_filter.hpp"
-#include "radio_control/ThrottleCurve.hpp"
+#include "rc/ThrottleCurve.hpp"
 #include "rtos/QueueSender.hpp"
 #include "rtos/constants.hpp"
 #include "rtos/periodic_task.hpp"
@@ -168,7 +168,7 @@ extern "C"
                                                             yaw_saturation_limit_factor,
                                                             slew_rate_limit_s};
 
-      radio_control::ThrottleCurve throttle_curve{throttle_hover, throttle_curve_factor};
+      rc::ThrottleCurve throttle_curve{throttle_hover, throttle_curve_factor};
 
       auto roll_input_lpf  = math::make_filter<StickFilterType>(stick_input_lpf_cutoff_hz);
       auto pitch_input_lpf = math::make_filter<StickFilterType>(stick_input_lpf_cutoff_hz);
