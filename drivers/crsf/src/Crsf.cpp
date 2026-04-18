@@ -79,10 +79,6 @@ std::optional<uint8_t> get_expected_payload_size(const uint8_t packet_type)
 namespace crsf
 {
 
-CrsfRcChannels       Crsf::rc_channels{};
-CrsfLinkStatistics   Crsf::link_statistics{};
-CrsfLinkStatisticsTx Crsf::link_statistics_tx{};
-
 // returns the number of bytes processed
 bool Crsf::parse_buffer(std::span<const uint8_t> buffer, CrsfPacket& packet)
 {
@@ -163,9 +159,98 @@ bool Crsf::parse_buffer(std::span<const uint8_t> buffer, CrsfPacket& packet)
    return false;
 }
 
+void Crsf::process_packet(std::span<const uint8_t> frame, crsf::CrsfPacket& packet)
+{
+   switch (packet.type)
+   {
+      case crsf::FrameType::rc_channels_packed:
+         process_rc_channels(frame, packet);
+         break;
+
+      case crsf::FrameType::link_statistics:
+         process_link_statistics(frame, packet);
+         break;
+
+      case crsf::FrameType::link_statistics_tx:
+         process_link_statistics_tx(frame, packet);
+         break;
+
+      case crsf::FrameType::airspeed:
+      case crsf::FrameType::attitude:
+      case crsf::FrameType::battery_sensor:
+      case crsf::FrameType::gps:
+      case crsf::FrameType::heartbeat:
+      case crsf::FrameType::link_statistics_rx:
+      default:
+         error::stop_operation();
+         break;
+   }
+}
+
+void Crsf::process_rc_channels(std::span<const uint8_t> frame, crsf::CrsfPacket& packet)
+{
+   error::verify(frame.size() == static_cast<uint8_t>(crsf::PayloadSize::rc_channels_packed));
+
+   CrsfRcChannels rc_channels{};
+
+   rc_channels.channels[0]  = static_cast<uint16_t>((frame[0] | frame[1u] << 8u) & 0x07ff);
+   rc_channels.channels[1]  = static_cast<uint16_t>((frame[1u] >> 3u | frame[2u] << 5u) & 0x07ff);
+   rc_channels.channels[2]  = static_cast<uint16_t>((frame[2u] >> 6u | frame[3u] << 2u | frame[4] << 10u) & 0x07ff);
+   rc_channels.channels[3]  = static_cast<uint16_t>((frame[4u] >> 1u | frame[5u] << 7u) & 0x07ff);
+   rc_channels.channels[4]  = static_cast<uint16_t>((frame[5u] >> 4u | frame[6u] << 4u) & 0x07ff);
+   rc_channels.channels[5]  = static_cast<uint16_t>((frame[6u] >> 7u | frame[7u] << 1u | frame[8] << 9u) & 0x07ff);
+   rc_channels.channels[6]  = static_cast<uint16_t>((frame[8u] >> 2u | frame[9u] << 6u) & 0x07ff);
+   rc_channels.channels[7]  = static_cast<uint16_t>((frame[9u] >> 5u | frame[10u] << 3u) & 0x07ff);
+   rc_channels.channels[8]  = static_cast<uint16_t>((frame[11u] | frame[12u] << 8u) & 0x07ff);
+   rc_channels.channels[9]  = static_cast<uint16_t>((frame[12u] >> 3u | frame[13u] << 5u) & 0x07ff);
+   rc_channels.channels[10] = static_cast<uint16_t>((frame[13u] >> 6u | frame[14u] << 2u | frame[15] << 10u) & 0x07ff);
+   rc_channels.channels[11] = static_cast<uint16_t>((frame[15u] >> 1u | frame[16u] << 7u) & 0x07ff);
+   rc_channels.channels[12] = static_cast<uint16_t>((frame[16u] >> 4u | frame[17u] << 4u) & 0x07ff);
+   rc_channels.channels[13] = static_cast<uint16_t>((frame[17u] >> 7u | frame[18u] << 1u | frame[19] << 9u) & 0x07ff);
+   rc_channels.channels[14] = static_cast<uint16_t>((frame[19u] >> 2u | frame[20u] << 6u) & 0x07ff);
+   rc_channels.channels[15] = static_cast<uint16_t>((frame[20u] >> 5u | frame[21u] << 3u) & 0x07ff);
+
+   packet.data = rc_channels;
+}
+
+void Crsf::process_link_statistics(std::span<const uint8_t> frame, crsf::CrsfPacket& packet)
+{
+   error::verify(frame.size() == static_cast<uint8_t>(crsf::PayloadSize::link_statistics));
+
+   CrsfLinkStatistics link_statistics{};
+
+   link_statistics.uplink_rssi_1         = frame[0];
+   link_statistics.uplink_rssi_2         = frame[1];
+   link_statistics.uplink_link_quality   = frame[2];
+   link_statistics.uplink_snr            = static_cast<int8_t>(frame[3]);
+   link_statistics.active_antenna        = frame[4];
+   link_statistics.rf_profile            = frame[5];
+   link_statistics.uplink_rf_power       = frame[6];
+   link_statistics.downlink_rssi         = frame[7];
+   link_statistics.downlink_link_quality = frame[8];
+   link_statistics.downlink_snr          = static_cast<int8_t>(frame[9]);
+
+   packet.data = link_statistics;
+}
+
+void Crsf::process_link_statistics_tx(std::span<const uint8_t> frame, crsf::CrsfPacket& packet)
+{
+   error::verify(frame.size() == static_cast<uint8_t>(crsf::PayloadSize::link_statistics_tx));
+
+   CrsfLinkStatisticsTx link_statistics_tx{};
+
+   link_statistics_tx.uplink_rssi_db       = frame[0];
+   link_statistics_tx.uplink_rssi_pct      = frame[1];
+   link_statistics_tx.uplink_link_quality  = frame[2];
+   link_statistics_tx.uplink_snr           = static_cast<int8_t>(frame[3]);
+   link_statistics_tx.downlink_rf_power_db = frame[4];
+   link_statistics_tx.uplink_fps           = frame[5];
+
+   packet.data = link_statistics_tx;
+}
+
 uint32_t Crsf::serialize_battery_telemetry(const CrsfBattery& packet, std::span<uint8_t> out)
 {
-
    static constexpr std::size_t total_bytes_required = num_bytes_sync_byte +
                                                        num_bytes_frame_size +
                                                        num_bytes_frame_type +
@@ -204,90 +289,6 @@ uint32_t Crsf::serialize_battery_telemetry(const CrsfBattery& packet, std::span<
    out[bytes_written++] = crc;
 
    return bytes_written;
-}
-
-void Crsf::process_rc_channels(std::span<const uint8_t> frame, crsf::CrsfPacket& packet)
-{
-   error::verify(frame.size() == static_cast<uint8_t>(crsf::PayloadSize::rc_channels_packed));
-
-   rc_channels.channels[0]  = static_cast<uint16_t>((frame[0] | frame[1u] << 8u) & 0x07ff);
-   rc_channels.channels[1]  = static_cast<uint16_t>((frame[1u] >> 3u | frame[2u] << 5u) & 0x07ff);
-   rc_channels.channels[2]  = static_cast<uint16_t>((frame[2u] >> 6u | frame[3u] << 2u | frame[4] << 10u) & 0x07ff);
-   rc_channels.channels[3]  = static_cast<uint16_t>((frame[4u] >> 1u | frame[5u] << 7u) & 0x07ff);
-   rc_channels.channels[4]  = static_cast<uint16_t>((frame[5u] >> 4u | frame[6u] << 4u) & 0x07ff);
-   rc_channels.channels[5]  = static_cast<uint16_t>((frame[6u] >> 7u | frame[7u] << 1u | frame[8] << 9u) & 0x07ff);
-   rc_channels.channels[6]  = static_cast<uint16_t>((frame[8u] >> 2u | frame[9u] << 6u) & 0x07ff);
-   rc_channels.channels[7]  = static_cast<uint16_t>((frame[9u] >> 5u | frame[10u] << 3u) & 0x07ff);
-   rc_channels.channels[8]  = static_cast<uint16_t>((frame[11u] | frame[12u] << 8u) & 0x07ff);
-   rc_channels.channels[9]  = static_cast<uint16_t>((frame[12u] >> 3u | frame[13u] << 5u) & 0x07ff);
-   rc_channels.channels[10] = static_cast<uint16_t>((frame[13u] >> 6u | frame[14u] << 2u | frame[15] << 10u) & 0x07ff);
-   rc_channels.channels[11] = static_cast<uint16_t>((frame[15u] >> 1u | frame[16u] << 7u) & 0x07ff);
-   rc_channels.channels[12] = static_cast<uint16_t>((frame[16u] >> 4u | frame[17u] << 4u) & 0x07ff);
-   rc_channels.channels[13] = static_cast<uint16_t>((frame[17u] >> 7u | frame[18u] << 1u | frame[19] << 9u) & 0x07ff);
-   rc_channels.channels[14] = static_cast<uint16_t>((frame[19u] >> 2u | frame[20u] << 6u) & 0x07ff);
-   rc_channels.channels[15] = static_cast<uint16_t>((frame[20u] >> 5u | frame[21u] << 3u) & 0x07ff);
-
-   packet.data = rc_channels;
-}
-
-void Crsf::process_link_statistics(std::span<const uint8_t> frame, crsf::CrsfPacket& packet)
-{
-   error::verify(frame.size() == static_cast<uint8_t>(crsf::PayloadSize::link_statistics));
-
-   link_statistics.uplink_rssi_1         = frame[0];
-   link_statistics.uplink_rssi_2         = frame[1];
-   link_statistics.uplink_link_quality   = frame[2];
-   link_statistics.uplink_snr            = static_cast<int8_t>(frame[3]);
-   link_statistics.active_antenna        = frame[4];
-   link_statistics.rf_profile            = frame[5];
-   link_statistics.uplink_rf_power       = frame[6];
-   link_statistics.downlink_rssi         = frame[7];
-   link_statistics.downlink_link_quality = frame[8];
-   link_statistics.downlink_snr          = static_cast<int8_t>(frame[9]);
-
-   packet.data = link_statistics;
-}
-
-void Crsf::process_link_statistics_tx(std::span<const uint8_t> frame, crsf::CrsfPacket& packet)
-{
-   error::verify(frame.size() == static_cast<uint8_t>(crsf::PayloadSize::link_statistics_tx));
-
-   link_statistics_tx.uplink_rssi_db       = frame[0];
-   link_statistics_tx.uplink_rssi_pct      = frame[1];
-   link_statistics_tx.uplink_link_quality  = frame[2];
-   link_statistics_tx.uplink_snr           = static_cast<int8_t>(frame[3]);
-   link_statistics_tx.downlink_rf_power_db = frame[4];
-   link_statistics_tx.uplink_fps           = frame[5];
-
-   packet.data = link_statistics_tx;
-}
-
-void Crsf::process_packet(std::span<const uint8_t> frame, crsf::CrsfPacket& packet)
-{
-   switch (packet.type)
-   {
-      case crsf::FrameType::rc_channels_packed:
-         process_rc_channels(frame, packet);
-         break;
-
-      case crsf::FrameType::link_statistics:
-         process_link_statistics(frame, packet);
-         break;
-
-      case crsf::FrameType::link_statistics_tx:
-         process_link_statistics_tx(frame, packet);
-         break;
-
-      case crsf::FrameType::airspeed:
-      case crsf::FrameType::attitude:
-      case crsf::FrameType::battery_sensor:
-      case crsf::FrameType::gps:
-      case crsf::FrameType::heartbeat:
-      case crsf::FrameType::link_statistics_rx:
-      default:
-         error::stop_operation();
-         break;
-   }
 }
 
 }   // namespace crsf
