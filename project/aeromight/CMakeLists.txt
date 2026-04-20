@@ -1,4 +1,3 @@
 add_subdirectory(application)
 add_subdirectory(aeromight_boundaries)
 add_subdirectory(controller)
-add_subdirectory(peripherals)

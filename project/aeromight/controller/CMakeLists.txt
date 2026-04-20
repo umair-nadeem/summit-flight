@@ -29,7 +29,6 @@ target_link_libraries(aeromight_lib INTERFACE
    stm32f411
 
    aeromight_boundaries
-   aeromight_battery
    aeromight_control
    aeromight_estimation
    aeromight_system
