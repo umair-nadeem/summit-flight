@@ -13,9 +13,6 @@
 
 class SystemManagerTest : public ::testing::Test
 {
-   using Setpoints = boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints>;
-   using LinkStats = boundaries::SharedData<rc::crsf::LinkStats>;
-
 protected:
    void provide_ticks(const uint32_t n)
    {
@@ -36,24 +33,23 @@ protected:
 
    void set_good_health_summary()
    {
-      health_summary.all_sensors_ready = true;
-      health_summary.estimation_ready  = true;
-      health_summary.control_ready     = true;
-      health_summary.imu_health        = aeromight_boundaries::SubsystemHealth::operational;
-      health_summary.barometer_health  = aeromight_boundaries::SubsystemHealth::operational;
-      health_summary.estimation_health = aeromight_boundaries::SubsystemHealth::operational;
-      health_summary.control_health    = aeromight_boundaries::SubsystemHealth::operational;
+      health_summary.imu_operational        = true;
+      health_summary.estimation_operational = true;
+      health_summary.control_operational    = true;
+      health_summary.imu_health             = aeromight_boundaries::SubsystemHealth::operational;
+      health_summary.estimation_health      = aeromight_boundaries::SubsystemHealth::operational;
+      health_summary.control_health         = aeromight_boundaries::SubsystemHealth::operational;
    }
 
    void set_good_radio_input()
    {
-      actuals.link_status_ok = true;
-      actuals.link_rssi_dbm  = min_good_signal_rssi_dbm + 1.0f;
+      link_stats.uplink_quality_pct = good_uplink_quality_pct + 1;
+      link_stats.uplink_rssi_1_dbm  = min_good_signal_rssi_dbm + 1.0f;
    }
 
    void give_arm_command()
    {
-      setpoints.state = aeromight_boundaries::SystemArmedState::arm;
+      setpoints.arm = true;
       system_control_setpoints.update_latest(setpoints, current_ms);
       provide_ticks(1u);
       EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::arming);
@@ -61,29 +57,7 @@ protected:
 
    void give_disarm_command()
    {
-      setpoints.state = aeromight_boundaries::SystemArmedState::disarm;
-      system_control_setpoints.update_latest(setpoints, current_ms);
-      provide_ticks(1u);
-   }
-
-   void give_kill_command()
-   {
-      setpoints.kill_switch_active = true;
-      system_control_setpoints.update_latest(setpoints, current_ms);
-      provide_ticks(1u);
-      EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::killed);
-   }
-
-   void give_manual_mode_command()
-   {
-      setpoints.mode = aeromight_boundaries::FlightMode::stabilized_manual;
-      system_control_setpoints.update_latest(setpoints, current_ms);
-      provide_ticks(1u);
-   }
-
-   void give_hover_mode_command()
-   {
-      setpoints.mode = aeromight_boundaries::FlightMode::altitude_hold;
+      setpoints.arm = false;
       system_control_setpoints.update_latest(setpoints, current_ms);
       provide_ticks(1u);
    }
@@ -91,9 +65,9 @@ protected:
    void create_bad_health_summary()
    {
       set_good_radio_input();
-      health_summary.flight_health = aeromight_boundaries::FlightHealthStatus::critical;   // bad health
+      health_summary.control_health = aeromight_boundaries::SubsystemHealth::fault;   // bad health
       system_control_setpoints.update_latest(setpoints, current_ms);
-      link_stats.update_latest(actuals, current_ms);
+      link_stats_subscriber.update_latest(link_stats, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);
       provide_ticks(1u);
@@ -102,9 +76,9 @@ protected:
    void create_bad_radio_input()
    {
       set_good_health_summary();
-      actuals.link_status_ok = false;
+      link_stats.uplink_quality_pct = good_uplink_quality_pct - 1u;
       system_control_setpoints.update_latest(setpoints, current_ms);
-      link_stats.update_latest(actuals, current_ms);
+      link_stats_subscriber.update_latest(link_stats, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);
       system_manager.run_once();
@@ -113,7 +87,7 @@ protected:
    void move_to_wait_sensors_state()
    {
       system_control_setpoints.update_latest(setpoints, current_ms + 1u);
-      link_stats.update_latest(actuals, current_ms + 1u);
+      link_stats_subscriber.update_latest(link_stats, current_ms + 1u);
       health_summary.timestamp_ms = current_ms + 1u;
       provide_health_summary(health_summary);
 
@@ -123,8 +97,8 @@ protected:
 
    void make_sensors_ready()
    {
-      health_summary.all_sensors_ready = true;
-      health_summary.timestamp_ms      = current_ms;
+      health_summary.imu_operational = true;
+      health_summary.timestamp_ms    = current_ms;
       provide_health_summary(health_summary);
       provide_ticks(1u);
       EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::wait_control);
@@ -132,9 +106,9 @@ protected:
 
    void make_control_ready()
    {
-      health_summary.estimation_ready = true;
-      health_summary.control_ready    = true;
-      health_summary.timestamp_ms     = current_ms;
+      health_summary.estimation_operational = true;
+      health_summary.control_operational    = true;
+      health_summary.timestamp_ms           = current_ms;
       provide_health_summary(health_summary);
       provide_ticks(1u);
       EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
@@ -146,14 +120,14 @@ protected:
       provide_health_summary(health_summary);
 
       set_good_radio_input();
-      link_stats.update_latest(actuals, current_ms);
+      link_stats_subscriber.update_latest(link_stats, current_ms);
 
       give_arm_command();
 
       for (uint32_t i = 0; i < (min_state_debounce_duration_ms / period_in_ms); i++)
       {
          system_control_setpoints.update_latest(setpoints, current_ms);
-         link_stats.update_latest(actuals, current_ms);
+         link_stats_subscriber.update_latest(link_stats, current_ms);
          health_summary.timestamp_ms = current_ms;
          provide_health_summary(health_summary);
          provide_ticks(1u);
@@ -171,19 +145,19 @@ protected:
    static constexpr uint32_t timeout_sensors_readiness_ms   = 6u;
    static constexpr uint32_t timeout_control_readiness_ms   = 4u;
 
-   mocks::rtos::QueueReceiver<aeromight_boundaries::HealthSummary> health_summary_queue_mock{};
-   mocks::rtos::Notifier                                           control_start_notifer_mock{};
-   mocks::rtos::Notifier                                           imu_start_calibration_notifer_mock{};
-   mocks::common::ClockSource                                      sys_clock{};
-   mocks::pcb_component::Led                                       led{};
-   Setpoints                                                       system_control_setpoints{};
-   LinkStats                                                       link_stats{};
-   mocks::common::Logger                                           logger{"flight"};
-   boundaries::SharedData<aeromight_boundaries::SystemState>       system_state{};
-   aeromight_boundaries::HealthSummary                             health_summary{};
-   aeromight_boundaries::SystemControlSetpoints                    setpoints{};
-   rc::crsf::LinkStats                                             actuals{};
-   uint32_t                                                        current_ms{0};
+   mocks::rtos::QueueReceiver<aeromight_boundaries::HealthSummary>      health_summary_queue_mock{};
+   mocks::rtos::Notifier                                                control_start_notifer_mock{};
+   mocks::rtos::Notifier                                                imu_start_calibration_notifer_mock{};
+   mocks::common::ClockSource                                           sys_clock{};
+   mocks::pcb_component::Led                                            led{};
+   boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints> system_control_setpoints{};
+   boundaries::SharedData<rc::crsf::LinkStats>                          link_stats_subscriber{};
+   mocks::common::Logger                                                logger{"flight"};
+   boundaries::SharedData<aeromight_boundaries::SystemState>            system_state{};
+   aeromight_boundaries::HealthSummary                                  health_summary{};
+   aeromight_boundaries::SystemControlSetpoints                         setpoints{};
+   rc::crsf::LinkStats                                                  link_stats{};
+   uint32_t                                                             current_ms{0};
 
    aeromight_system::SystemManager<decltype(health_summary_queue_mock),
                                    decltype(control_start_notifer_mock),
@@ -196,7 +170,7 @@ protected:
                       led,
                       system_state,
                       system_control_setpoints,
-                      link_stats,
+                      link_stats_subscriber,
                       logger,
                       stick_input_deadband_abs,
                       good_uplink_quality_pct,
@@ -256,27 +230,6 @@ TEST_F(SystemManagerTest, control_ready)
    make_control_ready();
 }
 
-TEST_F(SystemManagerTest, kill_while_arming)
-{
-   move_to_wait_sensors_state();
-
-   make_sensors_ready();
-
-   make_control_ready();
-
-   // start arming
-   set_good_health_summary();
-   provide_health_summary(health_summary);
-
-   set_good_radio_input();
-   link_stats.update_latest(actuals, current_ms);
-
-   give_arm_command();
-
-   // kill
-   give_kill_command();
-}
-
 TEST_F(SystemManagerTest, disarm_while_arming_due_to_disarm_signal)
 {
    move_to_wait_sensors_state();
@@ -290,7 +243,7 @@ TEST_F(SystemManagerTest, disarm_while_arming_due_to_disarm_signal)
    provide_health_summary(health_summary);
 
    set_good_radio_input();
-   link_stats.update_latest(actuals, current_ms);
+   link_stats_subscriber.update_latest(link_stats, current_ms);
 
    give_arm_command();
 
@@ -312,7 +265,7 @@ TEST_F(SystemManagerTest, fault_while_arming_due_to_stale_health)
    provide_health_summary(health_summary);
 
    set_good_radio_input();
-   link_stats.update_latest(actuals, current_ms);
+   link_stats_subscriber.update_latest(link_stats, current_ms);
 
    give_arm_command();
 
@@ -328,7 +281,7 @@ TEST_F(SystemManagerTest, fault_while_arming_due_to_stale_health)
    for (uint32_t i = 0; i < ticks_needed; i++)
    {
       system_control_setpoints.update_latest(setpoints, current_ms);
-      link_stats.update_latest(actuals, current_ms);
+      link_stats_subscriber.update_latest(link_stats, current_ms);
       provide_ticks(1u);
    }
 
@@ -345,7 +298,7 @@ TEST_F(SystemManagerTest, fault_while_arming_due_to_bad_health)
 
    // valid radio input
    set_good_radio_input();
-   link_stats.update_latest(actuals, current_ms);
+   link_stats_subscriber.update_latest(link_stats, current_ms);
 
    // disarm due to imu fault
    {
@@ -355,9 +308,9 @@ TEST_F(SystemManagerTest, fault_while_arming_due_to_bad_health)
       give_arm_command();
 
       // imu not operational
-      health_summary.imu_health = aeromight_boundaries::SubsystemHealth::fault;
+      health_summary.control_health = aeromight_boundaries::SubsystemHealth::fault;
       system_control_setpoints.update_latest(setpoints, current_ms);
-      link_stats.update_latest(actuals, current_ms);
+      link_stats_subscriber.update_latest(link_stats, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);
       provide_ticks(1u);
@@ -375,7 +328,7 @@ TEST_F(SystemManagerTest, fault_while_arming_due_to_bad_health)
       // imu not operational
       health_summary.estimation_health = aeromight_boundaries::SubsystemHealth::fault;
       system_control_setpoints.update_latest(setpoints, current_ms);
-      link_stats.update_latest(actuals, current_ms);
+      link_stats_subscriber.update_latest(link_stats, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);
       provide_ticks(1u);
@@ -393,7 +346,7 @@ TEST_F(SystemManagerTest, fault_while_arming_due_to_bad_health)
       // imu not operational
       health_summary.control_health = aeromight_boundaries::SubsystemHealth::fault;
       system_control_setpoints.update_latest(setpoints, current_ms);
-      link_stats.update_latest(actuals, current_ms);
+      link_stats_subscriber.update_latest(link_stats, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);
       provide_ticks(1u);
@@ -409,9 +362,10 @@ TEST_F(SystemManagerTest, fault_while_arming_due_to_bad_health)
       give_arm_command();
 
       // imu not operational
-      health_summary.flight_health = aeromight_boundaries::FlightHealthStatus::critical;
+      health_summary.imu_operational = false;
+      health_summary.imu_health      = aeromight_boundaries::SubsystemHealth::fault;
       system_control_setpoints.update_latest(setpoints, current_ms);
-      link_stats.update_latest(actuals, current_ms);
+      link_stats_subscriber.update_latest(link_stats, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);
       provide_ticks(1u);
@@ -431,10 +385,10 @@ TEST_F(SystemManagerTest, fault_while_arming_due_to_stale_radio_input)
    set_good_health_summary();
    provide_health_summary(health_summary);
    set_good_radio_input();
-   link_stats.update_latest(actuals, current_ms);
+   link_stats_subscriber.update_latest(link_stats, current_ms);
 
    // start arming
-   setpoints.state = aeromight_boundaries::SystemArmedState::arm;
+   setpoints.arm = true;
    system_control_setpoints.update_latest(setpoints, current_ms);
    provide_ticks(1u);
    EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::arming);
@@ -442,7 +396,7 @@ TEST_F(SystemManagerTest, fault_while_arming_due_to_stale_radio_input)
    // good but stale radio input
    set_good_radio_input();
    system_control_setpoints.update_latest(setpoints, 0);
-   link_stats.update_latest(actuals, 0);
+   link_stats_subscriber.update_latest(link_stats, 0);
 
    // good and up to date health summary
    set_good_health_summary();
@@ -469,7 +423,7 @@ TEST_F(SystemManagerTest, fault_while_arming_due_to_bad_radio_input)
    set_good_health_summary();
    provide_health_summary(health_summary);
    set_good_radio_input();
-   link_stats.update_latest(actuals, current_ms);
+   link_stats_subscriber.update_latest(link_stats, current_ms);
 
    // disarm due to link status not ok
    {
@@ -477,9 +431,9 @@ TEST_F(SystemManagerTest, fault_while_arming_due_to_bad_radio_input)
       give_arm_command();
 
       // link status not ok
-      actuals.link_status_ok = false;
+      link_stats.uplink_quality_pct = good_uplink_quality_pct - 1u;
       system_control_setpoints.update_latest(setpoints, current_ms);
-      link_stats.update_latest(actuals, current_ms);
+      link_stats_subscriber.update_latest(link_stats, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);
       provide_ticks(1u);
@@ -491,13 +445,13 @@ TEST_F(SystemManagerTest, fault_while_arming_due_to_bad_radio_input)
    {
       // start arming
       set_good_radio_input();
-      link_stats.update_latest(actuals, current_ms);
+      link_stats_subscriber.update_latest(link_stats, current_ms);
       give_arm_command();
 
       // low link rssi
-      actuals.link_rssi_dbm = min_good_signal_rssi_dbm - 1.0f;
+      link_stats.uplink_rssi_1_dbm = min_good_signal_rssi_dbm - 1.0f;
       system_control_setpoints.update_latest(setpoints, current_ms);
-      link_stats.update_latest(actuals, current_ms);
+      link_stats_subscriber.update_latest(link_stats, current_ms);
       health_summary.timestamp_ms = current_ms;
       provide_health_summary(health_summary);
       provide_ticks(1u);
@@ -517,21 +471,6 @@ TEST_F(SystemManagerTest, successfully_armed)
    move_to_armed();
 
    // @TODO: add check that motors are started
-}
-
-TEST_F(SystemManagerTest, kill_while_armed)
-{
-   move_to_wait_sensors_state();
-
-   make_sensors_ready();
-
-   make_control_ready();
-
-   move_to_armed();
-
-   give_kill_command();
-
-   // @TODO: add check that motors are stopped
 }
 
 TEST_F(SystemManagerTest, disarm_while_armed)
@@ -588,23 +527,6 @@ TEST_F(SystemManagerTest, fault_while_armed_due_to_bad_radio_input)
    // @TODO: add check that motors are stopped
 }
 
-TEST_F(SystemManagerTest, move_to_manual_mode)
-{
-   move_to_wait_sensors_state();
-
-   make_sensors_ready();
-
-   make_control_ready();
-
-   move_to_armed();
-
-   give_manual_mode_command();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::manual_mode);
-
-   // @TODO: add check for manual setpoints
-}
-
 TEST_F(SystemManagerTest, kill_while_in_manual_mode)
 {
    move_to_wait_sensors_state();
@@ -615,13 +537,9 @@ TEST_F(SystemManagerTest, kill_while_in_manual_mode)
 
    move_to_armed();
 
-   give_manual_mode_command();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::manual_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::armed);
 
    // @TODO: add check for manual setpoints
-
-   give_kill_command();
 
    // @TODO: add check that motors are stopped
 }
@@ -636,9 +554,7 @@ TEST_F(SystemManagerTest, disarm_while_in_manual_mode)
 
    move_to_armed();
 
-   give_manual_mode_command();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::manual_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::armed);
 
    // @TODO: add check for manual setpoints
 
@@ -649,27 +565,6 @@ TEST_F(SystemManagerTest, disarm_while_in_manual_mode)
    const uint32_t ticks_needed = min_state_debounce_duration_ms / period_in_ms;
    provide_ticks(ticks_needed);
    EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
-}
-
-TEST_F(SystemManagerTest, move_to_hover_while_in_manual_mode)
-{
-   move_to_wait_sensors_state();
-
-   make_sensors_ready();
-
-   make_control_ready();
-
-   move_to_armed();
-
-   give_manual_mode_command();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::manual_mode);
-
-   give_hover_mode_command();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::hover_mode);
-
-   // @TODO: add check for hover setpoints
 }
 
 TEST_F(SystemManagerTest, fault_while_in_manual_mode_due_to_bad_health)
@@ -682,156 +577,11 @@ TEST_F(SystemManagerTest, fault_while_in_manual_mode_due_to_bad_health)
 
    move_to_armed();
 
-   give_manual_mode_command();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::manual_mode);
+   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::armed);
 
    create_bad_health_summary();
 
    EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::fault);
 
    // @TODO: add check that motors are stopped
-}
-
-TEST_F(SystemManagerTest, auto_land_while_in_manual_mode_due_to_bad_radio_input)
-{
-   move_to_wait_sensors_state();
-
-   make_sensors_ready();
-
-   make_control_ready();
-
-   move_to_armed();
-
-   give_manual_mode_command();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::manual_mode);
-
-   create_bad_radio_input();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::auto_land);
-}
-
-TEST_F(SystemManagerTest, move_to_hover_mode)
-{
-   move_to_wait_sensors_state();
-
-   make_sensors_ready();
-
-   make_control_ready();
-
-   move_to_armed();
-
-   give_hover_mode_command();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::hover_mode);
-
-   // @TODO: add check for hover setpoints
-}
-
-TEST_F(SystemManagerTest, kill_while_in_hover_mode)
-{
-   move_to_wait_sensors_state();
-
-   make_sensors_ready();
-
-   make_control_ready();
-
-   move_to_armed();
-
-   give_hover_mode_command();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::hover_mode);
-
-   // @TODO: add check for hover setpoints
-
-   give_kill_command();
-
-   // @TODO: add check that motors are stopped
-}
-
-TEST_F(SystemManagerTest, disarm_while_in_hover_mode)
-{
-   move_to_wait_sensors_state();
-
-   make_sensors_ready();
-
-   make_control_ready();
-
-   move_to_armed();
-
-   give_hover_mode_command();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::hover_mode);
-
-   // @TODO: add check for hover setpoints
-
-   give_disarm_command();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarming);
-
-   const uint32_t ticks_needed = min_state_debounce_duration_ms / period_in_ms;
-   provide_ticks(ticks_needed);
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
-}
-
-TEST_F(SystemManagerTest, move_to_manual_mode_while_in_hover_mode)
-{
-   move_to_wait_sensors_state();
-
-   make_sensors_ready();
-
-   make_control_ready();
-
-   move_to_armed();
-
-   give_hover_mode_command();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::hover_mode);
-
-   give_manual_mode_command();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::manual_mode);
-
-   // @TODO: add check for manual setpoints
-}
-
-TEST_F(SystemManagerTest, fault_while_in_hover_mode_due_to_bad_health)
-{
-   move_to_wait_sensors_state();
-
-   make_sensors_ready();
-
-   make_control_ready();
-
-   move_to_armed();
-
-   give_hover_mode_command();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::hover_mode);
-
-   create_bad_health_summary();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::fault);
-
-   // @TODO: add check that motors are stopped
-}
-
-TEST_F(SystemManagerTest, auto_land_while_in_hover_mode_due_to_bad_radio_input)
-{
-   move_to_wait_sensors_state();
-
-   make_sensors_ready();
-
-   make_control_ready();
-
-   move_to_armed();
-
-   give_hover_mode_command();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::hover_mode);
-
-   create_bad_radio_input();
-
-   EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::auto_land);
 }

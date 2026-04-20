@@ -2,6 +2,8 @@ add_module_test(
    SOURCES
       EstimationTest.cpp
    LIBS
+      bmp390
       mocks
       aeromight_boundaries
+      utilities
 )
