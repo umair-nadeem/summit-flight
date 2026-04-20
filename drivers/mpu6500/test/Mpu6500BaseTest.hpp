@@ -1,7 +1,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "boundaries/SharedData.hpp"
 #include "imu_sensor/ImuSensorStatus.hpp"
 #include "imu_sensor/RawImuSensorData.hpp"
 #include "mocks/common/Logger.hpp"
@@ -74,8 +73,8 @@ protected:
    static constexpr float   gyro_tolerance_radps                 = 0.1f;
    static constexpr float   accel_tolerance_mps2                 = 1.5f;
 
-   boundaries::SharedData<imu::ImuData>                        imu_data_storage{};
-   boundaries::SharedData<mpu6500::ImuSensorStatus>            imu_health_storage{};
+   imu_sensor::RawImuSensorData                                imu_sensor_data{};
+   imu_sensor::ImuSensorStatus                                 imu_sensor_status{};
    std::array<uint8_t, mpu6500::params::num_bytes_transaction> tx_buffer{};
    std::array<uint8_t, mpu6500::params::num_bytes_transaction> rx_buffer{};
    std::array<uint8_t, mpu6500::params::num_bytes_transaction> test_buffer{};

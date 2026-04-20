@@ -3,7 +3,6 @@ add_module_test(
       Mpu6500Test.cpp
       ConfigSMTest.cpp
       ResetSMTest.cpp
-      SelfTestSMTest.cpp
       ValidationSMTest.cpp
    LIBS
       mocks

@@ -6,13 +6,13 @@
 class ConfigSMTest : public Mpu6500BaseTest
 {
 protected:
-   using StateHandler    = mpu6500::Mpu6500StateHandler<sys_time::ClockSource, decltype(spi_master_with_dma), mocks::common::Logger>;
+   using StateHandler    = mpu6500::Mpu6500StateHandler<decltype(spi_master_with_dma), mocks::common::Logger>;
    using StateMachineDef = mpu6500::ConfigStateMachine<StateHandler>;
 
-   StateHandler mpu6500_handler{imu_data_storage,
-                                imu_health_storage,
-                                spi_master_with_dma,
+   StateHandler mpu6500_handler{spi_master_with_dma,
                                 logger,
+                                imu_sensor_data,
+                                imu_sensor_status,
                                 read_failures_limit,
                                 execution_period_ms,
                                 receive_wait_timeout_ms,
@@ -22,10 +22,7 @@ protected:
                                 accel_full_scale,
                                 accel_a_dlpf_config,
                                 gyro_range_plausibility_margin_radps,
-                                accel_range_plausibility_margin_mps2,
-                                num_calibration_samples,
-                                gyro_tolerance_radps,
-                                accel_tolerance_mps2};
+                                accel_range_plausibility_margin_mps2};
 
    boost::sml::sm<StateMachineDef> sm{mpu6500_handler};
 };
@@ -129,7 +126,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_smplrt_mismatch)
    // provide tick for verification state to complete with fail
    sm.process_event(mpu6500::EventTick{});
 
-   mpu6500::ErrorBits ref_error{};
+   imu_sensor::ImuSensorErrorBits ref_error{};
    ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::config_mismatch_error));
 
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -161,7 +158,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_config_mismatch)
    // provide tick for verification state to complete with fail
    sm.process_event(mpu6500::EventTick{});
 
-   mpu6500::ErrorBits ref_error{};
+   imu_sensor::ImuSensorErrorBits ref_error{};
    ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::config_mismatch_error));
 
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -193,7 +190,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_gyro_config_mismatch)
    // provide tick for verification state to complete with fail
    sm.process_event(mpu6500::EventTick{});
 
-   mpu6500::ErrorBits ref_error{};
+   imu_sensor::ImuSensorErrorBits ref_error{};
    ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::config_mismatch_error));
 
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -225,7 +222,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_accel_config_mismatch)
    // provide tick for verification state to complete with fail
    sm.process_event(mpu6500::EventTick{});
 
-   mpu6500::ErrorBits ref_error{};
+   imu_sensor::ImuSensorErrorBits ref_error{};
    ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::config_mismatch_error));
 
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -257,7 +254,7 @@ TEST_F(ConfigSMTest, check_failed_config_due_to_accel_config_2_mismatch)
    // provide tick for verification state to complete with fail
    sm.process_event(mpu6500::EventTick{});
 
-   mpu6500::ErrorBits ref_error{};
+   imu_sensor::ImuSensorErrorBits ref_error{};
    ref_error.set(static_cast<uint32_t>(imu_sensor::ImuSensorError::config_mismatch_error));
 
    EXPECT_EQ(mpu6500_handler.get_error().to_ulong(), ref_error.to_ulong());
