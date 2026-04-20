@@ -7,6 +7,13 @@
 #include "mocks/common/Logger.hpp"
 #include "mocks/rtos/QueueSender.hpp"
 
+class BatteryMock
+{
+public:
+   MOCK_METHOD(void, execute, (), ());
+   MOCK_METHOD(power::battery::BatteryStatus, get_status, (), ());
+};
+
 class HealthMonitoringTest : public testing::Test
 {
 protected:
@@ -28,20 +35,14 @@ protected:
       }
    }
 
-   void wait_startup()
-   {
-      const uint32_t tick_required = wait_before_first_summary_update_ms / period_in_ms;
-      provide_ticks(tick_required);
-   }
-
    void make_sensors_ready()
    {
       // set imu & barometer operational
-      imu::ImuStatus imu_health{0, mpu6500::SensorState::operational, 0, true, true, true};
-      imu_health_storage.update_latest(imu_health, current_ms);
+      imu::ImuStatus imu_health{0, true};
+      imu_health_subscriber.update_latest(imu_health, current_ms);
 
-      barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 0, 0, true};
-      barometer_health_storage.update_latest(baro_health, current_ms);
+      barometer::BarometerStatus baro_health{true};
+      barometer_health_subscriber.update_latest(baro_health, current_ms);
 
       current_ms++;
       sys_clock.m_sec = current_ms;
@@ -50,77 +51,75 @@ protected:
 
    void make_estimation_and_control_ready()
    {
-      aeromight_boundaries::EstimatorHealth estimation_health{0, aeromight_boundaries::EstimatorState::running, 0, true};
-      estimation_health_storage.update_latest(estimation_health, current_ms);
+      aeromight_boundaries::EstimatorStatus estimation_health{true, 0};
+      estimation_health_subscriber.update_latest(estimation_health, current_ms);
 
-      aeromight_boundaries::ControlHealth control_health{0, aeromight_boundaries::ControlState::disarmed};
-      control_health_storage.update_latest(control_health, current_ms);
+      aeromight_boundaries::ControlStatus control_health{true, 0};
+      control_health_subscriber.update_latest(control_health, current_ms);
 
       current_ms++;
       sys_clock.m_sec = current_ms;
       health_monitoring.run_once();
    }
 
-   static constexpr uint32_t period_in_ms                             = 1u;
-   static constexpr uint32_t wait_before_first_summary_update_ms      = 4u;
-   static constexpr uint32_t max_wait_sensors_readiness_ms            = 2u;
-   static constexpr uint32_t max_wait_estimation_control_readiness_ms = 3u;
-   static constexpr uint32_t max_age_stale_imu_sensor_health_ms       = 3u;
-   static constexpr uint32_t max_age_barometer_sensor_health_ms       = 3u;
-   static constexpr uint32_t max_age_estimation_health_ms             = 3u;
-   static constexpr uint32_t max_age_control_health_ms                = 3u;
+   static constexpr uint32_t period_in_ms                       = 1u;
+   static constexpr uint32_t max_age_stale_imu_sensor_health_ms = 3u;
+   static constexpr uint32_t max_age_barometer_sensor_health_ms = 3u;
+   static constexpr uint32_t max_age_estimation_health_ms       = 3u;
+   static constexpr uint32_t max_age_control_health_ms          = 3u;
+   static constexpr bool     evaluate_barometer_health          = true;
 
+   BatteryMock                                                   battery_mock{};
    mocks::rtos::QueueSender<aeromight_boundaries::HealthSummary> queue_sender_mock{};
    mocks::common::ClockSource                                    sys_clock{};
-   boundaries::SharedData<imu::ImuStatus>                        imu_health_storage{};
-   boundaries::SharedData<barometer_sensor::BarometerHealth>     barometer_health_storage{};
-   boundaries::SharedData<aeromight_boundaries::EstimatorHealth> estimation_health_storage{};
-   boundaries::SharedData<aeromight_boundaries::ControlHealth>   control_health_storage{};
+   boundaries::SharedData<power::battery::BatteryStatus>         battery_status_publisher{};
+   boundaries::SharedData<imu::ImuStatus>                        imu_health_subscriber{};
+   boundaries::SharedData<barometer::BarometerStatus>            barometer_health_subscriber{};
+   boundaries::SharedData<aeromight_boundaries::EstimatorStatus> estimation_health_subscriber{};
+   boundaries::SharedData<aeromight_boundaries::ControlStatus>   control_health_subscriber{};
    mocks::common::Logger                                         logger_mock{"health_mon"};
    uint32_t                                                      current_ms{0u};
 
-   aeromight_health::HealthMonitoring<decltype(queue_sender_mock),
+   aeromight_health::HealthMonitoring<decltype(battery_mock),
+                                      decltype(queue_sender_mock),
                                       mocks::common::ClockSource,
                                       decltype(logger_mock)>
-       health_monitoring{queue_sender_mock,
-                         imu_health_storage,
-                         barometer_health_storage,
-                         estimation_health_storage,
-                         control_health_storage,
+       health_monitoring{battery_mock,
+                         queue_sender_mock,
+                         battery_status_publisher,
+                         imu_health_subscriber,
+                         barometer_health_subscriber,
+                         estimation_health_subscriber,
+                         control_health_subscriber,
                          logger_mock,
                          period_in_ms,
-                         wait_before_first_summary_update_ms,
-                         max_wait_sensors_readiness_ms,
-                         max_wait_estimation_control_readiness_ms,
                          max_age_stale_imu_sensor_health_ms,
                          max_age_barometer_sensor_health_ms,
                          max_age_estimation_health_ms,
-                         max_age_control_health_ms};
+                         max_age_control_health_ms,
+                         evaluate_barometer_health};
 };
 
 TEST_F(HealthMonitoringTest, wait_until_startup)
 {
    EXPECT_CALL(queue_sender_mock, send_if_possible).Times(0);
-   wait_startup();
 }
 
 TEST_F(HealthMonitoringTest, queue_transmission_failure)
 {
    EXPECT_CALL(queue_sender_mock, send_if_possible).Times(0);
-   wait_startup();
 
    EXPECT_CALL(queue_sender_mock, send_if_possible).WillRepeatedly(testing::Return(false));
    health_monitoring.run_once();
    health_monitoring.run_once();
 
    const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
-   EXPECT_EQ(health.queue_failure_count, 2u);
+   EXPECT_EQ(health.total_queue_failure_count, 2u);
 }
 
 TEST_F(HealthMonitoringTest, health_summary_passed_to_queue)
 {
    EXPECT_CALL(queue_sender_mock, send_if_possible).Times(0);
-   wait_startup();
 
    aeromight_boundaries::HealthSummary health1{};
    health1.timestamp_ms = current_ms;
@@ -132,125 +131,29 @@ TEST_F(HealthMonitoringTest, health_summary_passed_to_queue)
    EXPECT_EQ(health1, health2);
 }
 
-TEST_F(HealthMonitoringTest, timeout_occurs_while_waiting_for_sensor_readiness_imu_ready)
-{
-   wait_startup();
-
-   // set imu operational
-   imu::ImuStatus imu_health{0, mpu6500::SensorState::operational, 0, true, true, true};
-   imu_health_storage.update_latest(imu_health, current_ms);
-
-   const uint32_t ticks_required = max_wait_sensors_readiness_ms / period_in_ms;
-   provide_ticks(ticks_required);
-
-   const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
-   EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, false);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);
-   EXPECT_EQ(health.queue_failure_count, 0);
-   EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::fault);
-   EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::init);
-   EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::init);
-}
-
-TEST_F(HealthMonitoringTest, timeout_occurs_while_waiting_for_sensor_readiness_baro_ready)
-{
-   wait_startup();
-
-   // set barometer operational
-   barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 0, 0, true};
-   barometer_health_storage.update_latest(baro_health, current_ms);
-
-   const uint32_t ticks_required = max_wait_sensors_readiness_ms / period_in_ms;
-   provide_ticks(ticks_required);
-
-   const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
-   EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, false);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);
-   EXPECT_EQ(health.queue_failure_count, 0);
-   EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::fault);
-   EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::init);
-   EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::init);
-}
-
-TEST_F(HealthMonitoringTest, timeout_occurs_while_waiting_for_sensor_readiness_none_ready)
-{
-   wait_startup();
-
-   // set imu & barometer operational
-   imu::ImuStatus imu_health{0, mpu6500::SensorState::operational, 0, true, true, false};                                // self-test failed
-   imu_health_storage.update_latest(imu_health, current_ms);
-
-   barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 0, 0, false};   // setup failed
-   barometer_health_storage.update_latest(baro_health, current_ms);
-
-   const uint32_t ticks_required = max_wait_sensors_readiness_ms / period_in_ms;
-   provide_ticks(ticks_required);
-
-   const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
-   EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, false);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);
-   EXPECT_EQ(health.queue_failure_count, 0);
-   EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::fault);
-   EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::fault);
-   EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::init);
-   EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::init);
-}
-
 TEST_F(HealthMonitoringTest, wait_sensor_readiness_both_ready)
 {
-   wait_startup();
 
    make_sensors_ready();
 
    const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, false);
-   EXPECT_EQ(health.control_ready, false);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);
+   EXPECT_EQ(health.imu_operational, true);
+   EXPECT_EQ(health.estimation_operational, false);
+   EXPECT_EQ(health.control_operational, false);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::init);
    EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::init);
-}
-
-TEST_F(HealthMonitoringTest, timeout_occurs_while_waiting_for_estimation_readiness)
-{
-   wait_startup();
-
-   make_sensors_ready();
-
-   aeromight_boundaries::EstimatorHealth estimation_health{0, aeromight_boundaries::EstimatorState::running, 0, false};   // reference pressure not acquired
-   estimation_health_storage.update_latest(estimation_health, current_ms);
-
-   const uint32_t ticks_required = max_wait_estimation_control_readiness_ms / period_in_ms;
-   provide_ticks(ticks_required);
-
-   const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
-   EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, false);
-   EXPECT_EQ(health.control_ready, false);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);
-   EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::fault);
-   EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::fault);
 }
 
 TEST_F(HealthMonitoringTest, wait_estimation_ready)
 {
-   wait_startup();
 
    make_sensors_ready();
 
-   aeromight_boundaries::EstimatorHealth estimation_health{0, aeromight_boundaries::EstimatorState::running, 0, true};
-   estimation_health_storage.update_latest(estimation_health, current_ms);
+   aeromight_boundaries::EstimatorStatus estimation_health{true, 0};
+   estimation_health_subscriber.update_latest(estimation_health, current_ms);
 
    current_ms++;
    sys_clock.m_sec = current_ms;
@@ -258,50 +161,17 @@ TEST_F(HealthMonitoringTest, wait_estimation_ready)
 
    const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, false);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);
+   EXPECT_EQ(health.imu_operational, true);
+   EXPECT_EQ(health.estimation_operational, true);
+   EXPECT_EQ(health.control_operational, false);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::init);
 }
 
-TEST_F(HealthMonitoringTest, timeout_occurs_while_waiting_for_control_readiness)
-{
-   wait_startup();
-
-   make_sensors_ready();
-
-   aeromight_boundaries::EstimatorHealth estimation_health{0, aeromight_boundaries::EstimatorState::running, 0, true};
-   estimation_health_storage.update_latest(estimation_health, current_ms);
-
-   current_ms++;
-   sys_clock.m_sec = current_ms;
-   health_monitoring.run_once();
-
-   aeromight_boundaries::ControlHealth control_health{false};                                        // not enabled
-   control_health_storage.update_latest(control_health, current_ms);
-
-   const uint32_t ticks_required = (max_wait_estimation_control_readiness_ms / period_in_ms) - 1u;   // one tick to make estimation ready
-   provide_ticks(ticks_required);
-
-   const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
-   EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, false);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);
-   EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::fault);
-}
-
 TEST_F(HealthMonitoringTest, stale_imu_data_causes_degraded_health)
 {
-   wait_startup();
 
    make_sensors_ready();
 
@@ -310,24 +180,23 @@ TEST_F(HealthMonitoringTest, stale_imu_data_causes_degraded_health)
    // update baro, control and estimation health status
    current_ms += max_age_stale_imu_sensor_health_ms;
 
-   barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 0, 0, true};
-   barometer_health_storage.update_latest(baro_health, current_ms);
+   barometer::BarometerStatus baro_health{true};
+   barometer_health_subscriber.update_latest(baro_health, current_ms);
 
-   aeromight_boundaries::EstimatorHealth estimation_health{0, aeromight_boundaries::EstimatorState::running, 0, true};
-   estimation_health_storage.update_latest(estimation_health, current_ms);
+   aeromight_boundaries::EstimatorStatus estimation_health{true, 0};
+   estimation_health_subscriber.update_latest(estimation_health, current_ms);
 
-   aeromight_boundaries::ControlHealth control_health{0, aeromight_boundaries::ControlState::disarmed};
-   control_health_storage.update_latest(control_health, current_ms);
+   aeromight_boundaries::ControlStatus control_health{true, 0};
+   control_health_subscriber.update_latest(control_health, current_ms);
 
-   const uint32_t ticks_required = (max_wait_estimation_control_readiness_ms / period_in_ms) - 1u;   // one tick to make estimation ready
+   const uint32_t ticks_required = (max_age_stale_imu_sensor_health_ms / period_in_ms) - 1u;   // one tick to make estimation ready
    provide_ticks(ticks_required);
 
    const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::degraded);
+   EXPECT_EQ(health.imu_operational, true);
+   EXPECT_EQ(health.estimation_operational, true);
+   EXPECT_EQ(health.control_operational, true);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::degraded);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -336,7 +205,6 @@ TEST_F(HealthMonitoringTest, stale_imu_data_causes_degraded_health)
 
 TEST_F(HealthMonitoringTest, stale_baro_data_does_not_cause_degraded_health)
 {
-   wait_startup();
 
    make_sensors_ready();
 
@@ -345,24 +213,23 @@ TEST_F(HealthMonitoringTest, stale_baro_data_does_not_cause_degraded_health)
    // update imu, estimation and control health status
    current_ms += max_age_stale_imu_sensor_health_ms;
 
-   imu::ImuStatus imu_health{0, mpu6500::SensorState::operational, 0, true, true, true};
-   imu_health_storage.update_latest(imu_health, current_ms);
+   imu::ImuStatus imu_health{0, true};
+   imu_health_subscriber.update_latest(imu_health, current_ms);
 
-   aeromight_boundaries::EstimatorHealth estimation_health{0, aeromight_boundaries::EstimatorState::running, 0, true};
-   estimation_health_storage.update_latest(estimation_health, current_ms);
+   aeromight_boundaries::EstimatorStatus estimation_health{true, 0};
+   estimation_health_subscriber.update_latest(estimation_health, current_ms);
 
-   aeromight_boundaries::ControlHealth control_health{0, aeromight_boundaries::ControlState::disarmed};
-   control_health_storage.update_latest(control_health, current_ms);
+   aeromight_boundaries::ControlStatus control_health{true, 0};
+   control_health_subscriber.update_latest(control_health, current_ms);
 
-   const uint32_t ticks_required = (max_wait_estimation_control_readiness_ms / period_in_ms) - 1u;   // one tick to make estimation ready
+   const uint32_t ticks_required = (max_age_stale_imu_sensor_health_ms / period_in_ms) - 1u;   // one tick to make estimation ready
    provide_ticks(ticks_required);
 
    const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);
+   EXPECT_EQ(health.imu_operational, true);
+   EXPECT_EQ(health.estimation_operational, true);
+   EXPECT_EQ(health.control_operational, true);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::degraded);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -371,7 +238,6 @@ TEST_F(HealthMonitoringTest, stale_baro_data_does_not_cause_degraded_health)
 
 TEST_F(HealthMonitoringTest, stale_estimation_data_causes_degraded_health)
 {
-   wait_startup();
 
    make_sensors_ready();
 
@@ -380,24 +246,23 @@ TEST_F(HealthMonitoringTest, stale_estimation_data_causes_degraded_health)
    // update imu and baro health status
    current_ms += max_age_stale_imu_sensor_health_ms;
 
-   imu::ImuStatus imu_health{0, mpu6500::SensorState::operational, 0, true, true, true};
-   imu_health_storage.update_latest(imu_health, current_ms);
+   imu::ImuStatus imu_health{0, true};
+   imu_health_subscriber.update_latest(imu_health, current_ms);
 
-   barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 0, 0, true};
-   barometer_health_storage.update_latest(baro_health, current_ms);
+   barometer::BarometerStatus baro_health{true};
+   barometer_health_subscriber.update_latest(baro_health, current_ms);
 
-   aeromight_boundaries::ControlHealth control_health{0, aeromight_boundaries::ControlState::disarmed};
-   control_health_storage.update_latest(control_health, current_ms);
+   aeromight_boundaries::ControlStatus control_health{true, 0};
+   control_health_subscriber.update_latest(control_health, current_ms);
 
-   const uint32_t ticks_required = (max_wait_estimation_control_readiness_ms / period_in_ms) - 1u;   // one tick to make estimation ready
+   const uint32_t ticks_required = (max_age_stale_imu_sensor_health_ms / period_in_ms) - 1u;   // one tick to make estimation ready
    provide_ticks(ticks_required);
 
    const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::degraded);
+   EXPECT_EQ(health.imu_operational, true);
+   EXPECT_EQ(health.estimation_operational, true);
+   EXPECT_EQ(health.control_operational, true);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::degraded);
@@ -406,24 +271,22 @@ TEST_F(HealthMonitoringTest, stale_estimation_data_causes_degraded_health)
 
 TEST_F(HealthMonitoringTest, imu_non_zero_read_failures_cause_degraded_health)
 {
-   wait_startup();
 
    make_sensors_ready();
 
    make_estimation_and_control_ready();
 
-   imu::ImuStatus imu_health{0, mpu6500::SensorState::operational, 1u, true, true, true};   // 1 read failure
-   imu_health_storage.update_latest(imu_health, current_ms);
+   imu::ImuStatus imu_health{1u, true};   // 1 read failure
+   imu_health_subscriber.update_latest(imu_health, current_ms);
 
    sys_clock.m_sec = current_ms;
    health_monitoring.run_once();
 
    const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::degraded);
+   EXPECT_EQ(health.imu_operational, true);
+   EXPECT_EQ(health.estimation_operational, true);
+   EXPECT_EQ(health.control_operational, true);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::degraded);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -432,24 +295,22 @@ TEST_F(HealthMonitoringTest, imu_non_zero_read_failures_cause_degraded_health)
 
 TEST_F(HealthMonitoringTest, baro_non_zero_read_failures_does_not_cause_degraded_health)
 {
-   wait_startup();
 
    make_sensors_ready();
 
    make_estimation_and_control_ready();
 
-   barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 1u, 0, true};   // 1 read failure
-   barometer_health_storage.update_latest(baro_health, current_ms);
+   barometer::BarometerStatus baro_health{true};   // 1 read failure
+   barometer_health_subscriber.update_latest(baro_health, current_ms);
 
    sys_clock.m_sec = current_ms;
    health_monitoring.run_once();
 
    const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);
+   EXPECT_EQ(health.imu_operational, true);
+   EXPECT_EQ(health.estimation_operational, true);
+   EXPECT_EQ(health.control_operational, true);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::degraded);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -458,31 +319,24 @@ TEST_F(HealthMonitoringTest, baro_non_zero_read_failures_does_not_cause_degraded
 
 TEST_F(HealthMonitoringTest, imu_failure_causes_flight_critical_fault)
 {
-   wait_startup();
 
    make_sensors_ready();
 
    make_estimation_and_control_ready();
 
-   const auto error_types = std::array{mpu6500::SensorError::bus_error,
-                                       mpu6500::SensorError::bus_error,
-                                       mpu6500::SensorError::id_mismatch_error,
-                                       mpu6500::SensorError::config_mismatch_error,
-                                       mpu6500::SensorError::data_pattern_error,
-                                       mpu6500::SensorError::out_of_range_data_error,
-                                       mpu6500::SensorError::non_stationary_calibration_error,
-                                       mpu6500::SensorError::unstable_accel_error,
-                                       mpu6500::SensorError::unstable_gyro_error};
+   const auto error_types = std::array{imu::ImuError::non_stationary_calibration_error,
+                                       imu::ImuError::unstable_accel_error,
+                                       imu::ImuError::unstable_gyro_error};
 
    // good health for baro
-   barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 0, 0, true};
+   barometer::BarometerStatus baro_health{true};
 
    // good health for estimation
-   aeromight_boundaries::EstimatorHealth estimation_health{0, aeromight_boundaries::EstimatorState::running, 0, true};
-   aeromight_boundaries::ControlHealth   control_health{0, aeromight_boundaries::ControlState::disarmed};
+   aeromight_boundaries::EstimatorStatus estimation_health{true, 0};
+   aeromight_boundaries::ControlStatus   control_health{true, 0};
 
    // degraded health for imu
-   imu::ImuStatus imu_health{0, mpu6500::SensorState::operational, 1u, true, true, true};   // 1 read failure
+   imu::ImuStatus imu_health{1u, true};   // 1 read failure
 
    aeromight_boundaries::HealthSummary health{};
 
@@ -491,20 +345,19 @@ TEST_F(HealthMonitoringTest, imu_failure_causes_flight_critical_fault)
    {
       imu_health.error.reset();
       imu_health.error.set(static_cast<types::ErrorBitsType>(error));
-      imu_health_storage.update_latest(imu_health, current_ms);
-      barometer_health_storage.update_latest(baro_health, current_ms);          // keep providing good baro health status
-      estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
-      control_health_storage.update_latest(control_health, current_ms);         // keep providing good control health status
+      imu_health_subscriber.update_latest(imu_health, current_ms);
+      barometer_health_subscriber.update_latest(baro_health, current_ms);          // keep providing good baro health status
+      estimation_health_subscriber.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
+      control_health_subscriber.update_latest(control_health, current_ms);         // keep providing good control health status
       current_ms++;
       sys_clock.m_sec = current_ms;
       health_monitoring.run_once();
 
       health = health_monitoring.get_health_summary();
       EXPECT_EQ(health.timestamp_ms, current_ms);
-      EXPECT_EQ(health.all_sensors_ready, true);
-      EXPECT_EQ(health.estimation_ready, true);
-      EXPECT_EQ(health.control_ready, true);
-      EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);   // imu failure -> flight critical
+      EXPECT_EQ(health.imu_operational, true);
+      EXPECT_EQ(health.estimation_operational, true);
+      EXPECT_EQ(health.control_operational, true);
       EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::fault);
       EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
       EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -513,180 +366,57 @@ TEST_F(HealthMonitoringTest, imu_failure_causes_flight_critical_fault)
 
    // error is gone but state is failure -> state is fault
    imu_health.error.reset();
-   imu_health.state = mpu6500::SensorState::failure;
-   imu_health_storage.update_latest(imu_health, current_ms);
-   barometer_health_storage.update_latest(baro_health, current_ms);          // keep providing good baro health status
-   estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
-   control_health_storage.update_latest(control_health, current_ms);         // keep providing good control health status
+   imu_health_subscriber.update_latest(imu_health, current_ms);
+   barometer_health_subscriber.update_latest(baro_health, current_ms);          // keep providing good baro health status
+   estimation_health_subscriber.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
+   control_health_subscriber.update_latest(control_health, current_ms);         // keep providing good control health status
    current_ms++;
    sys_clock.m_sec = current_ms;
    health_monitoring.run_once();
 
    health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);   // imu failure -> flight critical
+   EXPECT_EQ(health.imu_operational, true);
+   EXPECT_EQ(health.estimation_operational, true);
+   EXPECT_EQ(health.control_operational, true);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::fault);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::operational);
 
    // removing causes of fault -> switches health state to degraded due to 1 read failure
-   imu_health.state = mpu6500::SensorState::operational;
-   imu_health_storage.update_latest(imu_health, current_ms);
-   barometer_health_storage.update_latest(baro_health, current_ms);          // keep providing good baro health status
-   estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
-   control_health_storage.update_latest(control_health, current_ms);         // keep providing good control health status
+   imu_health_subscriber.update_latest(imu_health, current_ms);
+   barometer_health_subscriber.update_latest(baro_health, current_ms);          // keep providing good baro health status
+   estimation_health_subscriber.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
+   control_health_subscriber.update_latest(control_health, current_ms);         // keep providing good control health status
    current_ms++;
    sys_clock.m_sec = current_ms;
    health_monitoring.run_once();
 
    health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::degraded);   // no longer flight critical
-   EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::degraded);         // still degraded
+   EXPECT_EQ(health.imu_operational, true);
+   EXPECT_EQ(health.estimation_operational, true);
+   EXPECT_EQ(health.control_operational, true);
+   EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::degraded);   // still degraded
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::operational);
 
    // removing cause of health degradation
-   imu_health.read_failure_count = 0;
-   imu_health_storage.update_latest(imu_health, current_ms);
-   barometer_health_storage.update_latest(baro_health, current_ms);          // keep providing good baro health status
-   estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
-   control_health_storage.update_latest(control_health, current_ms);         // keep providing good control health status
+   imu_health_subscriber.update_latest(imu_health, current_ms);
+   barometer_health_subscriber.update_latest(baro_health, current_ms);          // keep providing good baro health status
+   estimation_health_subscriber.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
+   control_health_subscriber.update_latest(control_health, current_ms);         // keep providing good control health status
    current_ms++;
    sys_clock.m_sec = current_ms;
    health_monitoring.run_once();
 
    health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);   // no longer flight critical
-   EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::operational);
-}
-
-TEST_F(HealthMonitoringTest, baro_failure_does_not_cause_flight_critical_fault)
-{
-   wait_startup();
-
-   make_sensors_ready();
-
-   make_estimation_and_control_ready();
-
-   const auto error_types = std::array{barometer_sensor::BarometerSensorError::bus_error,
-                                       barometer_sensor::BarometerSensorError::id_mismatch_error,
-                                       barometer_sensor::BarometerSensorError::config_mismatch_error,
-                                       barometer_sensor::BarometerSensorError::coefficients_pattern_error,
-                                       barometer_sensor::BarometerSensorError::sensor_error,
-                                       barometer_sensor::BarometerSensorError::data_pattern_error,
-                                       barometer_sensor::BarometerSensorError::out_of_range_data_error};
-
-   // good health for imu
-   imu::ImuStatus imu_health{0, mpu6500::SensorState::operational, 0u, true, true, true};
-
-   // good health for estimation
-   aeromight_boundaries::EstimatorHealth estimation_health{0, aeromight_boundaries::EstimatorState::running, 0, true};
-   aeromight_boundaries::ControlHealth   control_health{0, aeromight_boundaries::ControlState::disarmed};
-
-   // degraded health for baro
-   barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 1u, 0, true};   // 1 read failure
-
-   aeromight_boundaries::HealthSummary health{};
-
-   // if causes for both degradation and fault are present, fault will take priority
-   for (const auto& error : error_types)
-   {
-      baro_health.error.reset();
-      baro_health.error.set(static_cast<types::ErrorBitsType>(error));
-      barometer_health_storage.update_latest(baro_health, current_ms);
-      imu_health_storage.update_latest(imu_health, current_ms);                 // keep providing good imu health status
-      estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
-      control_health_storage.update_latest(control_health, current_ms);         // keep providing good control health status
-      current_ms++;
-      sys_clock.m_sec = current_ms;
-      health_monitoring.run_once();
-
-      health = health_monitoring.get_health_summary();
-      EXPECT_EQ(health.timestamp_ms, current_ms);
-      EXPECT_EQ(health.all_sensors_ready, true);
-      EXPECT_EQ(health.estimation_ready, true);
-      EXPECT_EQ(health.control_ready, true);
-      EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);   // baro failure -> non flight critical
-      EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
-      EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::fault);
-      EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
-      EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::operational);
-   }
-
-   // error is gone but state is failure -> state is fault
-   baro_health.error.reset();
-   baro_health.state = barometer_sensor::BarometerSensorState::failure;
-   barometer_health_storage.update_latest(baro_health, current_ms);
-   imu_health_storage.update_latest(imu_health, current_ms);                 // keep providing good imu health status
-   estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
-   control_health_storage.update_latest(control_health, current_ms);         // keep providing good control health status
-   current_ms++;
-   sys_clock.m_sec = current_ms;
-   health_monitoring.run_once();
-
-   health = health_monitoring.get_health_summary();
-   EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);   // baro failure -> non flight critical
-   EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::fault);
-   EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::operational);
-
-   // removing causes of fault -> switches health state to degraded due to 1 read failure
-   baro_health.state = barometer_sensor::BarometerSensorState::operational;
-   barometer_health_storage.update_latest(baro_health, current_ms);
-   imu_health_storage.update_latest(imu_health, current_ms);                 // keep providing good imu health status
-   estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
-   control_health_storage.update_latest(control_health, current_ms);         // keep providing good control health status
-   current_ms++;
-   sys_clock.m_sec = current_ms;
-   health_monitoring.run_once();
-
-   health = health_monitoring.get_health_summary();
-   EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);    // non flight critical
-   EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::degraded);   // still degraded
-   EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::operational);
-
-   // removing cause of health degradation
-   baro_health.read_failure_count = 0;
-   barometer_health_storage.update_latest(baro_health, current_ms);
-   imu_health_storage.update_latest(imu_health, current_ms);                 // keep providing good imu health status
-   estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
-   current_ms++;
-   sys_clock.m_sec = current_ms;
-   health_monitoring.run_once();
-
-   health = health_monitoring.get_health_summary();
-   EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);
+   EXPECT_EQ(health.imu_operational, true);
+   EXPECT_EQ(health.estimation_operational, true);
+   EXPECT_EQ(health.control_operational, true);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
@@ -695,26 +425,25 @@ TEST_F(HealthMonitoringTest, baro_failure_does_not_cause_flight_critical_fault)
 
 TEST_F(HealthMonitoringTest, estimation_failure_causes_flight_critical_fault)
 {
-   wait_startup();
 
    make_sensors_ready();
 
    make_estimation_and_control_ready();
 
-   const auto error_types = std::array{aeromight_boundaries::EstimatorHealth::Error::reference_pressure_estimate_timeout,   // non-critical errors only
-                                       aeromight_boundaries::EstimatorHealth::Error::reference_pressure_implausible,
-                                       aeromight_boundaries::EstimatorHealth::Error::stale_imu_data,
-                                       aeromight_boundaries::EstimatorHealth::Error::missing_valid_imu_data};
+   const auto error_types = std::array{aeromight_boundaries::EstimatorStatus::Error::stale_imu_sensor_data,   // non-critical errors only
+                                       aeromight_boundaries::EstimatorStatus::Error::stale_baro_sensor_data,
+                                       aeromight_boundaries::EstimatorStatus::Error::missing_valid_imu_data,
+                                       aeromight_boundaries::EstimatorStatus::Error::missing_valid_baro_data};
 
    // good health for imu
-   imu::ImuStatus imu_health{0, mpu6500::SensorState::operational, 0u, true, true, true};
+   imu::ImuStatus imu_health{0, true};
 
    // good health for baro
-   barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 0, 0, true};
+   barometer::BarometerStatus baro_health{true};
 
    // degraded health for estimation
-   aeromight_boundaries::EstimatorHealth estimation_health{0, aeromight_boundaries::EstimatorState::running, 0, true};
-   aeromight_boundaries::ControlHealth   control_health{0, aeromight_boundaries::ControlState::disarmed};
+   aeromight_boundaries::EstimatorStatus estimation_health{true, 0};
+   aeromight_boundaries::ControlStatus   control_health{true, 0};
 
    aeromight_boundaries::HealthSummary health{};
 
@@ -723,145 +452,136 @@ TEST_F(HealthMonitoringTest, estimation_failure_causes_flight_critical_fault)
    {
       estimation_health.error.reset();
       estimation_health.error.set(static_cast<types::ErrorBitsType>(error));
-      estimation_health_storage.update_latest(estimation_health, current_ms);
-      imu_health_storage.update_latest(imu_health, current_ms);           // keep providing good imu health status
-      barometer_health_storage.update_latest(baro_health, current_ms);    // keep providing good baro health status
-      control_health_storage.update_latest(control_health, current_ms);   // keep providing good control health status
+      estimation_health_subscriber.update_latest(estimation_health, current_ms);
+      imu_health_subscriber.update_latest(imu_health, current_ms);           // keep providing good imu health status
+      barometer_health_subscriber.update_latest(baro_health, current_ms);    // keep providing good baro health status
+      control_health_subscriber.update_latest(control_health, current_ms);   // keep providing good control health status
       current_ms++;
       sys_clock.m_sec = current_ms;
       health_monitoring.run_once();
 
       health = health_monitoring.get_health_summary();
       EXPECT_EQ(health.timestamp_ms, current_ms);
-      EXPECT_EQ(health.all_sensors_ready, true);
-      EXPECT_EQ(health.estimation_ready, true);
-      EXPECT_EQ(health.control_ready, true);
-      EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);   // estimation failure -> flight critical
+      EXPECT_EQ(health.imu_operational, true);
+      EXPECT_EQ(health.estimation_operational, true);
+      EXPECT_EQ(health.control_operational, true);
       EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
       EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
-      EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::fault);
+      EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::fault);   // estimation failure -> flight critical
       EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::operational);
    }
 
    // error is gone but state is failure -> state is fault
    estimation_health.error.reset();
-   estimation_health.state = aeromight_boundaries::EstimatorState::fault;
-   estimation_health_storage.update_latest(estimation_health, current_ms);
-   imu_health_storage.update_latest(imu_health, current_ms);          // keep providing good imu health status
-   barometer_health_storage.update_latest(baro_health, current_ms);   // keep providing good baro health status
+   estimation_health_subscriber.update_latest(estimation_health, current_ms);
+   imu_health_subscriber.update_latest(imu_health, current_ms);          // keep providing good imu health status
+   barometer_health_subscriber.update_latest(baro_health, current_ms);   // keep providing good baro health status
    current_ms++;
    sys_clock.m_sec = current_ms;
    health_monitoring.run_once();
 
    health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);   // estimation failure -> flight critical
+   EXPECT_EQ(health.imu_operational, true);
+   EXPECT_EQ(health.estimation_operational, true);
+   EXPECT_EQ(health.control_operational, true);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::fault);
+   EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::fault);   // estimation failure -> flight critical
    EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::operational);
 
    // removing cause of fault
-   estimation_health.state = aeromight_boundaries::EstimatorState::running;
-   estimation_health_storage.update_latest(estimation_health, current_ms);
-   imu_health_storage.update_latest(imu_health, current_ms);           // keep providing good imu health status
-   barometer_health_storage.update_latest(baro_health, current_ms);    // keep providing good baro health status
-   control_health_storage.update_latest(control_health, current_ms);   // keep providing good control health status
+   estimation_health_subscriber.update_latest(estimation_health, current_ms);
+   imu_health_subscriber.update_latest(imu_health, current_ms);           // keep providing good imu health status
+   barometer_health_subscriber.update_latest(baro_health, current_ms);    // keep providing good baro health status
+   control_health_subscriber.update_latest(control_health, current_ms);   // keep providing good control health status
    current_ms++;
    sys_clock.m_sec = current_ms;
    health_monitoring.run_once();
 
    health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);   // no longer flight critical
+   EXPECT_EQ(health.imu_operational, true);
+   EXPECT_EQ(health.estimation_operational, true);
+   EXPECT_EQ(health.control_operational, true);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
+   EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);   // no longer flight critical
    EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::operational);
 }
 
 TEST_F(HealthMonitoringTest, control_failure_causes_flight_critical_fault)
 {
-   wait_startup();
 
    make_sensors_ready();
 
    make_estimation_and_control_ready();
 
    // good health for imu
-   imu::ImuStatus imu_health{0, mpu6500::SensorState::operational, 0u, true, true, true};
+   imu::ImuStatus imu_health{0, true};
 
    // good health for baro
-   barometer_sensor::BarometerHealth baro_health{0, barometer_sensor::BarometerSensorState::operational, 0, 0, true};
+   barometer::BarometerStatus baro_health{true};
 
    // good health for estimation and control at startup
-   aeromight_boundaries::EstimatorHealth estimation_health{0, aeromight_boundaries::EstimatorState::running, 0, true};
-   aeromight_boundaries::ControlHealth   control_health{0, aeromight_boundaries::ControlState::disarmed};
+   aeromight_boundaries::EstimatorStatus estimation_health{true, 0};
+   aeromight_boundaries::ControlStatus   control_health{true, 0};
 
    aeromight_boundaries::HealthSummary health{};
 
-   imu_health_storage.update_latest(imu_health, current_ms);                 // keep providing good imu health status
-   barometer_health_storage.update_latest(baro_health, current_ms);          // keep providing good baro health status
-   estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
-   control_health_storage.update_latest(control_health, current_ms);         // keep providing good control health status
+   imu_health_subscriber.update_latest(imu_health, current_ms);                 // keep providing good imu health status
+   barometer_health_subscriber.update_latest(baro_health, current_ms);          // keep providing good baro health status
+   estimation_health_subscriber.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
+   control_health_subscriber.update_latest(control_health, current_ms);         // keep providing good control health status
    current_ms++;
    sys_clock.m_sec = current_ms;
    health_monitoring.run_once();
 
    health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);
+   EXPECT_EQ(health.imu_operational, true);
+   EXPECT_EQ(health.estimation_operational, true);
+   EXPECT_EQ(health.control_operational, true);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::operational);
 
    // control has now error
-   control_health.error.set(static_cast<types::ErrorBitsType>(aeromight_boundaries::ControlHealth::Error::invalid_time_delta));
-   imu_health_storage.update_latest(imu_health, current_ms);                 // keep providing good imu health status
-   barometer_health_storage.update_latest(baro_health, current_ms);          // keep providing good baro health status
-   estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
-   control_health_storage.update_latest(control_health, current_ms);
+   control_health.error.set(static_cast<types::ErrorBitsType>(aeromight_boundaries::ControlStatus::Error::timing_jitter));
+   imu_health_subscriber.update_latest(imu_health, current_ms);                 // keep providing good imu health status
+   barometer_health_subscriber.update_latest(baro_health, current_ms);          // keep providing good baro health status
+   estimation_health_subscriber.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
+   control_health_subscriber.update_latest(control_health, current_ms);
    current_ms++;
    sys_clock.m_sec = current_ms;
    health_monitoring.run_once();
 
    health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::critical);   // control failure -> flight critical
+   EXPECT_EQ(health.imu_operational, true);
+   EXPECT_EQ(health.estimation_operational, true);
+   EXPECT_EQ(health.control_operational, true);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
-   EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::fault);
+   EXPECT_EQ(health.control_health, aeromight_boundaries::SubsystemHealth::fault);   // control failure -> flight critical
 
    // removing cause of fault
    control_health.error = 0;
-   imu_health_storage.update_latest(imu_health, current_ms);                 // keep providing good imu health status
-   barometer_health_storage.update_latest(baro_health, current_ms);          // keep providing good baro health status
-   estimation_health_storage.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
-   control_health_storage.update_latest(control_health, current_ms);
+   imu_health_subscriber.update_latest(imu_health, current_ms);                 // keep providing good imu health status
+   barometer_health_subscriber.update_latest(baro_health, current_ms);          // keep providing good baro health status
+   estimation_health_subscriber.update_latest(estimation_health, current_ms);   // keep providing good estimation health status
+   control_health_subscriber.update_latest(control_health, current_ms);
    current_ms++;
    sys_clock.m_sec = current_ms;
    health_monitoring.run_once();
 
    health = health_monitoring.get_health_summary();
    EXPECT_EQ(health.timestamp_ms, current_ms);
-   EXPECT_EQ(health.all_sensors_ready, true);
-   EXPECT_EQ(health.estimation_ready, true);
-   EXPECT_EQ(health.control_ready, true);
-   EXPECT_EQ(health.flight_health, aeromight_boundaries::FlightHealthStatus::nominal);
+   EXPECT_EQ(health.imu_operational, true);
+   EXPECT_EQ(health.estimation_operational, true);
+   EXPECT_EQ(health.control_operational, true);
    EXPECT_EQ(health.imu_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.barometer_health, aeromight_boundaries::SubsystemHealth::operational);
    EXPECT_EQ(health.estimation_health, aeromight_boundaries::SubsystemHealth::operational);
