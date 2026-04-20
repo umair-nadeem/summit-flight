@@ -1,10 +1,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "barometer_sensor/BarometerData.hpp"
-#include "barometer_sensor/BarometerHealth.hpp"
+#include "barometer_sensor/BarometerSensorStatus.hpp"
+#include "barometer_sensor/RawBarometerSensorData.hpp"
 #include "bmp390/params.hpp"
-#include "boundaries/SharedData.hpp"
 #include "mocks/common/Logger.hpp"
 #include "mocks/hw/I2c.hpp"
 #include "sys_time/ClockSource.hpp"
@@ -29,10 +28,10 @@ protected:
    static constexpr uint8_t iir_filter         = 2u;
    static constexpr uint8_t sensor_normal_mode = 3u;
 
-   boundaries::SharedData<barometer_sensor::BarometerData>   barometer_data_storage{};
-   boundaries::SharedData<barometer_sensor::BarometerHealth> barometer_health_storage{};
-   mocks::hw::I2c                                            i2c_driver{};
-   mocks::common::Logger                                     logger{"bmp390_test"};
+   barometer_sensor::RawBarometerSensorData barometer_sensor_data{};
+   barometer_sensor::BarometerSensorStatus  barometer_sensor_status{};
+   mocks::hw::I2c                           i2c_driver{};
+   mocks::common::Logger                    logger{"bmp390_test"};
 
    std::array<uint8_t, bmp390::params::num_bytes_calibration_data>
        trimming_coefficients_buffer{214u, 108u, 213u, 76u, 249u, 234u, 26u, 252u, 20u, 6u,

@@ -2,10 +2,10 @@
 #include <gtest/gtest.h>
 
 #include "boundaries/SharedData.hpp"
-#include "imu/ImuData.hpp"
+#include "imu_sensor/ImuSensorStatus.hpp"
+#include "imu_sensor/RawImuSensorData.hpp"
 #include "mocks/common/Logger.hpp"
 #include "mocks/hw/SpiMasterWithDma.hpp"
-#include "mpu6500/ImuSensorStatus.hpp"
 #include "mpu6500/params.hpp"
 #include "sys_time/ClockSource.hpp"
 

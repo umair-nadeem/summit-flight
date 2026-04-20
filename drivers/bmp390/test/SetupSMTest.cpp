@@ -6,6 +6,26 @@
 class Bmp390SetupSMTest : public Bmp390BaseTest
 {
 protected:
+   using StateHandler    = bmp390::Bmp390StateHandler<decltype(i2c_driver), mocks::common::Logger>;
+   using StateMachineDef = bmp390::SetupStateMachine<StateHandler>;
+
+   StateHandler                    state_handler;
+   boost::sml::sm<StateMachineDef> sm;
+
+   // 2. Initialize them in the constructor
+   Bmp390SetupSMTest()
+       : state_handler{i2c_driver,
+                       logger,
+                       barometer_sensor_data,
+                       barometer_sensor_status,
+                       read_failures_limit,
+                       max_recovery_attempts,
+                       execution_period_ms,
+                       receive_wait_timeout_ms},
+         sm{state_handler}
+   {
+   }
+
    void bus_reset()
    {
       EXPECT_TRUE(sm.is(StateMachineDef::s_idle));
@@ -20,20 +40,6 @@ protected:
          sm.process_event(bmp390::EventTick{});
       }
    }
-
-   using StateHandler    = bmp390::Bmp390StateHandler<sys_time::ClockSource, decltype(i2c_driver), mocks::common::Logger>;
-   using StateMachineDef = bmp390::SetupStateMachine<StateHandler>;
-
-   StateHandler state_handler{barometer_data_storage,
-                              barometer_health_storage,
-                              i2c_driver,
-                              logger,
-                              read_failures_limit,
-                              max_recovery_attempts,
-                              execution_period_ms,
-                              receive_wait_timeout_ms};
-
-   boost::sml::sm<StateMachineDef> sm{state_handler};
 };
 
 TEST_F(Bmp390SetupSMTest, check_initial_state)
@@ -57,7 +63,7 @@ TEST_F(Bmp390SetupSMTest, check_soft_reset_fail_with_bus_error)
 
    sm.process_event(bmp390::EventTick{});   // bus error evaluated
 
-   barometer_sensor::ErrorBits ref_error{};
+   barometer_sensor::BarometerSensorErrorBits ref_error{};
    ref_error.set(static_cast<types::ErrorBitsType>(barometer_sensor::BarometerSensorError::bus_error));
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
    EXPECT_TRUE(sm.is(boost::sml::X));
@@ -77,7 +83,7 @@ TEST_F(Bmp390SetupSMTest, check_read_id_fail_with_bus_error)
    sm.process_event(bmp390::EventTick{});   // read id command executed
    sm.process_event(bmp390::EventTick{});   // bus error evaluated
 
-   barometer_sensor::ErrorBits ref_error{};
+   barometer_sensor::BarometerSensorErrorBits ref_error{};
    ref_error.set(static_cast<types::ErrorBitsType>(barometer_sensor::BarometerSensorError::bus_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -98,7 +104,7 @@ TEST_F(Bmp390SetupSMTest, check_read_id_fail_with_timeout)
    sm.process_event(bmp390::EventTick{});                                 // read id command executed
    provide_ticks((receive_wait_timeout_ms / execution_period_ms) + 1u);   // timeout ticks
 
-   barometer_sensor::ErrorBits ref_error{};
+   barometer_sensor::BarometerSensorErrorBits ref_error{};
    ref_error.set(static_cast<types::ErrorBitsType>(barometer_sensor::BarometerSensorError::bus_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -121,7 +127,7 @@ TEST_F(Bmp390SetupSMTest, check_read_id_fail_with_id_mismatch)
    sm.process_event(bmp390::EventTick{});   // read id command executed
    sm.process_event(bmp390::EventReceiveDone{});
 
-   barometer_sensor::ErrorBits ref_error{};
+   barometer_sensor::BarometerSensorErrorBits ref_error{};
    ref_error.set(static_cast<types::ErrorBitsType>(barometer_sensor::BarometerSensorError::id_mismatch_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -167,7 +173,7 @@ TEST_F(Bmp390SetupSMTest, check_config_write_fail_with_bus_error)
 
    sm.process_event(bmp390::EventTick{});   // bus error evaluated
 
-   barometer_sensor::ErrorBits ref_error{};
+   barometer_sensor::BarometerSensorErrorBits ref_error{};
    ref_error.set(static_cast<types::ErrorBitsType>(barometer_sensor::BarometerSensorError::bus_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -201,7 +207,7 @@ TEST_F(Bmp390SetupSMTest, check_power_mode_with_bus_error)
 
    sm.process_event(bmp390::EventTick{});   // bus error evaluated
 
-   barometer_sensor::ErrorBits ref_error{};
+   barometer_sensor::BarometerSensorErrorBits ref_error{};
    ref_error.set(static_cast<types::ErrorBitsType>(barometer_sensor::BarometerSensorError::bus_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -231,7 +237,7 @@ TEST_F(Bmp390SetupSMTest, check_read_config_burst_fail_with_timeout)
 
    provide_ticks((receive_wait_timeout_ms / execution_period_ms) + 1u);   // timeout ticks
 
-   barometer_sensor::ErrorBits ref_error{};
+   barometer_sensor::BarometerSensorErrorBits ref_error{};
    ref_error.set(static_cast<types::ErrorBitsType>(barometer_sensor::BarometerSensorError::bus_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -270,7 +276,7 @@ TEST_F(Bmp390SetupSMTest, check_read_config_burst_fail_with_pwr_ctrl_mismatch)
    sm.process_event(bmp390::EventTick{});
    sm.process_event(bmp390::EventReceiveDone{});
 
-   barometer_sensor::ErrorBits ref_error{};
+   barometer_sensor::BarometerSensorErrorBits ref_error{};
    ref_error.set(static_cast<types::ErrorBitsType>(barometer_sensor::BarometerSensorError::config_mismatch_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
@@ -309,7 +315,7 @@ TEST_F(Bmp390SetupSMTest, check_read_config_burst_fail_with_odr_mismatch)
    sm.process_event(bmp390::EventTick{});
    sm.process_event(bmp390::EventReceiveDone{});
 
-   barometer_sensor::ErrorBits ref_error{};
+   barometer_sensor::BarometerSensorErrorBits ref_error{};
    ref_error.set(static_cast<types::ErrorBitsType>(barometer_sensor::BarometerSensorError::config_mismatch_error));
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), ref_error.to_ulong());
