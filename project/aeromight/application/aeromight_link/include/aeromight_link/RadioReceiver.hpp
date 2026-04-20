@@ -2,7 +2,6 @@
 
 #include <cmath>
 
-#include "aeromight_boundaries/RadioLinkActuals.hpp"
 #include "aeromight_boundaries/SystemControlSetpoints.hpp"
 #include "boundaries/BufferWithOwnershipIndex.hpp"
 #include "boundaries/SharedData.hpp"
@@ -11,35 +10,36 @@
 #include "crsf/CrsfPacket.hpp"
 #include "error/error_handler.hpp"
 #include "interfaces/IClockSource.hpp"
+#include "rc/crsf/Channel.hpp"
+#include "rc/crsf/CrsfDecoderResult.hpp"
+#include "rc/crsf/LinkStats.hpp"
 
 namespace aeromight_link
 {
 
-template <typename QueueReceiver, typename QueueSender, typename Crsf, interfaces::IClockSource ClockSource, typename Logger>
+template <typename QueueReceiver, typename QueueSender, typename CrsfDecoder, interfaces::IClockSource ClockSource, typename Logger>
 class RadioReceiver
 {
 
    using StickCommandPublisher           = boundaries::SharedData<control::attitude::StickCommand>;
    using SystemControlSetpointsPublisher = boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints>;
-   using RadioLinkActualsPublisher       = boundaries::SharedData<aeromight_boundaries::RadioLinkActuals>;
+   using LinkStatsPublisher              = boundaries::SharedData<rc::crsf::LinkStats>;
 
 public:
    explicit RadioReceiver(QueueReceiver&                   radio_input_queue_receiver,
                           QueueSender&                     free_index_queue_sender,
+                          CrsfDecoder&                     crsf_decoder,
                           StickCommandPublisher&           stick_command_publisher,
                           SystemControlSetpointsPublisher& system_control_setpoints_publisher,
-                          RadioLinkActualsPublisher&       radio_link_actuals_publisher,
-                          Logger&                          logger,
-                          const float                      rc_channel_deadband,
-                          const uint8_t                    good_uplink_quality_threshold)
+                          LinkStatsPublisher&              link_stats_publisher,
+                          Logger&                          logger)
        : m_radio_input_queue_receiver{radio_input_queue_receiver},
-         m_free_index_queue_sender(free_index_queue_sender),
-         m_stick_command_publisher(stick_command_publisher),
-         m_system_control_setpoints_publisher(system_control_setpoints_publisher),
-         m_radio_link_actuals_publisher(radio_link_actuals_publisher),
-         m_logger(logger),
-         m_rc_channel_deadband(rc_channel_deadband),
-         m_good_uplink_quality_threshold(good_uplink_quality_threshold)
+         m_free_index_queue_sender{free_index_queue_sender},
+         m_crsf_decoder{crsf_decoder},
+         m_stick_command_publisher{stick_command_publisher},
+         m_system_control_setpoints_publisher{system_control_setpoints_publisher},
+         m_link_stats_publisher{link_stats_publisher},
+         m_logger{logger}
    {
       m_logger.enable();
    }
@@ -51,124 +51,59 @@ public:
       {
          const auto radio_input = queue_item.value();
 
-         process_radio_input(std::span{reinterpret_cast<const uint8_t*>(radio_input.buffer.data()), radio_input.buffer.size()});
+         const auto result = m_crsf_decoder.decode_crsf(std::span{reinterpret_cast<const uint8_t*>(radio_input.buffer.data()), radio_input.buffer.size()});
+
+         const auto clock_ms = ClockSource::now_ms();
+
+         if (result == rc::crsf::CrsfDecoderResult::rc_channels_update)
+         {
+            const auto& rc_channels = m_crsf_decoder.get_rc_channels();
+
+            // system control setpoints
+            const auto arm_state = get_bistate_channel(rc_channels, rc_channel_arm_state);
+
+            m_system_control_setpoints.state = (arm_state == rc::crsf::Bistate::high) ?
+                                                   aeromight_boundaries::SystemArmedState::arm :
+                                                   aeromight_boundaries::SystemArmedState::disarm;
+
+            const auto imu_calibration = get_bistate_channel(rc_channels, rc_channel_imu_calibration);
+
+            m_system_control_setpoints.imu_calibration = (imu_calibration == rc::crsf::Bistate::high);
+
+            // rc channels
+            m_stick_command.roll     = get_float_channel(rc_channels, rc_channel_roll);
+            m_stick_command.pitch    = get_float_channel(rc_channels, rc_channel_pitch);
+            m_stick_command.yaw      = get_float_channel(rc_channels, rc_channel_yaw);
+            m_stick_command.throttle = get_float_channel(rc_channels, rc_channel_throttle);
+
+            m_system_control_setpoints_publisher.update_latest(m_system_control_setpoints, clock_ms);
+            m_stick_command_publisher.update_latest(m_stick_command, clock_ms);
+         }
+         else if (result == rc::crsf::CrsfDecoderResult::link_stats_update)
+         {
+            const auto& link_stats = m_crsf_decoder.get_link_stats();
+            m_link_stats_publisher.update_latest(link_stats, clock_ms);
+         }
+         else
+         {
+            error::stop_operation();
+         }
 
          m_free_index_queue_sender.send_blocking(radio_input.index);   // send index to queue to indicate buffer is free
       }
    }
 
 private:
-   void process_radio_input(std::span<const uint8_t> buffer)
-   {
-      const bool result = Crsf::parse_buffer(buffer, m_crsf_packet);
-
-      if (!result)
-      {
-         m_logger.printf("received corrupted frame of len %u", buffer.size());
-         return;
-      }
-
-      switch (m_crsf_packet.type)   // type
-      {
-         case crsf::FrameType::rc_channels_packed:
-            publish_rc_channels(std::get<crsf::CrsfRcChannels>(m_crsf_packet.data));
-            break;
-
-         case crsf::FrameType::link_statistics:
-            publish_link_stats(std::get<crsf::CrsfLinkStatistics>(m_crsf_packet.data));
-            break;
-
-         case crsf::FrameType::airspeed:
-         case crsf::FrameType::attitude:
-         case crsf::FrameType::battery_sensor:
-         case crsf::FrameType::gps:
-         case crsf::FrameType::heartbeat:
-         case crsf::FrameType::link_statistics_rx:
-         case crsf::FrameType::link_statistics_tx:
-         default:
-            error::stop_operation();
-            break;
-      }
-   }
-
-   void publish_rc_channels(const crsf::CrsfRcChannels& rc_data)
-   {
-      // update flight stick input setpoints
-      m_stick_command.roll     = apply_deadband(normalize_channel(rc_data.channels[rc_channel_roll]), m_rc_channel_deadband);
-      m_stick_command.pitch    = apply_deadband(normalize_channel(rc_data.channels[rc_channel_pitch]), m_rc_channel_deadband);
-      m_stick_command.yaw      = apply_deadband(normalize_channel(rc_data.channels[rc_channel_yaw]), m_rc_channel_deadband);
-      m_stick_command.throttle = normalize_throttle(rc_data.channels[rc_channel_throttle]);
-
-      // update system control setpoints
-      m_system_control_setpoints.state           = get_arm_state(normalize_channel(rc_data.channels[rc_channel_arm_state]));
-      m_system_control_setpoints.imu_calibration = get_imu_calibration_state(normalize_channel(rc_data.channels[rc_channel_imu_calibration]));
-
-      // publish to shared buffers
-      const auto clock_ms = ClockSource::now_ms();
-      m_system_control_setpoints_publisher.update_latest(m_system_control_setpoints, clock_ms);
-      m_stick_command_publisher.update_latest(m_stick_command, clock_ms);
-   }
-
-   void publish_link_stats(const crsf::CrsfLinkStatistics& stats)
-   {
-      // update stats
-      m_radio_link_actuals.link_rssi_dbm    = static_cast<int8_t>(stats.uplink_rssi_1) * -1;
-      m_radio_link_actuals.link_quality_pct = stats.uplink_link_quality;
-      m_radio_link_actuals.link_snr_db      = stats.uplink_snr;
-      m_radio_link_actuals.tx_power_mw      = crsf::get_uplink_rf_power_mw(stats.uplink_rf_power);
-      m_radio_link_actuals.link_status_ok   = (stats.uplink_link_quality > m_good_uplink_quality_threshold);
-
-      // publish to shared buffer
-      m_radio_link_actuals_publisher.update_latest(m_radio_link_actuals, ClockSource::now_ms());
-   }
-
-   static constexpr float normalize_channel(const uint16_t raw) noexcept
-   {
-      constexpr float center = (crsf::rc_channel_value_min + crsf::rc_channel_value_max) / 2.0f;   // center point 991.5
-
-      return static_cast<float>(raw - center) / ((crsf::rc_channel_value_max - crsf::rc_channel_value_min) / 2.0f);
-   }
-
-   static constexpr float normalize_throttle(const uint16_t raw) noexcept
-   {
-      return static_cast<float>(raw - crsf::rc_channel_value_min) / (crsf::rc_channel_value_max - crsf::rc_channel_value_min);
-   }
-
-   static constexpr float apply_deadband(const float x, const float deadband) noexcept
-   {
-      if (fabs(x) < deadband)
-      {
-         return 0.0f;
-      };
-
-      return ((x > 0 ? (x - deadband) : (x + deadband)) / (1.0f - deadband));
-   }
-
-   static constexpr aeromight_boundaries::SystemArmedState get_arm_state(const float switch_value) noexcept
-   {
-      return (switch_value > rc_channel_switch_discrete_threshold) ? aeromight_boundaries::SystemArmedState::arm : aeromight_boundaries::SystemArmedState::disarm;
-   }
-
-   static constexpr bool get_imu_calibration_state(const float switch_value) noexcept
-   {
-      return (switch_value > rc_channel_switch_discrete_threshold);
-   }
-
-   static constexpr float rc_channel_switch_discrete_threshold = 0.5f;
-
    QueueReceiver&                               m_radio_input_queue_receiver;
    QueueSender&                                 m_free_index_queue_sender;
+   CrsfDecoder&                                 m_crsf_decoder;
    StickCommandPublisher&                       m_stick_command_publisher;
    SystemControlSetpointsPublisher&             m_system_control_setpoints_publisher;
-   RadioLinkActualsPublisher&                   m_radio_link_actuals_publisher;
+   LinkStatsPublisher&                          m_link_stats_publisher;
    Logger&                                      m_logger;
-   const float                                  m_rc_channel_deadband;
-   const uint8_t                                m_good_uplink_quality_threshold;
    control::attitude::StickCommand              m_stick_command{};
    aeromight_boundaries::SystemControlSetpoints m_system_control_setpoints{};
-   aeromight_boundaries::RadioLinkActuals       m_radio_link_actuals{};
-   crsf::CrsfPacket                             m_crsf_packet{};
-   std::size_t                                  m_counter{};
+   rc::crsf::LinkStats                          m_radio_link_actuals{};
 };
 
 }   // namespace aeromight_link

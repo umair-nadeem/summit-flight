@@ -2,7 +2,6 @@
 
 #include "ControlStatus.hpp"
 #include "EstimatorStatus.hpp"
-#include "RadioLinkActuals.hpp"
 #include "SystemControlSetpoints.hpp"
 #include "SystemState.hpp"
 #include "barometer/BarometerData.hpp"
@@ -11,6 +10,7 @@
 #include "control/attitude/StickCommand.hpp"
 #include "imu/ImuData.hpp"
 #include "imu/ImuStatus.hpp"
+#include "rc/crsf/LinkStats.hpp"
 
 namespace aeromight_boundaries
 {
@@ -37,7 +37,7 @@ struct AeromightData
    boundaries::SharedData<SystemControlSetpoints> system_control_setpoints{};
 
    // Radio Link
-   boundaries::SharedData<RadioLinkActuals> radio_link_actuals{};
+   boundaries::SharedData<rc::crsf::LinkStats> link_stats_actuals{};
 };
 
 extern AeromightData aeromight_data;

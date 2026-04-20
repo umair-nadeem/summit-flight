@@ -5,9 +5,9 @@
 #include "aeromight_link/RadioLink.hpp"
 #include "aeromight_link/RadioReceiver.hpp"
 #include "aeromight_link/RadioTransmitter.hpp"
-#include "crsf/Crsf.hpp"
 #include "hw/uart/uart.hpp"
 #include "logging/LogClient.hpp"
+#include "rc/crsf/CrsfDecoder.hpp"
 #include "rtos/periodic_task.hpp"
 #include "sys_time/ClockSource.hpp"
 #include "task_params.hpp"
@@ -30,8 +30,7 @@ extern "C"
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
       // crsf
-      constexpr float   rc_channel_deadband           = 0.05f;
-      constexpr uint8_t good_uplink_quality_threshold = 50u;
+      constexpr float rc_channel_deadband = 0.05f;
 
       // battery
       constexpr float    voltage_divider_r1_ohm                      = 100'000.0f;
@@ -64,20 +63,31 @@ extern "C"
                             battery_voltage_sensing_period_in_ms,
                             battery_telemetry_transmission_period_in_ms};
 
+      rc::crsf::ChannelConfigs crsf_channel_configs{{
+          {rc::crsf::ChannelType::normalized_float, rc_channel_deadband, -1.0f, 1.0f},   // roll
+          {rc::crsf::ChannelType::normalized_float, rc_channel_deadband, -1.0f, 1.0f},   // pitch
+          {rc::crsf::ChannelType::normalized_float, rc_channel_deadband, 0.0f, 1.0f},    // throttle
+          {rc::crsf::ChannelType::normalized_float, rc_channel_deadband, -1.0f, 1.0f},   // yaw
+          {rc::crsf::ChannelType::unused},
+          {rc::crsf::ChannelType::bistate},                                              // arm switch
+          {rc::crsf::ChannelType::bistate},                                              // imu calirbration
+      }};
+
+      rc::crsf::CrsfDecoder crsf_decoder{crsf_channel_configs};
+
       aeromight_link::RadioReceiver<decltype(data->radio_link_uart.radio_input_receiver),
                                     decltype(data->radio_link_uart.radio_queue_buffer_index_sender),
-                                    crsf::Crsf,
+                                    decltype(crsf_decoder),
                                     sys_time::ClockSource,
                                     decltype(logger_radio_link)>
           radio_receiver{
               data->radio_link_uart.radio_input_receiver,
               data->radio_link_uart.radio_queue_buffer_index_sender,
+              crsf_decoder,
               aeromight_boundaries::aeromight_data.stick_command,
               aeromight_boundaries::aeromight_data.system_control_setpoints,
-              aeromight_boundaries::aeromight_data.radio_link_actuals,
-              logger_radio_link,
-              rc_channel_deadband,
-              good_uplink_quality_threshold};
+              aeromight_boundaries::aeromight_data.link_stats_actuals,
+              logger_radio_link};
 
       aeromight_link::RadioLink<decltype(radio_receiver),
                                 decltype(radio_transmitter)>

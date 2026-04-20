@@ -2,7 +2,6 @@
 
 #include "SystemManagerState.hpp"
 #include "aeromight_boundaries/HealthSummary.hpp"
-#include "aeromight_boundaries/RadioLinkActuals.hpp"
 #include "aeromight_boundaries/SystemControlSetpoints.hpp"
 #include "aeromight_boundaries/SystemState.hpp"
 #include "boundaries/SharedData.hpp"
@@ -11,6 +10,7 @@
 #include "interfaces/pcb_component/ILed.hpp"
 #include "interfaces/rtos/INotifier.hpp"
 #include "interfaces/rtos/IQueueReceiver.hpp"
+#include "rc/crsf/LinkStats.hpp"
 
 namespace aeromight_system
 {
@@ -24,7 +24,7 @@ class SystemManagerStateHandler
 {
    using SystemStatePublisher             = boundaries::SharedData<aeromight_boundaries::SystemState>;
    using SystemControlSetpointsSubscriber = boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints>;
-   using RadioLinkActualsSubscriber       = boundaries::SharedData<aeromight_boundaries::RadioLinkActuals>;
+   using LinkStatsActualsSubscriber       = boundaries::SharedData<rc::crsf::LinkStats>;
 
 public:
    explicit SystemManagerStateHandler(QueueReceiver&                          health_summary_queue_receiver,
@@ -33,9 +33,10 @@ public:
                                       Led&                                    led,
                                       SystemStatePublisher&                   system_state_publisher,
                                       const SystemControlSetpointsSubscriber& system_control_setpoints_subscriber,
-                                      const RadioLinkActualsSubscriber&       radio_link_actuals_subscriber,
+                                      const LinkStatsActualsSubscriber&       link_stats_actuals_subscriber,
                                       Logger&                                 logger,
                                       const float                             stick_input_deadband_abs,
+                                      const uint8_t                           good_uplink_quality_pct,
                                       const float                             min_good_signal_rssi_dbm,
                                       const uint32_t                          max_age_stale_data_ms,
                                       const uint32_t                          min_state_debounce_duration_ms,
@@ -47,9 +48,10 @@ public:
          m_led{led},
          m_system_state_publisher(system_state_publisher),
          m_system_control_setpoints_subscriber(system_control_setpoints_subscriber),
-         m_radio_link_actuals_subscriber(radio_link_actuals_subscriber),
+         m_link_stats_actuals_subscriber(link_stats_actuals_subscriber),
          m_logger{logger},
          m_stick_input_deadband_abs{stick_input_deadband_abs},
+         m_good_uplink_quality_pct{good_uplink_quality_pct},
          m_min_good_signal_rssi_dbm{min_good_signal_rssi_dbm},
          m_max_age_stale_data_ms{max_age_stale_data_ms},
          m_min_state_debounce_duration_ms{min_state_debounce_duration_ms},
@@ -77,10 +79,10 @@ public:
       }
    }
 
-   void read_radio_input()
+   void get_rc_input()
    {
       m_system_control_setpoints = m_system_control_setpoints_subscriber.get_latest();
-      m_radio_link_actuals       = m_radio_link_actuals_subscriber.get_latest();
+      m_link_stats_actuals       = m_link_stats_actuals_subscriber.get_latest();
    }
 
    void publish_system_state()
@@ -195,7 +197,7 @@ public:
 
    bool radio_input_received() const
    {
-      return ((m_system_control_setpoints.timestamp_ms > 0) && (m_radio_link_actuals.timestamp_ms > 0));
+      return ((m_system_control_setpoints.timestamp_ms > 0) && (m_link_stats_actuals.timestamp_ms > 0));
    }
 
    bool timeout_sensors_readiness() const
@@ -251,7 +253,7 @@ public:
    bool stale_radio_input() const
    {
       if (((m_current_time_ms - m_system_control_setpoints.timestamp_ms) >= m_max_age_stale_data_ms) ||
-          ((m_current_time_ms - m_radio_link_actuals.timestamp_ms) >= m_max_age_stale_data_ms))
+          ((m_current_time_ms - m_link_stats_actuals.timestamp_ms) >= m_max_age_stale_data_ms))
       {
          return true;
       }
@@ -298,8 +300,8 @@ public:
    {
       if (!stale_radio_input())
       {
-         return (m_radio_link_actuals.data.link_status_ok &&
-                 (m_radio_link_actuals.data.link_rssi_dbm >= m_min_good_signal_rssi_dbm));
+         return ((m_link_stats_actuals.data.uplink_quality_pct > m_good_uplink_quality_pct) &&
+                 (m_link_stats_actuals.data.uplink_rssi_1_dbm >= m_min_good_signal_rssi_dbm));
       }
 
       return false;
@@ -348,9 +350,10 @@ private:
    Led&                                     m_led;
    SystemStatePublisher&                    m_system_state_publisher;
    const SystemControlSetpointsSubscriber&  m_system_control_setpoints_subscriber;
-   const RadioLinkActualsSubscriber&        m_radio_link_actuals_subscriber;
+   const LinkStatsActualsSubscriber&        m_link_stats_actuals_subscriber;
    Logger&                                  m_logger;
    const float                              m_stick_input_deadband_abs;
+   const uint8_t                            m_good_uplink_quality_pct;
    const float                              m_min_good_signal_rssi_dbm;
    const uint32_t                           m_max_age_stale_data_ms;
    const uint32_t                           m_min_state_debounce_duration_ms;
@@ -359,7 +362,7 @@ private:
    aeromight_boundaries::SystemState        m_system_state{};
    aeromight_boundaries::HealthSummary      m_health_summary{};
    SystemControlSetpointsSubscriber::Sample m_system_control_setpoints{};
-   RadioLinkActualsSubscriber::Sample       m_radio_link_actuals{};
+   LinkStatsActualsSubscriber::Sample       m_link_stats_actuals{};
    SystemManagerState                       m_state{SystemManagerState::init};
    uint32_t                                 m_current_time_ms{0};
    uint32_t                                 m_reference_time_ms{0};

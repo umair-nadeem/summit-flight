@@ -40,10 +40,10 @@ public:
    StickCommand apply_filter(const StickCommand& command, const float dt_s)
    {
       return StickCommand{
-          .throttle = command.throttle,
           .roll     = m_roll_input_lpf.apply(command.roll, dt_s),
           .pitch    = m_pitch_input_lpf.apply(command.pitch, dt_s),
-          .yaw      = m_yaw_input_lpf.apply(command.yaw, dt_s)};
+          .yaw      = m_yaw_input_lpf.apply(command.yaw, dt_s),
+          .throttle = command.throttle};
    }
 
    void reset()

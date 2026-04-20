@@ -20,9 +20,10 @@ public:
                           Led&                                                                        led,
                           boundaries::SharedData<aeromight_boundaries::SystemState>&                  system_state_publisher,
                           const boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints>& system_control_setpoints_subscriber,
-                          const boundaries::SharedData<aeromight_boundaries::RadioLinkActuals>&       radio_link_actuals_subscriber,
+                          const boundaries::SharedData<rc::crsf::LinkStats>&                          link_stats_actuals_subscriber,
                           Logger&                                                                     logger,
                           const float                                                                 stick_input_deadband_abs,
+                          const uint8_t                                                               good_uplink_quality_pct,
                           const float                                                                 min_good_signal_rssi_dbm,
                           const uint32_t                                                              period_ms,
                           const uint32_t                                                              max_age_stale_data_ms,
@@ -36,9 +37,10 @@ public:
                          led,
                          system_state_publisher,
                          system_control_setpoints_subscriber,
-                         radio_link_actuals_subscriber,
+                         link_stats_actuals_subscriber,
                          logger,
                          stick_input_deadband_abs,
+                         good_uplink_quality_pct,
                          min_good_signal_rssi_dbm,
                          max_age_stale_data_ms,
                          min_state_debounce_duration_ms,
@@ -52,7 +54,7 @@ public:
    {
       m_state_handler.get_time();
       m_state_handler.read_health_summary();
-      m_state_handler.read_radio_input();
+      m_state_handler.get_rc_input();
 
       m_state_machine.process_event(typename StateMachineDef::EventTick{});
 

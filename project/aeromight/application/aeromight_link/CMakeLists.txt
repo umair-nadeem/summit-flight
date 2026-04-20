@@ -3,6 +3,5 @@ add_module(
    LIBS
       aeromight_boundaries
       boundaries
-      crsf
       error
 )

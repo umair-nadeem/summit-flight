@@ -27,6 +27,7 @@ extern "C"
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
       constexpr float    stick_input_deadband_abs       = 0.1f;
+      constexpr uint8_t  good_uplink_quality_pct        = 50u;
       constexpr float    min_good_signal_rssi_dbm       = -110.0f;
       constexpr uint32_t max_age_stale_data_ms          = 1000u;
       constexpr uint32_t min_state_debounce_duration_ms = 100u;
@@ -48,9 +49,10 @@ extern "C"
                          led,
                          aeromight_boundaries::aeromight_data.system_state_info,
                          aeromight_boundaries::aeromight_data.system_control_setpoints,
-                         aeromight_boundaries::aeromight_data.radio_link_actuals,
+                         aeromight_boundaries::aeromight_data.link_stats_actuals,
                          logger_system_manager_task,
                          stick_input_deadband_abs,
+                         good_uplink_quality_pct,
                          min_good_signal_rssi_dbm,
                          controller::task::system_manager_task_period_in_ms,
                          max_age_stale_data_ms,
