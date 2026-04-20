@@ -1,4 +1,4 @@
-#include "aeromight_link/RadioReceiver.hpp"
+#include "aeromight_rc/RadioReceiver.hpp"
 
 #include <cstdint>
 
@@ -10,6 +10,14 @@
 #include "mocks/rtos/QueueReceiver.hpp"
 #include "mocks/rtos/QueueSender.hpp"
 
+class CrsfDecoderMock
+{
+public:
+   MOCK_METHOD(rc::crsf::CrsfDecoderResult, decode_crsf, (std::span<const uint8_t>), ());
+   MOCK_METHOD(rc::crsf::ChannelValues, get_rc_channels, (), ());
+   MOCK_METHOD(rc::crsf::LinkStats, get_link_stats, (), ());
+};
+
 class RadioReceiverTest : public ::testing::Test
 {
 public:
@@ -20,8 +28,7 @@ public:
    }
 
 protected:
-   static constexpr float   rc_channel_deadband           = 0.1f;
-   static constexpr uint8_t good_uplink_quality_threshold = 50u;
+   static constexpr float rc_channel_deadband = 0.1f;
 
    static constexpr uint16_t rc_channel_raw_deadband(uint16_t value) noexcept
    {
@@ -30,23 +37,25 @@ protected:
 
    mocks::rtos::QueueReceiver<boundaries::BufferWithOwnershipIndex<std::byte>> queue_receiver_mock{};
    mocks::rtos::QueueSender<std::size_t>                                       queue_sender_mock{};
+   CrsfDecoderMock                                                             crsf_decoder_mock{};
    mocks::common::ClockSource                                                  sys_clock{};
+   boundaries::SharedData<control::attitude::StickCommand>                     stick_commands{};
    boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints>        system_control_setpoints_storage{};
-   boundaries::SharedData<aeromight_boundaries::RadioLinkActuals>              radio_link_actuals_storage{};
+   boundaries::SharedData<rc::crsf::LinkStats>                                 link_stats_publisher{};
    mocks::common::Logger                                                       logger_mock{"radioReceiver"};
 
-   aeromight_link::RadioReceiver<decltype(queue_receiver_mock),
-                                 decltype(queue_sender_mock),
-                                 mocks::common::Crsf,
-                                 mocks::common::ClockSource,
-                                 decltype(logger_mock)>
+   aeromight_rc::RadioReceiver<decltype(queue_receiver_mock),
+                               decltype(queue_sender_mock),
+                               decltype(crsf_decoder_mock),
+                               mocks::common::ClockSource,
+                               decltype(logger_mock)>
        radio_receiver{queue_receiver_mock,
                       queue_sender_mock,
+                      crsf_decoder_mock,
+                      stick_commands,
                       system_control_setpoints_storage,
-                      radio_link_actuals_storage,
-                      logger_mock,
-                      rc_channel_deadband,
-                      good_uplink_quality_threshold};
+                      link_stats_publisher,
+                      logger_mock};
 };
 
 TEST_F(RadioReceiverTest, no_queue_item_is_received)
@@ -84,51 +93,13 @@ TEST_F(RadioReceiverTest, crsf_parsing_failed)
    sys_clock.m_sec = 1u;
    radio_receiver.execute();
 
-   const auto radio_link_actuals = radio_link_actuals_storage.get_latest();
+   const auto radio_link_actuals = link_stats_publisher.get_latest();
 
    EXPECT_EQ(radio_link_actuals.timestamp_ms, 0);
-   EXPECT_EQ(radio_link_actuals.data.link_rssi_dbm, 0);
-   EXPECT_EQ(radio_link_actuals.data.link_quality_pct, 0);
-   EXPECT_EQ(radio_link_actuals.data.link_snr_db, 0);
+   EXPECT_EQ(radio_link_actuals.data.uplink_rssi_1_dbm, 0);
+   EXPECT_EQ(radio_link_actuals.data.uplink_quality_pct, 0);
+   EXPECT_EQ(radio_link_actuals.data.uplink_snr_db, 0);
    EXPECT_EQ(radio_link_actuals.data.tx_power_mw, 0);
-   EXPECT_EQ(radio_link_actuals.data.link_status_ok, false);
-
-   EXPECT_EQ(mocks::common::Crsf::buffer_to_parse.data(), reinterpret_cast<const uint8_t*>(message.buffer.data()));
-}
-
-TEST_F(RadioReceiverTest, check_rc_channels)
-{
-   boundaries::BufferWithOwnershipIndex<std::byte> message{};
-   crsf::CrsfRcChannels                            rc_channels{};
-   rc_channels.channels[aeromight_link::rc_channel_roll]        = crsf::rc_channel_value_min + rc_channel_raw_deadband(crsf::rc_channel_value_min);
-   rc_channels.channels[aeromight_link::rc_channel_pitch]       = crsf::rc_channel_value_max - rc_channel_raw_deadband(crsf::rc_channel_value_max);
-   rc_channels.channels[aeromight_link::rc_channel_throttle]    = crsf::rc_channel_value_min * 2u;
-   rc_channels.channels[aeromight_link::rc_channel_yaw]         = (crsf::rc_channel_value_min + crsf::rc_channel_value_max) / 2u;
-   rc_channels.channels[aeromight_link::rc_channel_arm_state]   = ((crsf::rc_channel_value_min + crsf::rc_channel_value_max) / 2u) + 1u;
-   rc_channels.channels[aeromight_link::rc_channel_flight_mode] = ((crsf::rc_channel_value_min + crsf::rc_channel_value_max) / 2u);
-   rc_channels.channels[aeromight_link::rc_channel_kill_switch] = ((crsf::rc_channel_value_min + crsf::rc_channel_value_max) / 2u) + crsf::rc_channel_value_min;
-
-   crsf::CrsfPacket packet{crsf::FrameType::rc_channels_packed, rc_channels};   // rc channels
-
-   mocks::common::Crsf::parse_result = true;                                    // parsing result
-   mocks::common::Crsf::crsf_packet  = packet;                                  // update crsf packet that will be returned
-
-   EXPECT_CALL(queue_receiver_mock, receive_if_available()).WillOnce(testing::Return(message));
-   EXPECT_CALL(queue_sender_mock, send_blocking(0));
-
-   sys_clock.m_sec = 1u;
-   radio_receiver.execute();
-
-   const auto system_control_setpoints = system_control_setpoints_storage.get_latest();
-
-   EXPECT_NEAR(system_control_setpoints.data.input.roll, -0.9795f, 0.01f);
-   EXPECT_NEAR(system_control_setpoints.data.input.pitch, 0.75459f, 0.01f);
-   EXPECT_NEAR(system_control_setpoints.data.input.throttle, 0.00549f, 0.01f);
-   EXPECT_NEAR(system_control_setpoints.data.input.yaw, 0.0f, 0.01f);
-   EXPECT_EQ(system_control_setpoints.timestamp_ms, sys_clock.m_sec);
-   EXPECT_EQ(system_control_setpoints.data.state, aeromight_boundaries::SystemArmedState::disarm);
-   EXPECT_EQ(system_control_setpoints.data.mode, aeromight_boundaries::FlightMode::altitude_hold);
-   EXPECT_EQ(system_control_setpoints.data.kill_switch_active, false);
 
    EXPECT_EQ(mocks::common::Crsf::buffer_to_parse.data(), reinterpret_cast<const uint8_t*>(message.buffer.data()));
 }
@@ -159,14 +130,13 @@ TEST_F(RadioReceiverTest, check_link_stats)
    sys_clock.m_sec = 1u;
    radio_receiver.execute();
 
-   const auto radio_link_actuals = radio_link_actuals_storage.get_latest();
+   const auto radio_link_actuals = link_stats_publisher.get_latest();
 
    EXPECT_EQ(radio_link_actuals.timestamp_ms, sys_clock.m_sec);
-   EXPECT_EQ(radio_link_actuals.data.link_rssi_dbm, link_stats.uplink_rssi_1 * -1);
-   EXPECT_EQ(radio_link_actuals.data.link_quality_pct, link_stats.uplink_link_quality);
-   EXPECT_EQ(radio_link_actuals.data.link_snr_db, link_stats.uplink_snr);
+   EXPECT_EQ(radio_link_actuals.data.uplink_rssi_1_dbm, link_stats.uplink_rssi_1 * -1);
+   EXPECT_EQ(radio_link_actuals.data.uplink_quality_pct, link_stats.uplink_link_quality);
+   EXPECT_EQ(radio_link_actuals.data.uplink_snr_db, link_stats.uplink_snr);
    EXPECT_EQ(radio_link_actuals.data.tx_power_mw, crsf::get_uplink_rf_power_mw(link_stats.uplink_rf_power));
-   EXPECT_EQ(radio_link_actuals.data.link_status_ok, (link_stats.uplink_link_quality > good_uplink_quality_threshold));
 
    EXPECT_EQ(mocks::common::Crsf::buffer_to_parse.data(), reinterpret_cast<const uint8_t*>(message.buffer.data()));
 }

@@ -3,4 +3,5 @@ add_module(
    LIBS
       boundaries
       sys_time
+      types
 )

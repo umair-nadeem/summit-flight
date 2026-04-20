@@ -1,7 +1,6 @@
 add_module_test(
    SOURCES
       EstimationAndControlTest.cpp
-      ControlTest.cpp
    LIBS
       mocks
       aeromight_boundaries

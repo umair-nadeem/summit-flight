@@ -10,6 +10,11 @@ namespace mocks::common
 class ClockSource
 {
 public:
+   static uint32_t now_us()
+   {
+      return u_sec;
+   }
+
    static uint32_t now_ms()
    {
       return m_sec;
@@ -22,10 +27,12 @@ public:
 
    static void reset()
    {
+      u_sec = 0;
       m_sec = 0;
       sec   = 0;
    }
 
+   inline static uint32_t u_sec = 0;
    inline static uint32_t m_sec = 0;
    inline static uint32_t sec   = 0;
 };

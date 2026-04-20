@@ -25,7 +25,7 @@ inline void apply_thrust_linearization(T& motor_outputs, const float linearizati
       for (std::size_t i = 0; i < T::size; i++)
       {
          const float thrust = motor_outputs[i];
-         motor_outputs[i]   = std::clamp(-tmp1 + std::sqrtf(tmp2 + (thrust * inv_a)), motor_min, motor_max);
+         motor_outputs[i]   = std::clamp(-tmp1 + sqrtf(tmp2 + (thrust * inv_a)), motor_min, motor_max);
       }
    }
 }

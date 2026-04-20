@@ -17,7 +17,11 @@
 namespace aeromight_rc
 {
 
-template <typename QueueReceiver, typename QueueSender, typename CrsfDecoder, interfaces::IClockSource ClockSource, typename Logger>
+template <typename QueueReceiver,
+          typename QueueSender,
+          typename CrsfDecoder,
+          interfaces::IClockSource ClockSource,
+          typename Logger>
 class RadioReceiver
 {
 

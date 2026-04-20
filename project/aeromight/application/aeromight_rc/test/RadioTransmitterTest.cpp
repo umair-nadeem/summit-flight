@@ -1,4 +1,4 @@
-#include "aeromight_link/RadioTransmitter.hpp"
+#include "aeromight_rc/RadioTransmitter.hpp"
 
 #include <gmock/gmock.h>
 
@@ -18,14 +18,16 @@ public:
 protected:
    static constexpr uint32_t battery_status_transmission_period_in_ms = 5u;
 
-   std::array<std::byte, crsf::max_buffer_size> uart_tx_buffer{};
-   mocks::hw::UartTransmitter                   uart_transmitter_mock{};
-   mocks::common::ClockSource                   sys_clock{};
+   std::array<std::byte, crsf::max_buffer_size>          uart_tx_buffer{};
+   mocks::hw::UartTransmitter                            uart_transmitter_mock{};
+   mocks::common::ClockSource                            sys_clock{};
+   boundaries::SharedData<power::battery::BatteryStatus> battery_status{};
 
-   aeromight_link::RadioTransmitter<decltype(uart_transmitter_mock),
-                                    mocks::common::Crsf,
-                                    mocks::common::ClockSource>
+   aeromight_rc::RadioTransmitter<decltype(uart_transmitter_mock),
+                                  mocks::common::Crsf,
+                                  mocks::common::ClockSource>
        radio_transmitter{uart_transmitter_mock,
+                         battery_status,
                          battery_status_transmission_period_in_ms};
 };
 
@@ -47,8 +49,8 @@ TEST_F(RadioTransmitterTest, check_battery_telemetry)
    EXPECT_CALL(uart_transmitter_mock, send_blocking(10));
    radio_transmitter.execute();
 
-   EXPECT_EQ(mocks::common::Crsf::battery_telemetry_packet.voltage_v, 5u);
-   EXPECT_EQ(mocks::common::Crsf::battery_telemetry_packet.current_a, 10u);
+   EXPECT_EQ(mocks::common::Crsf::battery_telemetry_packet.voltage_10uv, 5u);
+   EXPECT_EQ(mocks::common::Crsf::battery_telemetry_packet.current_10ua, 10u);
    EXPECT_EQ(mocks::common::Crsf::battery_telemetry_packet.capacity_used_mah, 1024u);
    EXPECT_EQ(mocks::common::Crsf::battery_telemetry_packet.remaining_pct, 50u);
 

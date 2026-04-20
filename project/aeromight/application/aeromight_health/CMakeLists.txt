@@ -2,6 +2,8 @@ add_module(
    SOURCES
    LIBS
       aeromight_boundaries
-      barometer_sensor
+      barometer
       error
+      imu
+      power
 )

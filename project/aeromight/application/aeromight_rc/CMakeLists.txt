@@ -3,5 +3,8 @@ add_module(
    LIBS
       aeromight_boundaries
       boundaries
+      control
       error
+      power
+      rc
 )

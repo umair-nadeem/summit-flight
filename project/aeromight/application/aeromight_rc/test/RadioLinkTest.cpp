@@ -1,4 +1,4 @@
-#include "aeromight_link/RadioLink.hpp"
+#include "aeromight_rc/RadioLink.hpp"
 
 #include <gmock/gmock.h>
 
@@ -12,9 +12,9 @@ protected:
    mocks::common::Executable radio_receiver_mock{};
    mocks::common::Executable radio_transmitter_mock{};
 
-   aeromight_link::RadioLink<decltype(radio_receiver_mock), decltype(radio_transmitter_mock)> radio_link{radio_receiver_mock,
-                                                                                                         radio_transmitter_mock,
-                                                                                                         execution_period_ms};
+   aeromight_rc::RadioLink<decltype(radio_receiver_mock), decltype(radio_transmitter_mock)> radio_link{radio_receiver_mock,
+                                                                                                       radio_transmitter_mock,
+                                                                                                       execution_period_ms};
 };
 
 TEST_F(RadioLinkTest, check_execution)
