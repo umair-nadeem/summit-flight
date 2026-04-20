@@ -227,12 +227,12 @@ public:
 
    bool arm() const
    {
-      return (m_system_control_setpoints.data.state == aeromight_boundaries::SystemArmedState::arm);
+      return m_system_control_setpoints.data.arm;
    }
 
    bool disarm() const
    {
-      return (m_system_control_setpoints.data.state == aeromight_boundaries::SystemArmedState::disarm);
+      return !m_system_control_setpoints.data.arm;
    }
 
    bool imu_calibration() const

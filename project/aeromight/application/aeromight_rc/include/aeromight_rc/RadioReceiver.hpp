@@ -62,9 +62,7 @@ public:
             // system control setpoints
             const auto arm_state = get_bistate_channel(rc_channels, rc_channel_arm_state);
 
-            m_system_control_setpoints.state = (arm_state == rc::crsf::Bistate::high) ?
-                                                   aeromight_boundaries::SystemArmedState::arm :
-                                                   aeromight_boundaries::SystemArmedState::disarm;
+            m_system_control_setpoints.arm = (arm_state == rc::crsf::Bistate::high);
 
             const auto imu_calibration = get_bistate_channel(rc_channels, rc_channel_imu_calibration);
 
