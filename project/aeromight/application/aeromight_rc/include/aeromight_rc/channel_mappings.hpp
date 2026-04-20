@@ -1,6 +1,6 @@
 #pragma once
 
-namespace aeromight_link
+namespace aeromight_rc
 {
 
 // Tx channel mapping from Tx is at offset of 1 e.g. roll channel is 1 and so on...
@@ -12,4 +12,4 @@ static constexpr uint8_t rc_channel_yaw      = 3u;
 static constexpr uint8_t rc_channel_arm_state       = 5u;
 static constexpr uint8_t rc_channel_imu_calibration = 6u;
 
-}   // namespace aeromight_link
+}   // namespace aeromight_rc

@@ -7,7 +7,7 @@
 #include "interfaces/IClockSource.hpp"
 #include "interfaces/hw/IUartTransmitter.hpp"
 
-namespace aeromight_link
+namespace aeromight_rc
 {
 
 template <typename Battery, interfaces::hw::IUartTransmitter UartTransmitter, typename Crsf, interfaces::IClockSource ClockSource>
@@ -79,4 +79,4 @@ private:
    uint32_t          m_last_battery_transmission_time{0};
 };
 
-}   // namespace aeromight_link
+}   // namespace aeromight_rc

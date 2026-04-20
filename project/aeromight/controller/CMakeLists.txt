@@ -34,7 +34,7 @@ target_link_libraries(aeromight_lib INTERFACE
    aeromight_estimation
    aeromight_system
    aeromight_health
-   aeromight_link
+   aeromight_rc
    barometer
    bmp390
    control

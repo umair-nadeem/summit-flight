@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace aeromight_link
+namespace aeromight_rc
 {
 
 template <typename RadioReceiver, typename RadioTransmitter>
@@ -35,4 +35,4 @@ private:
    const uint32_t    m_period_in_ms;
 };
 
-}   // namespace aeromight_link
+}   // namespace aeromight_rc

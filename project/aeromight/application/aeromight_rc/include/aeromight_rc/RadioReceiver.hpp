@@ -14,7 +14,7 @@
 #include "rc/crsf/CrsfDecoderResult.hpp"
 #include "rc/crsf/LinkStats.hpp"
 
-namespace aeromight_link
+namespace aeromight_rc
 {
 
 template <typename QueueReceiver, typename QueueSender, typename CrsfDecoder, interfaces::IClockSource ClockSource, typename Logger>
@@ -106,4 +106,4 @@ private:
    rc::crsf::LinkStats                          m_radio_link_actuals{};
 };
 
-}   // namespace aeromight_link
+}   // namespace aeromight_rc

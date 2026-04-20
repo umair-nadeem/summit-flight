@@ -2,9 +2,9 @@
 #include "aeromight_battery/Battery.hpp"
 #include "aeromight_battery/VoltageHysterisis.hpp"
 #include "aeromight_boundaries/AeromightData.hpp"
-#include "aeromight_link/RadioLink.hpp"
-#include "aeromight_link/RadioReceiver.hpp"
-#include "aeromight_link/RadioTransmitter.hpp"
+#include "aeromight_rc/RadioLink.hpp"
+#include "aeromight_rc/RadioReceiver.hpp"
+#include "aeromight_rc/RadioTransmitter.hpp"
 #include "hw/uart/uart.hpp"
 #include "logging/LogClient.hpp"
 #include "rc/crsf/CrsfDecoder.hpp"
@@ -54,10 +54,10 @@ extern "C"
                   battery_voltage_sense,
                   battery_voltage_calibration_constant};
 
-      aeromight_link::RadioTransmitter<decltype(battery),
-                                       decltype(data->radio_link_uart.transmitter),
-                                       crsf::Crsf,
-                                       sys_time::ClockSource>
+      aeromight_rc::RadioTransmitter<decltype(battery),
+                                     decltype(data->radio_link_uart.transmitter),
+                                     crsf::Crsf,
+                                     sys_time::ClockSource>
           radio_transmitter{battery,
                             data->radio_link_uart.transmitter,
                             battery_voltage_sensing_period_in_ms,
@@ -75,11 +75,11 @@ extern "C"
 
       rc::crsf::CrsfDecoder crsf_decoder{crsf_channel_configs};
 
-      aeromight_link::RadioReceiver<decltype(data->radio_link_uart.radio_input_receiver),
-                                    decltype(data->radio_link_uart.radio_queue_buffer_index_sender),
-                                    decltype(crsf_decoder),
-                                    sys_time::ClockSource,
-                                    decltype(logger_radio_link)>
+      aeromight_rc::RadioReceiver<decltype(data->radio_link_uart.radio_input_receiver),
+                                  decltype(data->radio_link_uart.radio_queue_buffer_index_sender),
+                                  decltype(crsf_decoder),
+                                  sys_time::ClockSource,
+                                  decltype(logger_radio_link)>
           radio_receiver{
               data->radio_link_uart.radio_input_receiver,
               data->radio_link_uart.radio_queue_buffer_index_sender,
@@ -89,8 +89,8 @@ extern "C"
               aeromight_boundaries::aeromight_data.link_stats_actuals,
               logger_radio_link};
 
-      aeromight_link::RadioLink<decltype(radio_receiver),
-                                decltype(radio_transmitter)>
+      aeromight_rc::RadioLink<decltype(radio_receiver),
+                              decltype(radio_transmitter)>
           radio_link{radio_receiver,
                      radio_transmitter,
                      controller::task::radio_link_task_period_in_ms};
