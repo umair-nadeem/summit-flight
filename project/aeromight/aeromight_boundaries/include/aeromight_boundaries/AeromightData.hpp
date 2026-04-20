@@ -10,6 +10,7 @@
 #include "control/attitude/StickCommand.hpp"
 #include "imu/ImuData.hpp"
 #include "imu/ImuStatus.hpp"
+#include "power/battery/BatteryStatus.hpp"
 #include "rc/crsf/LinkStats.hpp"
 
 namespace aeromight_boundaries
@@ -31,6 +32,8 @@ struct AeromightData
    // Control
    boundaries::SharedData<ControlStatus>                   control_health{};
    boundaries::SharedData<control::attitude::StickCommand> stick_command{};
+
+   boundaries::SharedData<power::battery::BatteryStatus> battery_status{};
 
    // System Manager
    boundaries::SharedData<SystemState>            system_state_info{};

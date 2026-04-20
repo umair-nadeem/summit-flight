@@ -1,11 +1,12 @@
 #pragma once
 
-namespace aeromight_battery
+namespace power::battery
 {
 
-struct PercentageConvertor16V8
+struct PercentageModelLipo4S
 {
-   static constexpr uint8_t to_percentage(int32_t mv) noexcept
+   // cppcheck-suppress functionStatic
+   constexpr uint8_t to_percentage(int32_t mv) const noexcept
    {
       if (mv >= 16800)
          return 100u;
@@ -31,4 +32,4 @@ struct PercentageConvertor16V8
    }
 };
 
-}   // namespace aeromight_battery
+}   // namespace power::battery

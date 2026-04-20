@@ -8,17 +8,23 @@
 #include "imu/ImuStatus.hpp"
 #include "interfaces/IClockSource.hpp"
 #include "interfaces/rtos/IQueueSender.hpp"
+#include "power/battery/BatteryStatus.hpp"
 
 namespace aeromight_health
 {
 
-template <interfaces::rtos::IQueueSender<aeromight_boundaries::HealthSummary> QueueSender,
+template <typename Battery,
+          interfaces::rtos::IQueueSender<aeromight_boundaries::HealthSummary> QueueSender,
           interfaces::IClockSource                                            ClockSource,
           typename Logger>
 class HealthMonitoring
 {
+   using BatteryStatusPublisher = boundaries::SharedData<power::battery::BatteryStatus>;
+
 public:
-   explicit HealthMonitoring(QueueSender&                                                         queue_sender,
+   explicit HealthMonitoring(Battery&                                                             battery,
+                             QueueSender&                                                         queue_sender,
+                             BatteryStatusPublisher&                                              battery_status_publisher,
                              const boundaries::SharedData<imu::ImuStatus>&                        imu_health_subscriber,
                              const boundaries::SharedData<barometer::BarometerStatus>&            barometer_health_subscriber,
                              const boundaries::SharedData<aeromight_boundaries::EstimatorStatus>& estimation_health_subscriber,
@@ -30,7 +36,9 @@ public:
                              const uint32_t                                                       max_age_estimation_health_ms,
                              const uint32_t                                                       max_age_control_health_ms,
                              const bool                                                           evaluate_barometer_health)
-       : m_queue_sender{queue_sender},
+       : m_battery{battery},
+         m_queue_sender{queue_sender},
+         m_battery_status_publisher{battery_status_publisher},
          m_imu_health_subscriber{imu_health_subscriber},
          m_barometer_health_subscriber{barometer_health_subscriber},
          m_estimation_health_subscriber{estimation_health_subscriber},
@@ -50,9 +58,13 @@ public:
    {
       m_current_time_ms = ClockSource::now_ms();
 
+      m_battery.execute();
+
       get_health_updates();
 
       publish_health_summary();
+
+      publish_battery_status();
    }
 
    aeromight_boundaries::HealthSummary get_health_summary() const
@@ -180,7 +192,15 @@ private:
       }
    }
 
+   void publish_battery_status()
+   {
+      m_battery_status = m_battery.get_status();
+      m_battery_status_publisher.update_latest(m_battery_status, m_current_time_ms);
+   }
+
+   Battery&                                                             m_battery;
    QueueSender&                                                         m_queue_sender;
+   BatteryStatusPublisher&                                              m_battery_status_publisher;
    const boundaries::SharedData<imu::ImuStatus>&                        m_imu_health_subscriber;
    const boundaries::SharedData<barometer::BarometerStatus>&            m_barometer_health_subscriber;
    const boundaries::SharedData<aeromight_boundaries::EstimatorStatus>& m_estimation_health_subscriber;
@@ -193,6 +213,7 @@ private:
    const uint32_t                                                       m_max_age_control_health_ms;
    const bool                                                           m_evaluate_barometer_health;
    aeromight_boundaries::HealthSummary                                  m_health_summary{};
+   power::battery::BatteryStatus                                        m_battery_status{};
    uint32_t                                                             m_current_time_ms{0};
 };
 

@@ -46,6 +46,7 @@ target_link_libraries(aeromight_lib INTERFACE
    led
    logging
    mpu6500
+   power
    rc
 )
 

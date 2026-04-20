@@ -3,6 +3,8 @@
 #include "aeromight_health/HealthMonitoring.hpp"
 #include "error/error_handler.hpp"
 #include "logging/LogClient.hpp"
+#include "power/battery/Battery.hpp"
+#include "power/battery/BatteryPercentageModel.hpp"
 #include "rtos/periodic_task.hpp"
 #include "sys_time/ClockSource.hpp"
 #include "task_params.hpp"
@@ -29,12 +31,33 @@ extern "C"
       constexpr uint32_t max_age_control_health_ms          = controller::task::health_monitoring_task_period_in_ms * 5u;
       constexpr bool     evaluate_barometer_health          = false;
 
+      // battery
+      constexpr float    voltage_divider_r1_ohm               = 100'000.0f;
+      constexpr float    voltage_divider_r2_ohm               = 22'000.0f;
+      constexpr float    vref_v                               = 3.3f;
+      constexpr uint16_t adc_resolution                       = 4095u;
+      constexpr float    battery_voltage_calibration_constant = 0.988f;
+
       LogClient logger_health_monitoring{logging::logging_queue_sender, "health"};
 
-      aeromight_health::HealthMonitoring<decltype(data->health_summary_queue_sender),
+      power::battery::VoltageSenseConfig battery_voltage_sense{voltage_divider_r1_ohm, voltage_divider_r2_ohm, vref_v, adc_resolution};
+
+      power::battery::PercentageModelLipo4S percentage_convertor{};
+
+      power::battery::Battery<decltype(data->voltage_sensing_adc),
+                              decltype(percentage_convertor)>
+          battery{data->voltage_sensing_adc,
+                  percentage_convertor,
+                  battery_voltage_sense,
+                  battery_voltage_calibration_constant};
+
+      aeromight_health::HealthMonitoring<decltype(battery),
+                                         decltype(data->health_summary_queue_sender),
                                          sys_time::ClockSource,
                                          LogClient>
-          health_monitoring{data->health_summary_queue_sender,
+          health_monitoring{battery,
+                            data->health_summary_queue_sender,
+                            aeromight_boundaries::aeromight_data.battery_status,
                             aeromight_boundaries::aeromight_data.imu_health,
                             aeromight_boundaries::aeromight_data.barometer_health,
                             aeromight_boundaries::aeromight_data.estimator_health,

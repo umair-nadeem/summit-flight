@@ -1,6 +1,6 @@
 #pragma once
 
-namespace aeromight_battery
+namespace power::battery
 {
 
 struct VoltageSenseConfig
@@ -12,4 +12,4 @@ struct VoltageSenseConfig
    uint16_t resolution{};
 };
 
-}   // namespace aeromight_battery
+}   // namespace power::battery

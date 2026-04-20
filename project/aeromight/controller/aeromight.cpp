@@ -256,7 +256,7 @@ void setup_i2c()
 
 void setup_adc()
 {
-   radio_link_task_data.voltage_sensing_adc.prepare_for_communication();
+   health_monitoring_task_data.voltage_sensing_adc.prepare_for_communication();
 }
 
 void setup_dshot()

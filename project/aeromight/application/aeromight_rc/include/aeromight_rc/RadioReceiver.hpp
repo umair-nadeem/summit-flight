@@ -60,15 +60,13 @@ public:
             const auto& rc_channels = m_crsf_decoder.get_rc_channels();
 
             // system control setpoints
-            const auto arm_state = get_bistate_channel(rc_channels, rc_channel_arm_state);
-
-            m_system_control_setpoints.arm = (arm_state == rc::crsf::Bistate::high);
-
+            const auto arm_state       = get_bistate_channel(rc_channels, rc_channel_arm_state);
             const auto imu_calibration = get_bistate_channel(rc_channels, rc_channel_imu_calibration);
 
+            m_system_control_setpoints.arm             = (arm_state == rc::crsf::Bistate::high);
             m_system_control_setpoints.imu_calibration = (imu_calibration == rc::crsf::Bistate::high);
 
-            // rc channels
+            // stick input
             m_stick_command.roll     = get_float_channel(rc_channels, rc_channel_roll);
             m_stick_command.pitch    = get_float_channel(rc_channels, rc_channel_pitch);
             m_stick_command.yaw      = get_float_channel(rc_channels, rc_channel_yaw);
@@ -79,10 +77,10 @@ public:
          }
          else if (result == rc::crsf::CrsfDecoderResult::link_stats_update)
          {
-            const auto& link_stats = m_crsf_decoder.get_link_stats();
-            m_link_stats_publisher.update_latest(link_stats, clock_ms);
+            m_link_stats = m_crsf_decoder.get_link_stats();
+            m_link_stats_publisher.update_latest(m_link_stats, clock_ms);
          }
-         else
+         else if (result == rc::crsf::CrsfDecoderResult::other_packet)
          {
             error::stop_operation();
          }
@@ -101,7 +99,7 @@ private:
    Logger&                                      m_logger;
    control::attitude::StickCommand              m_stick_command{};
    aeromight_boundaries::SystemControlSetpoints m_system_control_setpoints{};
-   rc::crsf::LinkStats                          m_radio_link_actuals{};
+   rc::crsf::LinkStats                          m_link_stats{};
 };
 
 }   // namespace aeromight_rc
