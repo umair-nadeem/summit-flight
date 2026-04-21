@@ -7,10 +7,10 @@
 #include "barometer/BarometerData.hpp"
 #include "barometer/BarometerStatus.hpp"
 #include "boundaries/SharedData.hpp"
-#include "control/attitude/StickCommand.hpp"
 #include "imu/ImuData.hpp"
 #include "imu/ImuStatus.hpp"
 #include "power/battery/BatteryStatus.hpp"
+#include "rc/StickCommand.hpp"
 #include "rc/crsf/LinkStats.hpp"
 
 namespace aeromight_boundaries
@@ -30,8 +30,7 @@ struct AeromightData
    boundaries::SharedData<EstimatorStatus> estimator_health{};
 
    // Control
-   boundaries::SharedData<ControlStatus>                   control_health{};
-   boundaries::SharedData<control::attitude::StickCommand> stick_command{};
+   boundaries::SharedData<ControlStatus> control_health{};
 
    boundaries::SharedData<power::battery::BatteryStatus> battery_status{};
 
@@ -40,6 +39,7 @@ struct AeromightData
    boundaries::SharedData<SystemControlSetpoints> system_control_setpoints{};
 
    // Radio Link
+   boundaries::SharedData<rc::StickCommand>    stick_command{};
    boundaries::SharedData<rc::crsf::LinkStats> link_stats_actuals{};
 };
 

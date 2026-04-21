@@ -6,7 +6,6 @@
 #include "aeromight_estimation/AltitudeEkf.hpp"
 #include "aeromight_estimation/Estimation.hpp"
 #include "control/attitude/AttitudeController.hpp"
-#include "control/attitude/StickCommandSource.hpp"
 #include "control/rate/RateController.hpp"
 #include "error/error_handler.hpp"
 #include "estimation/AttitudeEstimator.hpp"
@@ -18,6 +17,7 @@
 #include "math/NullFilter.hpp"
 #include "math/constants.hpp"
 #include "math/make_filter.hpp"
+#include "rc/StickCommandSource.hpp"
 #include "rc/ThrottleCurve.hpp"
 #include "rtos/QueueSender.hpp"
 #include "rtos/constants.hpp"
@@ -74,8 +74,6 @@ extern "C"
       constexpr float    actuator_min                           = 0.0f;
       constexpr float    actuator_max                           = 1.0f - thrust_limiting;
       constexpr float    actuator_idle                          = 0.1f;
-      constexpr float    throttle_min                           = actuator_min;
-      constexpr float    throttle_max                           = actuator_max;
       constexpr float    throttle_arming                        = 0.01f;
       constexpr float    throttle_hover                         = 0.3f;
       constexpr float    throttle_curve_factor                  = 0.7f;
@@ -83,9 +81,6 @@ extern "C"
       // attitude controller
       constexpr bool     run_attitude_controller                = true;
       constexpr float    max_tilt_angle_rad                     = 30 * math::constants::deg_to_rad;
-      constexpr float    attitude_controller_roll_kp            = 6.0f;
-      constexpr float    attitude_controller_pitch_kp           = 6.0f;
-      constexpr float    attitude_controller_yaw_kp             = 0.0f;
       constexpr float    max_roll_rate_radps                    = 3.0f;
       constexpr float    max_pitch_rate_radps                   = 3.0f;
       constexpr float    max_yaw_rate_radps                     = 3.0f;
@@ -144,9 +139,8 @@ extern "C"
                      max_valid_imu_sample_dt_s,
                      max_valid_barometer_sample_dt_s};
 
-      const math::Vec3f attitude_gains_p{attitude_controller_roll_kp, attitude_controller_pitch_kp, attitude_controller_yaw_kp};
-
-      control::attitude::AttitudeController attitude_controller{attitude_gains_p};
+      control::attitude::AttitudeControllerParams attitude_controller_params{};
+      control::attitude::AttitudeController       attitude_controller{attitude_controller_params};
 
       const math::Vec3f rate_gains_p{rate_controller_roll_kp, rate_controller_pitch_kp, rate_controller_yaw_kp};
       const math::Vec3f rate_gains_i{rate_controller_roll_ki, rate_controller_pitch_ki, rate_controller_yaw_ki};
@@ -174,15 +168,15 @@ extern "C"
       auto pitch_input_lpf = math::make_filter<StickFilterType>(stick_input_lpf_cutoff_hz);
       auto yaw_input_lpf   = math::make_filter<StickFilterType>(stick_input_lpf_cutoff_hz);
 
-      control::attitude::StickCommandSource<decltype(roll_input_lpf),
-                                            decltype(throttle_curve)>
+      rc::StickCommandSourceParams stick_command_source_params{actuator_min, actuator_max};
+      rc::StickCommandSource<decltype(roll_input_lpf),
+                             decltype(throttle_curve)>
           stick_command_source{roll_input_lpf,
                                pitch_input_lpf,
                                yaw_input_lpf,
                                throttle_curve,
                                aeromight_boundaries::aeromight_data.stick_command,
-                               throttle_min,
-                               throttle_max};
+                               stick_command_source_params};
 
       auto gyro_x_lpf = math::make_filter<GyroFilterType>(gyro_lpf_cutoff_hz);
       auto gyro_y_lpf = math::make_filter<GyroFilterType>(gyro_lpf_cutoff_hz);

@@ -9,12 +9,12 @@
 #include "aeromight_boundaries/SystemState.hpp"
 #include "aeromight_boundaries/actuator.hpp"
 #include "boundaries/SharedData.hpp"
-#include "control/attitude/StickCommand.hpp"
 #include "dshot/dshot.hpp"
 #include "interfaces/IClockSource.hpp"
 #include "math/Vector2.hpp"
 #include "math/Vector4.hpp"
 #include "motor/motor.hpp"
+#include "rc/StickCommand.hpp"
 
 namespace aeromight_control
 {
@@ -404,7 +404,7 @@ private:
    const float                                               m_throttle_gate_integrator;
    const float                                               m_thrust_linearization_factor;
    aeromight_boundaries::ControlStatus                       m_control_status{};
-   control::attitude::StickCommand                           m_stick_command{};
+   rc::StickCommand                                          m_stick_command{};
    aeromight_boundaries::SystemState                         m_system_state_setpoints{};
    aeromight_boundaries::StateEstimation                     m_state_estimation{};
    math::Vec3f                                               m_rate_setpoints{};

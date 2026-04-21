@@ -1,6 +1,6 @@
 #pragma once
 
-#include "math/Vector3.hpp"
+#include "control/attitude/AttitudeControllerParams.hpp"
 
 namespace control::attitude
 {
@@ -8,18 +8,18 @@ namespace control::attitude
 class AttitudeController
 {
 public:
-   explicit AttitudeController(const math::Vec3f& gains_p)
-       : m_gains_p{gains_p}
+   explicit AttitudeController(const AttitudeControllerParams& params)
+       : m_params{params}
    {
    }
 
    math::Vec3f update(const math::Vec3f& angle_setpoint_rad, const math::Vec3f& angle_estimation_rad) const
    {
-      return m_gains_p.emul(angle_setpoint_rad - angle_estimation_rad);
+      return m_params.gains_p.emul(angle_setpoint_rad - angle_estimation_rad);
    }
 
 private:
-   const math::Vec3f m_gains_p;
+   const AttitudeControllerParams& m_params;
 };
 
 }   // namespace control::attitude

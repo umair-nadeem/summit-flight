@@ -6,10 +6,10 @@
 #include "boundaries/BufferWithOwnershipIndex.hpp"
 #include "boundaries/SharedData.hpp"
 #include "channel_mappings.hpp"
-#include "control/attitude/StickCommand.hpp"
 #include "crsf/CrsfPacket.hpp"
 #include "error/error_handler.hpp"
 #include "interfaces/IClockSource.hpp"
+#include "rc/StickCommand.hpp"
 #include "rc/crsf/Channel.hpp"
 #include "rc/crsf/CrsfDecoderResult.hpp"
 #include "rc/crsf/LinkStats.hpp"
@@ -25,7 +25,7 @@ template <typename QueueReceiver,
 class RadioReceiver
 {
 
-   using StickCommandPublisher           = boundaries::SharedData<control::attitude::StickCommand>;
+   using StickCommandPublisher           = boundaries::SharedData<rc::StickCommand>;
    using SystemControlSetpointsPublisher = boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints>;
    using LinkStatsPublisher              = boundaries::SharedData<rc::crsf::LinkStats>;
 
@@ -101,7 +101,7 @@ private:
    SystemControlSetpointsPublisher&             m_system_control_setpoints_publisher;
    LinkStatsPublisher&                          m_link_stats_publisher;
    Logger&                                      m_logger;
-   control::attitude::StickCommand              m_stick_command{};
+   rc::StickCommand                             m_stick_command{};
    aeromight_boundaries::SystemControlSetpoints m_system_control_setpoints{};
    rc::crsf::LinkStats                          m_link_stats{};
 };

@@ -37,10 +37,6 @@ extern "C"
       constexpr uint8_t  mpu6500_accel_a_dlpf_config                  = 0x03;
       constexpr float    mpu6500_gyro_range_plausibility_margin_radps = 6.0f;
       constexpr float    mpu6500_accel_range_plausibility_margin_mps2 = 20.0f;
-      constexpr uint16_t num_calibration_samples                      = 400u;
-      constexpr float    gyro_tolerance_radps                         = 0.1f;
-      constexpr float    accel_tolerance_mps2                         = 1.5f;
-      constexpr bool     front_left_up_frame                          = true;
 
       LogClient logger_mpu6500{logging::logging_queue_sender, "mpu6500"};
       LogClient logger_imu{logging::logging_queue_sender, "imu"};
@@ -62,13 +58,11 @@ extern "C"
                   mpu6500_gyro_range_plausibility_margin_radps,
                   mpu6500_accel_range_plausibility_margin_mps2};
 
+      imu::ImuParams                             imu_params{};
       imu::Imu<sys_time::ClockSource, LogClient> imu{aeromight_boundaries::aeromight_data.imu_data,
                                                      aeromight_boundaries::aeromight_data.imu_health,
                                                      logger_imu,
-                                                     num_calibration_samples,
-                                                     gyro_tolerance_radps,
-                                                     accel_tolerance_mps2,
-                                                     front_left_up_frame};
+                                                     imu_params};
 
       using TickBinding        = event_handling::EventBinding<decltype(mpu6500), &decltype(mpu6500)::execute>;
       using RxCompleteBinding  = event_handling::EventBinding<decltype(mpu6500), &decltype(mpu6500)::notify_receive_complete>;

@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace control::attitude
+namespace rc
 {
 
 struct StickCommand
@@ -14,4 +14,4 @@ struct StickCommand
    float throttle{};   // 0.0 to 1.0
 };
 
-}   // namespace control::attitude
+}   // namespace rc

@@ -1,9 +1,10 @@
 #pragma once
 
 #include "boundaries/SharedData.hpp"
-#include "control/attitude/StickCommand.hpp"
+#include "rc/StickCommand.hpp"
+#include "rc/StickCommandSourceParams.hpp"
 
-namespace control::attitude
+namespace rc
 {
 
 template <typename StickCommandFilter,
@@ -13,20 +14,18 @@ class StickCommandSource
    using StickCommandSubscriber = boundaries::SharedData<StickCommand>;
 
 public:
-   explicit StickCommandSource(StickCommandFilter&           roll_input_lpf,
-                               StickCommandFilter&           pitch_input_lpf,
-                               StickCommandFilter&           yaw_input_lpf,
-                               ThrottleCurve&                throttle_curve,
-                               const StickCommandSubscriber& stick_command_subscriber,
-                               const float                   throttle_min,
-                               const float                   throttle_max)
+   explicit StickCommandSource(StickCommandFilter&             roll_input_lpf,
+                               StickCommandFilter&             pitch_input_lpf,
+                               StickCommandFilter&             yaw_input_lpf,
+                               ThrottleCurve&                  throttle_curve,
+                               const StickCommandSubscriber&   stick_command_subscriber,
+                               const StickCommandSourceParams& params)
        : m_roll_input_lpf{roll_input_lpf},
          m_pitch_input_lpf{pitch_input_lpf},
          m_yaw_input_lpf{yaw_input_lpf},
          m_throttle_curve{throttle_curve},
          m_stick_command_subscriber{stick_command_subscriber},
-         m_throttle_min{throttle_min},
-         m_throttle_max{throttle_max}
+         m_params{params}
    {
    }
 
@@ -65,16 +64,15 @@ private:
       command.throttle = std::clamp(command.throttle, 0.0f, 1.0f);
 
       command.throttle = m_throttle_curve.apply(command.throttle);
-      command.throttle = std::clamp(command.throttle, m_throttle_min, m_throttle_max);
+      command.throttle = std::clamp(command.throttle, m_params.throttle_min, m_params.throttle_max);
    }
 
-   StickCommandFilter&           m_roll_input_lpf;
-   StickCommandFilter&           m_pitch_input_lpf;
-   StickCommandFilter&           m_yaw_input_lpf;
-   ThrottleCurve&                m_throttle_curve;
-   const StickCommandSubscriber& m_stick_command_subscriber;
-   const float                   m_throttle_min;
-   const float                   m_throttle_max;
+   StickCommandFilter&             m_roll_input_lpf;
+   StickCommandFilter&             m_pitch_input_lpf;
+   StickCommandFilter&             m_yaw_input_lpf;
+   ThrottleCurve&                  m_throttle_curve;
+   const StickCommandSubscriber&   m_stick_command_subscriber;
+   const StickCommandSourceParams& m_params;
 };
 
-}   // namespace control::attitude
+}   // namespace rc

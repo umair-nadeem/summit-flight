@@ -2,6 +2,7 @@
 
 #include "boundaries/SharedData.hpp"
 #include "imu/ImuData.hpp"
+#include "imu/ImuParams.hpp"
 #include "imu/ImuStatus.hpp"
 #include "imu_sensor/ImuSensorStatus.hpp"
 #include "imu_sensor/RawImuSensorData.hpp"
@@ -21,18 +22,11 @@ public:
    explicit Imu(ImuDataPublisher&   imu_data_publisher,
                 ImuStatusPublisher& imu_health_publisher,
                 Logger&             logger,
-                const uint16_t      num_calibration_samples,
-                const float         gyro_tolerance_radps,
-                const float         accel_tolerance_mps2,
-                const bool          front_left_up_frame)
+                const ImuParams&    params)
        : m_imu_data_publisher{imu_data_publisher},
          m_imu_health_publisher{imu_health_publisher},
          m_logger{logger},
-         m_num_calibration_samples{num_calibration_samples},
-         m_gyro_tolerance_radps{gyro_tolerance_radps},
-         m_accel_tolerance_mps2{accel_tolerance_mps2},
-         m_front_left_up_frame{front_left_up_frame}
-
+         m_params{params}
    {
       m_logger.enable();
    }
@@ -128,7 +122,7 @@ private:
 
    void perform_alignment(auto& raw_data) const
    {
-      if (m_front_left_up_frame)
+      if (m_params.front_left_up_frame)
       {
          // convert sensor axes from FLU body frame to FRD
          raw_data.accel_mps2 = convert_to_front_right_down_frame(raw_data.accel_mps2);
@@ -308,7 +302,7 @@ private:
 
    bool all_samples_collected() const
    {
-      return (m_calibration.sample_counter >= m_num_calibration_samples);
+      return (m_calibration.sample_counter >= m_params.num_calibration_samples);
    }
 
    bool is_calibration_valid() const
@@ -319,21 +313,21 @@ private:
    bool is_platform_stationary() const
    {
       const float magnitude = m_calibration.mean_accel.norm();
-      return std::abs(magnitude - math::constants::g_to_mps2) <= m_accel_tolerance_mps2;
+      return std::abs(magnitude - math::constants::g_to_mps2) <= m_params.accel_tolerance_mps2;
    }
 
    bool is_accel_stable() const
    {
-      return ((m_calibration.std_accel[0] <= m_accel_tolerance_mps2) &&
-              (m_calibration.std_accel[1] <= m_accel_tolerance_mps2) &&
-              (m_calibration.std_accel[2] <= m_accel_tolerance_mps2));
+      return ((m_calibration.std_accel[0] <= m_params.accel_tolerance_mps2) &&
+              (m_calibration.std_accel[1] <= m_params.accel_tolerance_mps2) &&
+              (m_calibration.std_accel[2] <= m_params.accel_tolerance_mps2));
    }
 
    bool is_gyro_stable() const
    {
-      return ((m_calibration.std_gyro[0] <= m_gyro_tolerance_radps) &&
-              (m_calibration.std_gyro[1] <= m_gyro_tolerance_radps) &&
-              (m_calibration.std_gyro[2] <= m_gyro_tolerance_radps));
+      return ((m_calibration.std_gyro[0] <= m_params.gyro_tolerance_radps) &&
+              (m_calibration.std_gyro[1] <= m_params.gyro_tolerance_radps) &&
+              (m_calibration.std_gyro[2] <= m_params.gyro_tolerance_radps));
    }
 
    struct Calibration
@@ -384,10 +378,7 @@ private:
    ImuDataPublisher&            m_imu_data_publisher;
    ImuStatusPublisher&          m_imu_health_publisher;
    Logger&                      m_logger;
-   const uint16_t               m_num_calibration_samples;
-   const float                  m_gyro_tolerance_radps;
-   const float                  m_accel_tolerance_mps2;
-   const bool                   m_front_left_up_frame;
+   const ImuParams&             m_params;
    imu::ImuData                 m_imu_data{};
    imu::ImuStatus               m_imu_status{};
    Calibration                  m_calibration{};
