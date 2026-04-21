@@ -15,30 +15,12 @@ public:
                     Logger&                       logger,
                     imu_sensor::RawImuSensorData& raw_sensor_data_out,
                     imu_sensor::ImuSensorStatus&  sensor_status_out,
-                    const uint8_t                 read_failures_limit,
-                    const uint32_t                execution_period_ms,
-                    const uint32_t                receive_wait_timeout_ms,
-                    const uint8_t                 sample_rate_divider,
-                    const uint8_t                 dlpf_config,
-                    const uint8_t                 gyro_full_scale,
-                    const uint8_t                 accel_full_scale,
-                    const uint8_t                 accel_a_dlpf_config,
-                    const float                   gyro_range_plausibility_margin_radps,
-                    const float                   accel_range_plausibility_margin_mps2)
+                    const Mpu6500Params&          params)
        : m_state_handler{spi_master,
                          logger,
                          raw_sensor_data_out,
                          sensor_status_out,
-                         read_failures_limit,
-                         execution_period_ms,
-                         receive_wait_timeout_ms,
-                         sample_rate_divider,
-                         dlpf_config,
-                         gyro_full_scale,
-                         accel_full_scale,
-                         accel_a_dlpf_config,
-                         gyro_range_plausibility_margin_radps,
-                         accel_range_plausibility_margin_mps2}
+                         params}
    {
    }
 

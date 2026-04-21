@@ -4,6 +4,7 @@
 #include <cmath>
 #include <span>
 
+#include "Mpu6500Params.hpp"
 #include "SensorState.hpp"
 #include "error/error_handler.hpp"
 #include "imu_sensor/ImuSensorStatus.hpp"
@@ -25,41 +26,23 @@ public:
                                 Logger&                       logger,
                                 imu_sensor::RawImuSensorData& raw_sensor_data_out,
                                 imu_sensor::ImuSensorStatus&  sensor_status_out,
-                                const uint8_t                 read_failures_limit,
-                                const uint32_t                execution_period_ms,
-                                const uint32_t                receive_wait_timeout_ms,
-                                const uint8_t                 sample_rate_divider,
-                                const uint8_t                 dlpf_config,
-                                const uint8_t                 gyro_full_scale,
-                                const uint8_t                 accel_full_scale,
-                                const uint8_t                 accel_a_dlpf_config,
-                                const float                   gyro_range_plausibility_margin_radps,
-                                const float                   accel_range_plausibility_margin_mps2)
+                                const Mpu6500Params&          params)
        : m_spi_master{spi_master},
          m_logger{logger},
          m_raw_sensor_data_out{raw_sensor_data_out},
          m_sensor_status_out{sensor_status_out},
-         m_read_failures_limit{read_failures_limit},
-         m_execution_period_ms{execution_period_ms},
-         m_receive_wait_timeout_ms{receive_wait_timeout_ms},
-         m_sample_rate_divider{sample_rate_divider},
-         m_dlpf_config{dlpf_config},
-         m_gyro_full_scale{gyro_full_scale},
-         m_accel_full_scale{accel_full_scale},
-         m_accel_a_dlpf_config{accel_a_dlpf_config},
-         m_gyro_range_plausibility_margin_radps{gyro_range_plausibility_margin_radps},
-         m_accel_range_plausibility_margin_mps2{accel_range_plausibility_margin_mps2},
-         m_gyro_scale{math::constants::deg_to_rad / params::gyro_sensitivity_scale_factor[m_gyro_full_scale]},
-         m_accel_scale{math::constants::g_to_mps2 / params::accel_sensitivity_scale_factor[m_accel_full_scale]},
-         m_gyro_absolute_plausibility_limit_radps{(params::gyro_abs_full_scale_range_dps[m_gyro_full_scale] * math::constants::deg_to_rad) + m_gyro_range_plausibility_margin_radps},
-         m_accel_absolute_plausibility_limit_mps2{(params::accel_abs_full_scale_range_g[m_accel_full_scale] * math::constants::g_to_mps2) + m_accel_range_plausibility_margin_mps2}
+         m_params{params},
+         m_gyro_scale{math::constants::deg_to_rad / params::gyro_sensitivity_scale_factor[m_params.gyro_full_scale]},
+         m_accel_scale{math::constants::g_to_mps2 / params::accel_sensitivity_scale_factor[m_params.accel_full_scale]},
+         m_gyro_absolute_plausibility_limit_radps{(params::gyro_abs_full_scale_range_dps[m_params.gyro_full_scale] * math::constants::deg_to_rad) + m_params.gyro_range_plausibility_margin_radps},
+         m_accel_absolute_plausibility_limit_mps2{(params::accel_abs_full_scale_range_g[m_params.accel_full_scale] * math::constants::g_to_mps2) + m_params.accel_range_plausibility_margin_mps2}
    {
       m_logger.enable();
    }
 
    void tick_timer()
    {
-      m_wait_timer_ms += m_execution_period_ms;
+      m_wait_timer_ms += m_params.execution_period_ms;
    }
 
    void reset_timer()
@@ -122,11 +105,11 @@ public:
 
       // write to sample rate, config, gyro config and accel config registers in single burst
       m_tx_buffer[0] = get_write_spi_command(params::smplrt_div_reg);
-      m_tx_buffer[1] = m_sample_rate_divider;                                                                  // sample rate
-      m_tx_buffer[2] = m_dlpf_config & params::ConfigBitMask::dlpf_cfg;                                        // config reg
-      m_tx_buffer[3] = ((m_gyro_full_scale << three_bit_shift) & params::GyroConfigBitMask::gyro_fs_sel);      // gyro config reg, FCHOICE_B[1:0]=0
-      m_tx_buffer[4] = ((m_accel_full_scale << three_bit_shift) & params::AccelConfigBitMask::accel_fs_sel);   // accel config reg
-      m_tx_buffer[5] = m_accel_a_dlpf_config & params::AccelConfig2BitMask::accel_a_dlpf_config;               // accel config 2 reg, ACCEL_FCHOICE_B=0
+      m_tx_buffer[1] = m_params.sample_rate_divider;                                                                  // sample rate
+      m_tx_buffer[2] = m_params.dlpf_config & params::ConfigBitMask::dlpf_cfg;                                        // config reg
+      m_tx_buffer[3] = ((m_params.gyro_full_scale << three_bit_shift) & params::GyroConfigBitMask::gyro_fs_sel);      // gyro config reg, FCHOICE_B[1:0]=0
+      m_tx_buffer[4] = ((m_params.accel_full_scale << three_bit_shift) & params::AccelConfigBitMask::accel_fs_sel);   // accel config reg
+      m_tx_buffer[5] = m_params.accel_a_dlpf_config & params::AccelConfig2BitMask::accel_a_dlpf_config;               // accel config 2 reg, ACCEL_FCHOICE_B=0
 
       m_spi_master.transfer(std::span{m_tx_buffer.data(), burst_len}, std::span{m_rx_buffer.data(), burst_len});
    }
@@ -336,11 +319,11 @@ public:
       const uint8_t accel_fs_sel        = (m_config_registers.accel_config & params::AccelConfigBitMask::accel_fs_sel) >> three_bit_shift;
       const uint8_t accel_a_dlpf_config = m_config_registers.accel_config_2 & params::AccelConfig2BitMask::accel_a_dlpf_config;
 
-      return ((m_config_registers.sample_rate_div == m_sample_rate_divider) &&
-              (dlpf_config == m_dlpf_config) &&
-              (gyro_fs_sel == m_gyro_full_scale) &&
-              (accel_fs_sel == m_accel_full_scale) &&
-              (accel_a_dlpf_config == m_accel_a_dlpf_config));
+      return ((m_config_registers.sample_rate_div == m_params.sample_rate_divider) &&
+              (dlpf_config == m_params.dlpf_config) &&
+              (gyro_fs_sel == m_params.gyro_full_scale) &&
+              (accel_fs_sel == m_params.accel_full_scale) &&
+              (accel_a_dlpf_config == m_params.accel_a_dlpf_config));
    }
 
    bool is_data_pattern_ok() const
@@ -366,12 +349,12 @@ public:
 
    bool receive_wait_timeout() const
    {
-      return m_wait_timer_ms >= m_receive_wait_timeout_ms;
+      return m_wait_timer_ms >= m_params.receive_wait_timeout_ms;
    }
 
    bool read_failures_below_limit() const
    {
-      return (m_sensor_status.read_failure_count < m_read_failures_limit);
+      return (m_sensor_status.read_failure_count < m_params.read_failures_limit);
    }
 
 private:
@@ -448,16 +431,7 @@ private:
    Logger&                                            m_logger;
    imu_sensor::RawImuSensorData&                      m_raw_sensor_data_out;
    imu_sensor::ImuSensorStatus&                       m_sensor_status_out;
-   const uint8_t                                      m_read_failures_limit;
-   const uint32_t                                     m_execution_period_ms;
-   const uint32_t                                     m_receive_wait_timeout_ms;
-   const uint8_t                                      m_sample_rate_divider;
-   const uint8_t                                      m_dlpf_config;
-   const uint8_t                                      m_gyro_full_scale;
-   const uint8_t                                      m_accel_full_scale;
-   const uint8_t                                      m_accel_a_dlpf_config;
-   const float                                        m_gyro_range_plausibility_margin_radps;
-   const float                                        m_accel_range_plausibility_margin_mps2;
+   const Mpu6500Params&                               m_params;
    const float                                        m_gyro_scale;
    const float                                        m_accel_scale;
    const float                                        m_gyro_absolute_plausibility_limit_radps;

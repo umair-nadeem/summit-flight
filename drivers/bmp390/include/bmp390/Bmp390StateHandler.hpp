@@ -4,6 +4,7 @@
 #include <cmath>
 #include <span>
 
+#include "Bmp390Params.hpp"
 #include "SensorState.hpp"
 #include "barometer_sensor/BarometerSensorStatus.hpp"
 #include "barometer_sensor/RawBarometerSensorData.hpp"
@@ -21,24 +22,18 @@ public:
                                Logger&                                   logger,
                                barometer_sensor::RawBarometerSensorData& raw_sensor_data_out,
                                barometer_sensor::BarometerSensorStatus&  sensor_status_out,
-                               const uint8_t                             read_failures_limit,
-                               const uint8_t                             max_recovery_attempts,
-                               const uint32_t                            execution_period_ms,
-                               const uint32_t                            receive_wait_timeout_ms)
+                               const Bmp390Params&                       params)
        : m_i2c_driver{i2c_driver},
          m_logger{logger},
          m_raw_sensor_data_out{raw_sensor_data_out},
          m_sensor_status_out{sensor_status_out},
-         m_read_failures_limit{read_failures_limit},
-         m_max_recovery_attempts{max_recovery_attempts},
-         m_execution_period_ms{execution_period_ms},
-         m_receive_wait_timeout_ms{receive_wait_timeout_ms}
+         m_params{params}
    {
    }
 
    void tick_timer()
    {
-      m_wait_timer_ms += m_execution_period_ms;
+      m_wait_timer_ms += m_params.execution_period_ms;
    }
 
    void reset_timer()
@@ -385,17 +380,17 @@ public:
 
    bool receive_wait_timeout() const
    {
-      return m_wait_timer_ms >= m_receive_wait_timeout_ms;
+      return m_wait_timer_ms >= m_params.receive_wait_timeout_ms;
    }
 
    bool read_failures_below_limit() const
    {
-      return (m_sensor_status.read_failure_count < m_read_failures_limit);
+      return (m_sensor_status.read_failure_count < m_params.read_failures_limit);
    }
 
    bool recovery_attempts_below_limit() const
    {
-      return (m_sensor_status.recovery_attempt_count < m_max_recovery_attempts);
+      return (m_sensor_status.recovery_attempt_count < m_params.max_recovery_attempts);
    }
 
 private:
@@ -519,10 +514,7 @@ private:
    Logger&                                   m_logger;
    barometer_sensor::RawBarometerSensorData& m_raw_sensor_data_out;
    barometer_sensor::BarometerSensorStatus&  m_sensor_status_out;
-   const uint8_t                             m_read_failures_limit;
-   const uint8_t                             m_max_recovery_attempts;
-   const uint32_t                            m_execution_period_ms;
-   const uint32_t                            m_receive_wait_timeout_ms;
+   const Bmp390Params&                       m_params;
    std::array<uint8_t, params::buffer_size>  m_tx_buffer{};
    std::array<uint8_t, params::buffer_size>  m_rx_buffer{};
    barometer_sensor::RawBarometerSensorData  m_raw_sensor_data{};

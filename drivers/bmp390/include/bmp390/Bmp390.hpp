@@ -14,18 +14,12 @@ public:
                    Logger&                                   logger,
                    barometer_sensor::RawBarometerSensorData& raw_sensor_data_out,
                    barometer_sensor::BarometerSensorStatus&  sensor_status_out,
-                   const uint8_t                             read_failures_limit,
-                   const uint8_t                             max_recovery_attempts,
-                   const uint32_t                            execution_period_ms,
-                   const uint32_t                            receive_wait_timeout_ms)
+                   const Bmp390Params&                       params)
        : m_state_handler{i2c_driver,
                          logger,
                          raw_sensor_data_out,
                          sensor_status_out,
-                         read_failures_limit,
-                         max_recovery_attempts,
-                         execution_period_ms,
-                         receive_wait_timeout_ms},
+                         params},
          m_logger{logger}
    {
       m_logger.enable();

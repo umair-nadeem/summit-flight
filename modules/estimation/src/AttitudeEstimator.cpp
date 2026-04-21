@@ -5,10 +5,8 @@
 namespace estimation
 {
 
-AttitudeEstimator::AttitudeEstimator(const float accelerometer_weight,
-                                     const float gyro_bias_weight)
-    : m_accelerometer_weight{accelerometer_weight},
-      m_gyro_bias_weight{gyro_bias_weight}
+AttitudeEstimator::AttitudeEstimator(const AttitudeEstimatorParams& params)
+    : m_params{params}
 {
 }
 
@@ -38,13 +36,13 @@ void AttitudeEstimator::update(const math::Vec3f& accel_mps2, const math::Vec3f&
        (accel_norm_sq < upper_accel_limit * upper_accel_limit))
    {
       const Vec3f accel_dir = accel_mps2.normalized();
-      corr += (k.cross(accel_dir)) * m_accelerometer_weight;
+      corr += (k.cross(accel_dir)) * m_params.accelerometer_weight;
    }
 
    // Gyro bias estimation
    if (spinRate < max_gyro_spin_rate)
    {
-      m_gyro_bias += corr * (m_gyro_bias_weight * dt_s);
+      m_gyro_bias += corr * (m_params.gyro_bias_weight * dt_s);
 
       m_gyro_bias[0] = std::clamp(m_gyro_bias[0], -max_gyro_bias_radps, max_gyro_bias_radps);
       m_gyro_bias[1] = std::clamp(m_gyro_bias[1], -max_gyro_bias_radps, max_gyro_bias_radps);

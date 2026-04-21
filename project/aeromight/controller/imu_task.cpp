@@ -28,35 +28,17 @@ extern "C"
 
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
-      constexpr uint32_t mpu6500_receive_wait_timeout_ms              = 2u * controller::task::imu_task_period_in_ms;
-      constexpr uint8_t  mpu6500_read_failures_limit                  = 5u;
-      constexpr uint8_t  mpu6500_sample_rate_divider                  = 0x03;
-      constexpr uint8_t  mpu6500_dlpf_config                          = 0x03;
-      constexpr uint8_t  mpu6500_gyro_full_scale                      = 0x03;
-      constexpr uint8_t  mpu6500_accel_full_scale                     = 0x03;
-      constexpr uint8_t  mpu6500_accel_a_dlpf_config                  = 0x03;
-      constexpr float    mpu6500_gyro_range_plausibility_margin_radps = 6.0f;
-      constexpr float    mpu6500_accel_range_plausibility_margin_mps2 = 20.0f;
-
       LogClient logger_mpu6500{logging::logging_queue_sender, "mpu6500"};
       LogClient logger_imu{logging::logging_queue_sender, "imu"};
 
+      mpu6500::Mpu6500Params mpu6500_params{};
       mpu6500::Mpu6500<decltype(data->spi1_master),
                        LogClient>
           mpu6500{data->spi1_master,
                   logger_mpu6500,
                   data->imu_sensor_data,
                   data->imu_sensor_status,
-                  mpu6500_read_failures_limit,
-                  controller::task::imu_task_period_in_ms,
-                  mpu6500_receive_wait_timeout_ms,
-                  mpu6500_sample_rate_divider,
-                  mpu6500_dlpf_config,
-                  mpu6500_gyro_full_scale,
-                  mpu6500_accel_full_scale,
-                  mpu6500_accel_a_dlpf_config,
-                  mpu6500_gyro_range_plausibility_margin_radps,
-                  mpu6500_accel_range_plausibility_margin_mps2};
+                  mpu6500_params};
 
       imu::ImuParams                             imu_params{};
       imu::Imu<sys_time::ClockSource, LogClient> imu{aeromight_boundaries::aeromight_data.imu_data,

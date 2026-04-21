@@ -26,23 +26,18 @@ extern "C"
 
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
-      constexpr uint32_t bmp390_receive_wait_timeout_ms = 2u * controller::task::barometer_task_period_in_ms;
       constexpr uint32_t notification_wait_period_in_ms = controller::task::barometer_task_period_in_ms / 4u;
-      constexpr uint8_t  bmp390_read_failures_limit     = 5u;
-      constexpr uint8_t  bmp390_max_recovery_attempts   = 3u;
 
       LogClient logger_bmp390{logging::logging_queue_sender, "bmp390"};
 
+      bmp390::Bmp390Params bmp390_params{};
       bmp390::Bmp390<decltype(data->i2c_driver),
                      LogClient>
           bmp390{data->i2c_driver,
                  logger_bmp390,
                  data->baro_sensor_data,
                  data->baro_sensor_status,
-                 bmp390_read_failures_limit,
-                 bmp390_max_recovery_attempts,
-                 controller::task::barometer_task_period_in_ms,
-                 bmp390_receive_wait_timeout_ms};
+                 bmp390_params};
 
       using TickBinding       = event_handling::EventBinding<decltype(bmp390), &decltype(bmp390)::execute>;
       using RxCompleteBinding = event_handling::EventBinding<decltype(bmp390), &decltype(bmp390)::notify_receive_complete>;
