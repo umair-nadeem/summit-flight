@@ -2,6 +2,7 @@
 
 #include <array>
 
+#include "ControlAllocatorParams.hpp"
 #include "aeromight_boundaries/ControlAxis.hpp"
 #include "aeromight_boundaries/actuator.hpp"
 #include "error/error_handler.hpp"
@@ -17,23 +18,13 @@ class ControlAllocator
 public:
    static constexpr std::size_t num_actuators = aeromight_boundaries::num_actuators;
 
-   explicit ControlAllocator(const float actuator_min,
-                             const float actuator_max,
-                             const float actuator_idle,
-                             const float thrust_deadband,
-                             const float yaw_saturation_limit_factor,
-                             const float slew_rate_limit_s)
-       : m_actuator_min{actuator_min},
-         m_actuator_max{actuator_max},
-         m_actuator_idle{actuator_idle},
-         m_thrust_deadband{thrust_deadband},
-         m_yaw_saturation_limit_factor{yaw_saturation_limit_factor},
-         m_slew_rate_limit_s{slew_rate_limit_s}
+   explicit ControlAllocator(const ControlAllocatorParams& params)
+       : m_params{params}
    {
-      error::verify((actuator_min < actuator_idle) && (actuator_idle < actuator_max));
-      error::verify(aeromight_boundaries::actuator_min <= actuator_min);
-      error::verify(actuator_max <= aeromight_boundaries::actuator_max);
-      error::verify(m_slew_rate_limit_s > math::constants::epsilon);
+      error::verify((m_params.actuator_min < m_params.actuator_idle) && (m_params.actuator_idle < m_params.actuator_max));
+      error::verify(aeromight_boundaries::actuator_min <= m_params.actuator_min);
+      error::verify(m_params.actuator_max <= aeromight_boundaries::actuator_max);
+      error::verify(m_params.slew_rate_limit_s > math::constants::epsilon);
    }
 
    const math::Vec4f& update(const math::Vec4f& control_setpoints)
@@ -109,7 +100,7 @@ public:
 
    void apply_slew_rate_limits(const float dt_s)
    {
-      const float max_delta_sp = dt_s * (m_actuator_max - m_actuator_min) / m_slew_rate_limit_s;
+      const float max_delta_sp = dt_s * (m_params.actuator_max - m_params.actuator_min) / m_params.slew_rate_limit_s;
 
       for (std::size_t i = 0; i < m_actuator_setpoints.size; i++)
       {
@@ -132,7 +123,7 @@ public:
    {
       for (std::size_t i = 0; i < m_actuator_setpoints.size; i++)
       {
-         m_actuator_setpoints[i] = std::clamp(m_actuator_setpoints[i], m_actuator_min, m_actuator_max);
+         m_actuator_setpoints[i] = std::clamp(m_actuator_setpoints[i], m_params.actuator_min, m_params.actuator_max);
       }
    }
 
@@ -156,6 +147,16 @@ public:
       return m_control_saturation_negative;
    }
 
+   float get_actuator_min() const
+   {
+      return m_params.actuator_min;
+   }
+
+   float get_actuator_max() const
+   {
+      return m_params.actuator_max;
+   }
+
 private:
    void set_control_setpoints(const math::Vec4f& control_setpoints)
    {
@@ -171,8 +172,8 @@ private:
 
    void perform_desaturation(math::Vec4f& actuator_torque, const float collective_thrust)
    {
-      const float upper_margin   = m_actuator_max - collective_thrust;
-      const float lower_margin   = std::max((collective_thrust - m_actuator_idle), 0.0f);
+      const float upper_margin   = m_params.actuator_max - collective_thrust;
+      const float lower_margin   = std::max((collective_thrust - m_params.actuator_idle), 0.0f);
       const float available_span = 2.0f * std::min(upper_margin, lower_margin);   // will become zero at throttle extremes
 
       float torque_min = 0.0f;
@@ -198,7 +199,7 @@ private:
    {
       for (std::size_t i = 0; i < m_actuator_setpoints.size; i++)
       {
-         if (std::fabs(m_actuator_setpoints[i]) < m_thrust_deadband)
+         if (std::fabs(m_actuator_setpoints[i]) < m_params.thrust_deadband)
          {
             m_actuator_setpoints[i] = 0.0f;
          }
@@ -233,7 +234,7 @@ private:
 
    constexpr float get_yaw_limit(const float thrust) const noexcept
    {
-      return (thrust * m_yaw_saturation_limit_factor);
+      return (thrust * m_params.yaw_saturation_limit_factor);
    }
 
    float apply_yaw_limit(const float yaw_control_sp) const noexcept
@@ -244,18 +245,13 @@ private:
 
    static constexpr float control_setpoint_min = 1e-3f;
 
-   const float     m_actuator_min;
-   const float     m_actuator_max;
-   const float     m_actuator_idle;
-   const float     m_thrust_deadband;
-   const float     m_yaw_saturation_limit_factor;
-   const float     m_slew_rate_limit_s;
-   math::Vec4f     m_control_setpoints{0.0f};
-   math::Vec4f     m_actuator_setpoints{0.0f};
-   math::Vec4f     m_last_actuator_setpoints{0.0f};
-   bool            m_actuator_saturation{false};
-   SaturationFlags m_control_saturation_positive{};
-   SaturationFlags m_control_saturation_negative{};
+   const ControlAllocatorParams& m_params;
+   math::Vec4f                   m_control_setpoints{0.0f};
+   math::Vec4f                   m_actuator_setpoints{0.0f};
+   math::Vec4f                   m_last_actuator_setpoints{0.0f};
+   bool                          m_actuator_saturation{false};
+   SaturationFlags               m_control_saturation_positive{};
+   SaturationFlags               m_control_saturation_negative{};
 };
 
 }   // namespace aeromight_control

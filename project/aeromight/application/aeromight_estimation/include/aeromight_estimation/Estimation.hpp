@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EstimationParams.hpp"
 #include "aeromight_boundaries/EstimatorStatus.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
 #include "barometer/BarometerData.hpp"
@@ -28,11 +29,7 @@ public:
                        const ImuDataSubscriber&               imu_data_subscriber,
                        const BarometerDataSubscriber&         barometer_data_subscriber,
                        Logger&                                logger,
-                       const bool                             run_altitude_estimation,
-                       const uint32_t                         max_age_imu_data_ms,
-                       const uint32_t                         max_age_baro_data_ms,
-                       const float                            max_valid_imu_sample_dt_s,
-                       const float                            max_valid_barometer_sample_dt_s)
+                       const EstimationParams&                params)
        : m_attitude_estimator{attitude_estimator},
          m_altitude_ekf{altitude_ekf},
          m_estimator_health_publisher{estimator_health_publisher},
@@ -40,11 +37,7 @@ public:
          m_imu_data_subscriber{imu_data_subscriber},
          m_barometer_data_subscriber{barometer_data_subscriber},
          m_logger{logger},
-         m_run_altitude_estimation{run_altitude_estimation},
-         m_max_age_imu_data_ms{max_age_imu_data_ms},
-         m_max_age_baro_data_ms{max_age_baro_data_ms},
-         m_max_valid_imu_sample_dt_s{max_valid_imu_sample_dt_s},
-         m_max_valid_barometer_sample_dt_s{max_valid_barometer_sample_dt_s}
+         m_params{params}
    {
       m_logger.enable();
    }
@@ -71,7 +64,7 @@ public:
 
       run_attitude_estimation();
 
-      if (m_run_altitude_estimation)
+      if (m_params.run_altitude_estimation)
       {
          run_altitude_estimation();
       }
@@ -170,7 +163,7 @@ private:
 
    void update_attitude_state(const ImuDataSubscriber::Sample& imu_sample, const float dt_s)
    {
-      if (dt_s > m_max_valid_imu_sample_dt_s)
+      if (dt_s > m_params.max_valid_imu_sample_dt_s)
       {
          m_attitude_estimator.reset();
          m_altitude_ekf.reset();
@@ -188,7 +181,7 @@ private:
       m_state_estimation.raw_gyro_radps = gyro_radps;
       m_state_estimation.gyro_bias      = m_attitude_estimator.get_gyro_bias();
 
-      if (m_run_altitude_estimation)
+      if (m_params.run_altitude_estimation)
       {
          // predict altitude with ekf2
          m_altitude_ekf.predict(accel_mps2, attitude_q, dt_s);
@@ -197,7 +190,7 @@ private:
 
    void update_altitude_state(const BarometerDataSubscriber::Sample& barometer_sample, const float dt_s)
    {
-      if (dt_s > m_max_valid_barometer_sample_dt_s)
+      if (dt_s > m_params.max_valid_barometer_sample_dt_s)
       {
          m_altitude_ekf.reset();
          return;
@@ -234,13 +227,13 @@ private:
    bool imu_data_is_current(const ImuDataSubscriber::Sample& imu_sample) const
    {
       const uint32_t imu_data_age_ms = m_current_time_ms - imu_sample.timestamp_ms;
-      return (imu_data_age_ms <= m_max_age_imu_data_ms);
+      return (imu_data_age_ms <= m_params.max_age_imu_data_ms);
    }
 
    bool baro_data_is_current(const BarometerDataSubscriber::Sample& barometer_sample) const
    {
       const uint32_t baro_data_age_ms = m_current_time_ms - barometer_sample.timestamp_ms;
-      return (baro_data_age_ms <= m_max_age_baro_data_ms);
+      return (baro_data_age_ms <= m_params.max_age_baro_data_ms);
    }
 
    AttitudeEstimator&                     m_attitude_estimator;
@@ -250,11 +243,7 @@ private:
    const ImuDataSubscriber&               m_imu_data_subscriber;
    const BarometerDataSubscriber&         m_barometer_data_subscriber;
    Logger&                                m_logger;
-   const bool                             m_run_altitude_estimation;
-   const uint32_t                         m_max_age_imu_data_ms;
-   const uint32_t                         m_max_age_baro_data_ms;
-   const float                            m_max_valid_imu_sample_dt_s;
-   const float                            m_max_valid_barometer_sample_dt_s;
+   const EstimationParams&                m_params;
    aeromight_boundaries::EstimatorStatus  m_estimation_status{};
    aeromight_boundaries::StateEstimation  m_state_estimation{};
    ImuDataSubscriber::Sample              m_previous_imu_sample{};

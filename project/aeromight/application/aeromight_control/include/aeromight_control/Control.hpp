@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <span>
 
+#include "ControlParams.hpp"
 #include "aeromight_boundaries/ControlAxis.hpp"
 #include "aeromight_boundaries/ControlStatus.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
@@ -57,17 +58,7 @@ public:
                     const SystemStateSubscriber&                 system_state_subscriber,
                     const aeromight_boundaries::StateEstimation& state_estimation_subscriber,
                     Logger&                                      logger,
-                    const uint32_t                               max_age_state_estimation_data_ms,
-                    const float                                  min_dt_s,
-                    const float                                  max_dt_s,
-                    const bool                                   run_attitude_controller,
-                    const float                                  max_tilt_angle_rad,
-                    const math::Vec3f                            max_rate_radps,
-                    const float                                  actuator_min,
-                    const float                                  actuator_max,
-                    const float                                  throttle_arming,
-                    const float                                  throttle_gate_integrator,
-                    const float                                  thrust_linearization_factor)
+                    const ControlParams&                         params)
        : m_attitude_controller{attitude_controller},
          m_rate_controller{rate_controller},
          m_control_allocator{control_allocator},
@@ -81,17 +72,7 @@ public:
          m_system_state_subscriber{system_state_subscriber},
          m_state_estimation_subscriber{state_estimation_subscriber},
          m_logger{logger},
-         m_max_age_state_estimation_data_ms{max_age_state_estimation_data_ms},
-         m_min_dt_s{min_dt_s},
-         m_max_dt_s{max_dt_s},
-         m_run_attitude_controller{run_attitude_controller},
-         m_max_tilt_angle_rad{max_tilt_angle_rad},
-         m_max_rate_radps{max_rate_radps},
-         m_actuator_min{actuator_min},
-         m_actuator_max{actuator_max},
-         m_throttle_arming{throttle_arming},
-         m_throttle_gate_integrator{throttle_gate_integrator},
-         m_thrust_linearization_factor{thrust_linearization_factor}
+         m_params{params}
    {
       m_logger.enable();
    }
@@ -152,7 +133,7 @@ public:
          {
             if (m_system_state_setpoints.armed)
             {
-               if (m_stick_command.throttle < m_throttle_arming)
+               if (m_stick_command.throttle < m_params.throttle_arming)
                {
                   m_armed = true;
                   m_logger.print("armed");
@@ -191,9 +172,9 @@ private:
       m_current_time_ms        = m_current_time_us / 1000u;
 
       m_dt_s = static_cast<float>(m_current_time_us - m_last_execution_time_us) * 0.000001f;
-      if ((m_dt_s < m_min_dt_s) || (m_max_dt_s < m_dt_s))
+      if ((m_dt_s < m_params.min_dt_s) || (m_params.max_dt_s < m_dt_s))
       {
-         m_dt_s = std::clamp(m_dt_s, m_min_dt_s, m_max_dt_s);
+         m_dt_s = std::clamp(m_dt_s, m_params.min_dt_s, m_params.max_dt_s);
          m_control_status.error.set(static_cast<types::ErrorBitsType>(Error::timing_jitter));
       }
    }
@@ -218,15 +199,15 @@ private:
    {
       using namespace aeromight_boundaries;
 
-      if (m_run_attitude_controller)
+      if (m_params.run_attitude_controller)
       {
-         math::Vec2f stick_setpoints{m_stick_command.roll * m_max_tilt_angle_rad, m_stick_command.pitch * m_max_tilt_angle_rad};
+         math::Vec2f stick_setpoints{m_stick_command.roll * m_params.max_tilt_angle_rad, m_stick_command.pitch * m_params.max_tilt_angle_rad};
 
          const float tilt_norm = stick_setpoints.norm();
 
-         if (tilt_norm > m_max_tilt_angle_rad)
+         if (tilt_norm > m_params.max_tilt_angle_rad)
          {
-            stick_setpoints *= (m_max_tilt_angle_rad / tilt_norm);
+            stick_setpoints *= (m_params.max_tilt_angle_rad / tilt_norm);
          }
 
          const math::Vec3f attitude_setpoints{stick_setpoints[idx(Axis::roll)], stick_setpoints[idx(Axis::pitch)], 0.0f};
@@ -237,17 +218,17 @@ private:
 
          m_rate_setpoints = m_attitude_controller.update(attitude_setpoints, attitude_estimation);
 
-         m_rate_setpoints[idx(Axis::roll)]  = std::clamp(m_rate_setpoints[idx(Axis::roll)], -m_max_rate_radps[idx(Axis::roll)], m_max_rate_radps[idx(Axis::roll)]);
-         m_rate_setpoints[idx(Axis::pitch)] = std::clamp(m_rate_setpoints[idx(Axis::pitch)], -m_max_rate_radps[idx(Axis::pitch)], m_max_rate_radps[idx(Axis::pitch)]);
+         m_rate_setpoints[idx(Axis::roll)]  = std::clamp(m_rate_setpoints[idx(Axis::roll)], -m_params.max_rate[idx(Axis::roll)], m_params.max_rate[idx(Axis::roll)]);
+         m_rate_setpoints[idx(Axis::pitch)] = std::clamp(m_rate_setpoints[idx(Axis::pitch)], -m_params.max_rate[idx(Axis::pitch)], m_params.max_rate[idx(Axis::pitch)]);
       }
       else   // generate rate setpoints from sticks
       {
-         m_rate_setpoints[idx(Axis::roll)]  = m_stick_command.roll * m_max_rate_radps[idx(Axis::roll)];
-         m_rate_setpoints[idx(Axis::pitch)] = m_stick_command.pitch * m_max_rate_radps[idx(Axis::pitch)];
+         m_rate_setpoints[idx(Axis::roll)]  = m_stick_command.roll * m_params.max_rate[idx(Axis::roll)];
+         m_rate_setpoints[idx(Axis::pitch)] = m_stick_command.pitch * m_params.max_rate[idx(Axis::pitch)];
       }
 
       // yaw rate from stick setpoint
-      m_rate_setpoints[idx(Axis::yaw)] = m_stick_command.yaw * m_max_rate_radps[idx(Axis::yaw)];
+      m_rate_setpoints[idx(Axis::yaw)] = m_stick_command.yaw * m_params.max_rate[idx(Axis::yaw)];
    }
 
    void update_rate_control()
@@ -268,7 +249,7 @@ private:
       }
 
       const bool run_integrator{m_armed &&
-                                (m_stick_command.throttle > m_throttle_gate_integrator)};
+                                (m_stick_command.throttle > m_params.throttle_gate_integrator)};
 
       m_torque_setpoints = m_rate_controller.update(m_rate_setpoints,
                                                     gyro_rate,
@@ -302,7 +283,9 @@ private:
       // apply motor permutation
       motor::apply_motor_permutation(motor_values, m_actuator_setpoints, m_motor_mapping);
 
-      motor::apply_thrust_linearization(motor_values, m_thrust_linearization_factor, m_actuator_min, m_actuator_max);
+      motor::apply_thrust_linearization(motor_values, m_params.thrust_linearization_factor,
+                                        m_control_allocator.get_actuator_min(),
+                                        m_control_allocator.get_actuator_max());
 
       for (std::size_t i = 0; i < num_actuators; i++)
       {
@@ -374,7 +357,7 @@ private:
    bool is_state_estimation_valid() const
    {
       const auto state_estimation_data_age_ms = m_current_time_ms - m_state_estimation.timestamp_ms;
-      return (m_state_estimation.attitude_estimation_valid && (state_estimation_data_age_ms <= m_max_age_state_estimation_data_ms));
+      return (m_state_estimation.attitude_estimation_valid && (state_estimation_data_age_ms <= m_params.max_age_state_estimation_data_ms));
    }
 
    static constexpr uint32_t control_led_period_ms = 100u;
@@ -392,17 +375,7 @@ private:
    const SystemStateSubscriber&                              m_system_state_subscriber;
    const aeromight_boundaries::StateEstimation&              m_state_estimation_subscriber;
    Logger&                                                   m_logger;
-   const uint32_t                                            m_max_age_state_estimation_data_ms;
-   const float                                               m_min_dt_s;
-   const float                                               m_max_dt_s;
-   const bool                                                m_run_attitude_controller;
-   const float                                               m_max_tilt_angle_rad;
-   const math::Vec3f                                         m_max_rate_radps;
-   const float                                               m_actuator_min;
-   const float                                               m_actuator_max;
-   const float                                               m_throttle_arming;
-   const float                                               m_throttle_gate_integrator;
-   const float                                               m_thrust_linearization_factor;
+   const ControlParams&                                      m_params;
    aeromight_boundaries::ControlStatus                       m_control_status{};
    rc::StickCommand                                          m_stick_command{};
    aeromight_boundaries::SystemState                         m_system_state_setpoints{};
