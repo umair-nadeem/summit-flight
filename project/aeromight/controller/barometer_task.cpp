@@ -37,8 +37,8 @@ extern "C"
                      LogClient>
           bmp390{data->i2c_driver,
                  logger_bmp390,
-                 data->bmp390_data,
-                 data->bmp390_status,
+                 data->baro_sensor_data,
+                 data->baro_sensor_status,
                  bmp390_read_failures_limit,
                  bmp390_max_recovery_attempts,
                  controller::task::barometer_task_period_in_ms,

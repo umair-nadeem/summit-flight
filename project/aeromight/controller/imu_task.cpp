@@ -49,8 +49,8 @@ extern "C"
                        LogClient>
           mpu6500{data->spi1_master,
                   logger_mpu6500,
-                  data->mpu6500_data,
-                  data->mpu6500_status,
+                  data->imu_sensor_data,
+                  data->imu_sensor_status,
                   mpu6500_read_failures_limit,
                   controller::task::imu_task_period_in_ms,
                   mpu6500_receive_wait_timeout_ms,
@@ -87,7 +87,7 @@ extern "C"
       while (true)
       {
          imu_event_dispatcher.execute();
-         imu.execute(data->mpu6500_data, data->mpu6500_status);
+         imu.execute(data->imu_sensor_data, data->imu_sensor_status);
       }
    }
 }

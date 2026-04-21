@@ -42,8 +42,8 @@ struct ImuTaskData
    rtos::Notifier           imu_task_rx_complete_notifier_from_isr{event_rx_complete_bit_mask};
 
    // sensors
-   imu_sensor::RawImuSensorData mpu6500_data{};
-   imu_sensor::ImuSensorStatus  mpu6500_status{};
+   imu_sensor::RawImuSensorData imu_sensor_data{};
+   imu_sensor::ImuSensorStatus  imu_sensor_status{};
 };
 
 extern ImuTaskData imu_task_data;

@@ -31,8 +31,8 @@ struct BarometerTaskData
    rtos::Notifier           barometer_task_rx_complete_notifier_from_isr{event_rx_complete_bit_mask};
 
    // sensor
-   barometer_sensor::RawBarometerSensorData bmp390_data{};
-   barometer_sensor::BarometerSensorStatus  bmp390_status{};
+   barometer_sensor::RawBarometerSensorData baro_sensor_data{};
+   barometer_sensor::BarometerSensorStatus  baro_sensor_status{};
 };
 
 extern BarometerTaskData barometer_task_data;
