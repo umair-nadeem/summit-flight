@@ -26,18 +26,11 @@ extern "C"
 
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
-      constexpr float    stick_input_deadband_abs       = 0.1f;
-      constexpr uint8_t  good_uplink_quality_pct        = 50u;
-      constexpr float    min_good_signal_rssi_dbm       = -110.0f;
-      constexpr uint32_t max_age_stale_data_ms          = 1000u;
-      constexpr uint32_t min_state_debounce_duration_ms = 100u;
-      constexpr uint32_t timeout_sensors_readiness_ms   = 10'000u;
-      constexpr uint32_t timeout_control_readiness_ms   = 2000u;
-
       LogClient logger_system_manager_task{logging::logging_queue_sender, "system"};
 
       led::Led<hw::pcb_component::Led, sys_time::ClockSource> led{data->system_status_led};
 
+      aeromight_system::SystemManagerParams system_params{};
       aeromight_system::SystemManager<decltype(data->health_summary_queue_receiver),
                                       rtos::Notifier,
                                       decltype(led),
@@ -51,14 +44,7 @@ extern "C"
                          aeromight_boundaries::aeromight_data.system_control_setpoints,
                          aeromight_boundaries::aeromight_data.link_stats_actuals,
                          logger_system_manager_task,
-                         stick_input_deadband_abs,
-                         good_uplink_quality_pct,
-                         min_good_signal_rssi_dbm,
-                         controller::task::system_manager_task_period_in_ms,
-                         max_age_stale_data_ms,
-                         min_state_debounce_duration_ms,
-                         timeout_sensors_readiness_ms,
-                         timeout_control_readiness_ms};
+                         system_params};
 
       rtos::run_periodic_task(system_manager);
    }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "HealthMonitoringParams.hpp"
 #include "aeromight_boundaries/ControlStatus.hpp"
 #include "aeromight_boundaries/EstimatorStatus.hpp"
 #include "aeromight_boundaries/HealthSummary.hpp"
@@ -30,12 +31,7 @@ public:
                              const boundaries::SharedData<aeromight_boundaries::EstimatorStatus>& estimation_health_subscriber,
                              const boundaries::SharedData<aeromight_boundaries::ControlStatus>&   control_health_subscriber,
                              Logger&                                                              logger,
-                             const uint32_t                                                       period_in_ms,
-                             const uint32_t                                                       max_age_imu_health_ms,
-                             const uint32_t                                                       max_age_barometer_health_ms,
-                             const uint32_t                                                       max_age_estimation_health_ms,
-                             const uint32_t                                                       max_age_control_health_ms,
-                             const bool                                                           evaluate_barometer_health)
+                             const HealthMonitoringParams&                                        params)
        : m_battery{battery},
          m_queue_sender{queue_sender},
          m_battery_status_publisher{battery_status_publisher},
@@ -44,12 +40,7 @@ public:
          m_estimation_health_subscriber{estimation_health_subscriber},
          m_control_health_subscriber{control_health_subscriber},
          m_logger{logger},
-         m_period_in_ms{period_in_ms},
-         m_max_age_imu_health_ms{max_age_imu_health_ms},
-         m_max_age_barometer_health_ms{max_age_barometer_health_ms},
-         m_max_age_estimation_health_ms{max_age_estimation_health_ms},
-         m_max_age_control_health_ms{max_age_control_health_ms},
-         m_evaluate_barometer_health{evaluate_barometer_health}
+         m_params{params}
    {
       m_logger.enable();
    }
@@ -74,7 +65,7 @@ public:
 
    uint32_t get_period_ms() const
    {
-      return m_period_in_ms;
+      return m_params.execution_period_ms;
    }
 
 private:
@@ -84,7 +75,7 @@ private:
       evaluate_estimation_health();
       evaluate_control_health();
 
-      if (m_evaluate_barometer_health)
+      if (m_params.evaluate_barometer_health)
       {
          evaluate_barometer_health();
       }
@@ -98,7 +89,7 @@ private:
 
       m_health_summary.imu_calibration_finished = imu_health.data.calibration_done;
 
-      const bool imu_stale = (((m_current_time_ms - imu_health.timestamp_ms) > m_max_age_imu_health_ms));
+      const bool imu_stale = (((m_current_time_ms - imu_health.timestamp_ms) > m_params.max_age_stale_imu_sensor_health_ms));
 
       if (!m_health_summary.imu_operational)
       {
@@ -120,7 +111,7 @@ private:
 
       m_health_summary.barometer_operational = barometer_health.data.available;
 
-      const bool barometer_stale = (((m_current_time_ms - barometer_health.timestamp_ms) > m_max_age_barometer_health_ms));
+      const bool barometer_stale = (((m_current_time_ms - barometer_health.timestamp_ms) > m_params.max_age_barometer_sensor_health_ms));
 
       if (!m_health_summary.barometer_operational)
       {
@@ -143,7 +134,7 @@ private:
       m_health_summary.estimation_operational = (estimation_health.data.enabled &&
                                                  (estimation_health.data.error.to_ullong() == 0));
 
-      const bool estimation_stale = (((m_current_time_ms - estimation_health.timestamp_ms) > m_max_age_estimation_health_ms));
+      const bool estimation_stale = (((m_current_time_ms - estimation_health.timestamp_ms) > m_params.max_age_estimation_health_ms));
 
       if (!m_health_summary.estimation_operational)
       {
@@ -165,7 +156,7 @@ private:
 
       m_health_summary.control_operational = control_health.data.enabled;
 
-      const bool control_stale = (((m_current_time_ms - control_health.timestamp_ms) > m_max_age_control_health_ms) ||
+      const bool control_stale = (((m_current_time_ms - control_health.timestamp_ms) > m_params.max_age_control_health_ms) ||
                                   (control_health.data.error.to_ullong() != 0));
 
       if (!m_health_summary.control_operational)
@@ -206,12 +197,7 @@ private:
    const boundaries::SharedData<aeromight_boundaries::EstimatorStatus>& m_estimation_health_subscriber;
    const boundaries::SharedData<aeromight_boundaries::ControlStatus>&   m_control_health_subscriber;
    Logger&                                                              m_logger;
-   const uint32_t                                                       m_period_in_ms;
-   const uint32_t                                                       m_max_age_imu_health_ms;
-   const uint32_t                                                       m_max_age_barometer_health_ms;
-   const uint32_t                                                       m_max_age_estimation_health_ms;
-   const uint32_t                                                       m_max_age_control_health_ms;
-   const bool                                                           m_evaluate_barometer_health;
+   const HealthMonitoringParams&                                        m_params;
    aeromight_boundaries::HealthSummary                                  m_health_summary{};
    power::battery::BatteryStatus                                        m_battery_status{};
    uint32_t                                                             m_current_time_ms{0};

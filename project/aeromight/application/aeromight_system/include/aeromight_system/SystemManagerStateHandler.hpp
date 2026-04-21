@@ -1,5 +1,6 @@
 #pragma once
 
+#include "SystemManagerParams.hpp"
 #include "SystemManagerState.hpp"
 #include "aeromight_boundaries/HealthSummary.hpp"
 #include "aeromight_boundaries/SystemControlSetpoints.hpp"
@@ -35,13 +36,7 @@ public:
                                       const SystemControlSetpointsSubscriber& system_control_setpoints_subscriber,
                                       const LinkStatsActualsSubscriber&       link_stats_actuals_subscriber,
                                       Logger&                                 logger,
-                                      const float                             stick_input_deadband_abs,
-                                      const uint8_t                           good_uplink_quality_pct,
-                                      const float                             min_good_signal_rssi_dbm,
-                                      const uint32_t                          max_age_stale_data_ms,
-                                      const uint32_t                          min_state_debounce_duration_ms,
-                                      const uint32_t                          timeout_sensors_readiness_ms,
-                                      const uint32_t                          timeout_control_readiness_ms)
+                                      const SystemManagerParams&              params)
        : m_health_summary_queue_receiver{health_summary_queue_receiver},
          m_control_start_notifier(control_start_notifier),
          m_imu_start_calibration_notifier(imu_start_calibration_notifier),
@@ -50,13 +45,7 @@ public:
          m_system_control_setpoints_subscriber(system_control_setpoints_subscriber),
          m_link_stats_actuals_subscriber(link_stats_actuals_subscriber),
          m_logger{logger},
-         m_stick_input_deadband_abs{stick_input_deadband_abs},
-         m_good_uplink_quality_pct{good_uplink_quality_pct},
-         m_min_good_signal_rssi_dbm{min_good_signal_rssi_dbm},
-         m_max_age_stale_data_ms{max_age_stale_data_ms},
-         m_min_state_debounce_duration_ms{min_state_debounce_duration_ms},
-         m_timeout_sensors_readiness_ms{timeout_sensors_readiness_ms},
-         m_timeout_control_readiness_ms{timeout_control_readiness_ms}
+         m_params{params}
    {
    }
 
@@ -202,17 +191,17 @@ public:
 
    bool timeout_sensors_readiness() const
    {
-      return ((m_current_time_ms - m_reference_time_ms) >= m_timeout_sensors_readiness_ms);
+      return ((m_current_time_ms - m_reference_time_ms) >= m_params.timeout_sensors_readiness_ms);
    }
 
    bool timeout_control_readiness() const
    {
-      return ((m_current_time_ms - m_reference_time_ms) >= m_timeout_control_readiness_ms);
+      return ((m_current_time_ms - m_reference_time_ms) >= m_params.timeout_control_readiness_ms);
    }
 
    bool is_state_change_persistent() const
    {
-      return ((m_current_time_ms - m_reference_time_ms) >= m_min_state_debounce_duration_ms);
+      return ((m_current_time_ms - m_reference_time_ms) >= m_params.min_state_debounce_duration_ms);
    }
 
    bool sensors_ready() const
@@ -247,13 +236,13 @@ public:
 
    bool stale_health() const
    {
-      return ((m_current_time_ms - m_health_summary.timestamp_ms) >= m_max_age_stale_data_ms);
+      return ((m_current_time_ms - m_health_summary.timestamp_ms) >= m_params.max_age_stale_data_ms);
    }
 
    bool stale_radio_input() const
    {
-      if (((m_current_time_ms - m_system_control_setpoints.timestamp_ms) >= m_max_age_stale_data_ms) ||
-          ((m_current_time_ms - m_link_stats_actuals.timestamp_ms) >= m_max_age_stale_data_ms))
+      if (((m_current_time_ms - m_system_control_setpoints.timestamp_ms) >= m_params.max_age_stale_data_ms) ||
+          ((m_current_time_ms - m_link_stats_actuals.timestamp_ms) >= m_params.max_age_stale_data_ms))
       {
          return true;
       }
@@ -300,8 +289,8 @@ public:
    {
       if (!stale_radio_input())
       {
-         return ((m_link_stats_actuals.data.uplink_quality_pct > m_good_uplink_quality_pct) &&
-                 (m_link_stats_actuals.data.uplink_rssi_1_dbm >= m_min_good_signal_rssi_dbm));
+         return ((m_link_stats_actuals.data.uplink_quality_pct > m_params.good_uplink_quality_pct) &&
+                 (m_link_stats_actuals.data.uplink_rssi_1_dbm >= m_params.min_good_signal_rssi_dbm));
       }
 
       return false;
@@ -352,13 +341,7 @@ private:
    const SystemControlSetpointsSubscriber&  m_system_control_setpoints_subscriber;
    const LinkStatsActualsSubscriber&        m_link_stats_actuals_subscriber;
    Logger&                                  m_logger;
-   const float                              m_stick_input_deadband_abs;
-   const uint8_t                            m_good_uplink_quality_pct;
-   const float                              m_min_good_signal_rssi_dbm;
-   const uint32_t                           m_max_age_stale_data_ms;
-   const uint32_t                           m_min_state_debounce_duration_ms;
-   const uint32_t                           m_timeout_sensors_readiness_ms;
-   const uint32_t                           m_timeout_control_readiness_ms;
+   const SystemManagerParams&               m_params;
    aeromight_boundaries::SystemState        m_system_state{};
    aeromight_boundaries::HealthSummary      m_health_summary{};
    SystemControlSetpointsSubscriber::Sample m_system_control_setpoints{};
