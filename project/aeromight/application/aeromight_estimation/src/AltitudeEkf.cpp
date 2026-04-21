@@ -20,18 +20,8 @@ constexpr float transform_accel_to_world_z(const math::Vec3f& accel_body, const 
 namespace aeromight_estimation
 {
 
-AltitudeEkf::AltitudeEkf(const float process_noise_z,
-                         const float process_noise_vz,
-                         const float process_noise_accel_bias,
-                         const float measurement_noise_baro,
-                         const float tilt_gating_attitude_angle_rad,
-                         const float tilt_gating_accel_weight)
-    : m_process_noise_z{process_noise_z},
-      m_process_noise_vz{process_noise_vz},
-      m_process_noise_accel_bias{process_noise_accel_bias},
-      m_measurement_noise_baro{measurement_noise_baro},
-      m_tilt_gating_attitude_angle_rad{tilt_gating_attitude_angle_rad},
-      m_tilt_gating_accel_weight{tilt_gating_accel_weight}
+AltitudeEkf::AltitudeEkf(const AltitudeEkfParams& params)
+    : m_params{params}
 
 {
    reset();
@@ -49,9 +39,9 @@ void AltitudeEkf::predict(const math::Vec3f&      accel_body_mps2,
 
    // apply tilt-compensation gate to accel_z
    const math::Euler euler = math::quaternion_to_euler(attitude);
-   if ((fabsf(euler.roll()) > m_tilt_gating_attitude_angle_rad) || (fabsf(euler.pitch()) > m_tilt_gating_attitude_angle_rad))
+   if ((fabsf(euler.roll()) > m_params.tilt_gating_attitude_angle_rad) || (fabsf(euler.pitch()) > m_params.tilt_gating_attitude_angle_rad))
    {
-      accel_world_z = (fabsf(1.0f - m_tilt_gating_accel_weight) * m_last_accel_world_z) + (m_tilt_gating_accel_weight * accel_world_z);
+      accel_world_z = (fabsf(1.0f - m_params.tilt_gating_accel_weight) * m_last_accel_world_z) + (m_params.tilt_gating_accel_weight * accel_world_z);
    }
 
    // update state estimates
@@ -69,9 +59,9 @@ void AltitudeEkf::predict(const math::Vec3f&      accel_body_mps2,
    m_f_d.at(1u, 2u) = -dt_s * r33;
 
    // initialize Q
-   m_q.at(0, 0)   = dt_s * m_process_noise_z;
-   m_q.at(1u, 1u) = dt_s * m_process_noise_vz;
-   m_q.at(2u, 2u) = dt_s * m_process_noise_accel_bias;
+   m_q.at(0, 0)   = dt_s * m_params.process_noise_z;
+   m_q.at(1u, 1u) = dt_s * m_params.process_noise_vz;
+   m_q.at(2u, 2u) = dt_s * m_params.process_noise_accel_bias;
 
    // 6) Covariance propagate: P = F_d * P * F_d^T + Q_d
    const auto f_d_transpose = m_f_d.transpose();
@@ -98,7 +88,7 @@ void AltitudeEkf::update(const float baro_altitude_m)
 
    // S = HPH^T + R = P[0,0] + R
    const float p_0_0 = m_p.at(0, 0);
-   const float s     = p_0_0 + m_measurement_noise_baro;
+   const float s     = p_0_0 + m_params.measurement_noise_baro;
 
    // Kalman gain K = P * H^T / S = [P00; P10; P20] / S
    math::Matrix<float, num_state_dimensions, 1u> kalman_gain{};
@@ -130,7 +120,7 @@ void AltitudeEkf::update(const float baro_altitude_m)
    // K * R * K^T -> R (scalar) x  K * K^T
    const math::Matrix<float, num_state_dimensions, num_state_dimensions> result_2 = kalman_gain * kalman_gain.transpose();
 
-   p_new += result_2 * m_measurement_noise_baro;
+   p_new += result_2 * m_params.measurement_noise_baro;
 
    // assign and enforce symmetry/diagonals
    m_p = p_new;

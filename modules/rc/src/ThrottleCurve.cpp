@@ -8,14 +8,13 @@
 namespace rc
 {
 
-ThrottleCurve::ThrottleCurve(const float throttle_hover, const float exponential)
-    : m_throttle_hover{throttle_hover},
-      m_exponential{exponential}
+ThrottleCurve::ThrottleCurve(const ThrottleCurveParams& params)
+    : m_params{params}
 {
-   error::verify((0.0f < m_throttle_hover) && (m_throttle_hover < 1.0f));
-   error::verify((0.0f <= m_exponential) && (m_exponential <= 1.0f));
+   error::verify((0.0f < m_params.throttle_hover) && (m_params.throttle_hover < 1.0f));
+   error::verify((0.0f <= m_params.exponential) && (m_params.exponential <= 1.0f));
 
-   m_s  = std::max((1.0f - throttle_hover), throttle_hover);
+   m_s  = std::max((1.0f - m_params.throttle_hover), m_params.throttle_hover);
    m_f0 = apply_raw(0.0f);
    m_f1 = apply_raw(1.0f);
 
@@ -26,10 +25,10 @@ ThrottleCurve::ThrottleCurve(const float throttle_hover, const float exponential
 
 float ThrottleCurve::apply_raw(const float throttle) const
 {
-   const float x = (throttle - m_throttle_hover) / m_s;
-   const float y = (1.0f - m_exponential) * x + (m_exponential * x * x * x);
+   const float x = (throttle - m_params.throttle_hover) / m_s;
+   const float y = (1.0f - m_params.exponential) * x + (m_params.exponential * x * x * x);
 
-   return (m_throttle_hover + (m_s * y));
+   return (m_params.throttle_hover + (m_s * y));
 }
 
 float ThrottleCurve::apply(const float throttle) const

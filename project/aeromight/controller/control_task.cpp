@@ -45,13 +45,6 @@ extern "C"
       using GyroFilterType  = math::FirstOrderLpf;
       using DtermFilterType = math::NullFilter;
 
-      // altitude ekf2 parameters
-      constexpr float    process_noise_z                      = 1.0f;
-      constexpr float    process_noise_vz                     = 5.0f;
-      constexpr float    process_noise_accel_bias             = 0.0001f;
-      constexpr float    measurement_noise_baro               = 0.5f;
-      constexpr float    tilt_gating_attitude_angle_rad       = 0.2f;
-      constexpr float    tilt_gating_accel_weight             = 0.08f;
       // estimation parameters
       constexpr bool     run_altitude_estimation              = false;
       constexpr uint32_t max_age_imu_data_ms                  = controller::task::imu_task_period_in_ms * 10u;
@@ -72,8 +65,6 @@ extern "C"
       constexpr float    actuator_max                         = 1.0f - thrust_limiting;
       constexpr float    actuator_idle                        = 0.1f;
       constexpr float    throttle_arming                      = 0.01f;
-      constexpr float    throttle_hover                       = 0.3f;
-      constexpr float    throttle_curve_factor                = 0.7f;
       constexpr float    throttle_gate_integrator             = 0.15f;
       // attitude controller
       constexpr bool     run_attitude_controller              = true;
@@ -81,11 +72,10 @@ extern "C"
       constexpr float    max_roll_rate_radps                  = 3.0f;
       constexpr float    max_pitch_rate_radps                 = 3.0f;
       constexpr float    max_yaw_rate_radps                   = 3.0f;
-
       // control allocator
-      constexpr float thrust_deadband             = 0.01f;
-      constexpr float yaw_saturation_limit_factor = 0.25f;
-      constexpr float slew_rate_limit_s           = 1.0f;
+      constexpr float    thrust_deadband                      = 0.01f;
+      constexpr float    yaw_saturation_limit_factor          = 0.25f;
+      constexpr float    slew_rate_limit_s                    = 1.0f;
 
       LogClient logger_estimation{logging::logging_queue_sender, "estimation"};
       LogClient logger_control{logging::logging_queue_sender, "control"};
@@ -93,12 +83,8 @@ extern "C"
       estimation::AttitudeEstimatorParams ahrs_params{};
       estimation::AttitudeEstimator       ahrs_filter{ahrs_params};
 
-      aeromight_estimation::AltitudeEkf altitude_ekf{process_noise_z,
-                                                     process_noise_vz,
-                                                     process_noise_accel_bias,
-                                                     measurement_noise_baro,
-                                                     tilt_gating_attitude_angle_rad,
-                                                     tilt_gating_accel_weight};
+      aeromight_estimation::AltitudeEkfParams ekf2_params{};
+      aeromight_estimation::AltitudeEkf       altitude_ekf{ekf2_params};
 
       aeromight_estimation::Estimation<decltype(ahrs_filter),
                                        decltype(altitude_ekf),
@@ -130,7 +116,8 @@ extern "C"
                                                             yaw_saturation_limit_factor,
                                                             slew_rate_limit_s};
 
-      rc::ThrottleCurve throttle_curve{throttle_hover, throttle_curve_factor};
+      rc::ThrottleCurveParams throttle_curve_params{};
+      rc::ThrottleCurve       throttle_curve{throttle_curve_params};
 
       auto roll_input_lpf  = math::make_filter<StickFilterType>(stick_input_lpf_cutoff_hz);
       auto pitch_input_lpf = math::make_filter<StickFilterType>(stick_input_lpf_cutoff_hz);
