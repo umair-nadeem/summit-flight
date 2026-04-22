@@ -5,8 +5,8 @@
 
 #include "aeromight_estimation/EkfState.hpp"
 #include "bmp390/params.hpp"
+#include "logging/Logger.hpp"
 #include "mocks/common/ClockSource.hpp"
-#include "mocks/common/Logger.hpp"
 #include "utilities/Barometric.hpp"
 
 class AttitudeEstimatorMock
@@ -55,11 +55,12 @@ protected:
       baro_data.update_latest(data, timestamp_ms);
    }
 
-   static constexpr bool     run_altitude_estimation         = true;
-   static constexpr uint32_t max_age_imu_data_ms             = 8u;
-   static constexpr uint32_t max_age_baro_data_ms            = 16u;
-   static constexpr float    max_valid_imu_sample_dt_s       = 0.01f;
-   static constexpr float    max_valid_barometer_sample_dt_s = 2.0f;
+   aeromight_estimation::EstimationParams params{
+       .run_altitude_estimation         = true,
+       .max_age_imu_data_ms             = 8u,
+       .max_age_baro_data_ms            = 16u,
+       .max_valid_imu_sample_dt_s       = 0.01f,
+       .max_valid_barometer_sample_dt_s = 2.0f};
 
    testing::NiceMock<AttitudeEstimatorMock>                      ahrs_filter_mock{};
    testing::NiceMock<EkfMock>                                    ekf_mock{};
@@ -68,7 +69,7 @@ protected:
    aeromight_boundaries::StateEstimation                         state_estimation_storage{};
    boundaries::SharedData<imu::ImuData>                          imu_data{};
    boundaries::SharedData<barometer::BarometerData>              baro_data{};
-   mocks::common::Logger                                         logger{"estmation"};
+   logging::Logger                                               logger{"estmation"};
    uint32_t                                                      current_ms{0};
 
    aeromight_estimation::Estimation<decltype(ahrs_filter_mock),
@@ -82,11 +83,7 @@ protected:
                   imu_data,
                   baro_data,
                   logger,
-                  run_altitude_estimation,
-                  max_age_imu_data_ms,
-                  max_age_baro_data_ms,
-                  max_valid_imu_sample_dt_s,
-                  max_valid_barometer_sample_dt_s};
+                  params};
 };
 
 TEST_F(EstimationTest, filters_reset_due_to_large_time_gap_in_imu_samples)
@@ -99,7 +96,7 @@ TEST_F(EstimationTest, filters_reset_due_to_large_time_gap_in_imu_samples)
    sys_clock.m_sec = current_ms++;
    estimation.execute();
 
-   const uint32_t ticks_needed = static_cast<uint32_t>(max_valid_imu_sample_dt_s * 1000.0f);
+   const uint32_t ticks_needed = static_cast<uint32_t>(params.max_valid_imu_sample_dt_s * 1000.0f);
    for (uint32_t i = 0; i < ticks_needed; i++)
    {
       prepare_baro_sample(bmp390::params::max_plauisble_range_pressure_pa, current_ms);   // normal update for baro
@@ -125,7 +122,7 @@ TEST_F(EstimationTest, filters_reset_due_to_large_time_gap_in_barometer_samples)
    sys_clock.m_sec = current_ms++;
    estimation.execute();
 
-   const uint32_t ticks_needed = static_cast<uint32_t>(max_valid_barometer_sample_dt_s * 1000.0f);
+   const uint32_t ticks_needed = static_cast<uint32_t>(params.max_valid_barometer_sample_dt_s * 1000.0f);
    for (uint32_t i = 0; i < ticks_needed; i++)
    {
       prepare_imu_sample(math::Vec3f{}, math::Vec3f{}, current_ms);   // normal update for imu
@@ -207,7 +204,7 @@ TEST_F(EstimationTest, fault_due_to_stale_imu_data)
    sys_clock.m_sec = current_ms++;
    estimation.execute();
 
-   const uint32_t ticks_to_execute = max_age_imu_data_ms + current_ms + 1u;
+   const uint32_t ticks_to_execute = params.max_age_imu_data_ms + current_ms + 1u;
    for (; current_ms < ticks_to_execute; current_ms++)
    {
       sys_clock.m_sec = current_ms;
@@ -232,7 +229,7 @@ TEST_F(EstimationTest, no_fault_due_to_stale_baro_data)
    sys_clock.m_sec = current_ms++;
    estimation.execute();
 
-   const uint32_t ticks_to_execute = max_age_baro_data_ms + current_ms + 1u;
+   const uint32_t ticks_to_execute = params.max_age_baro_data_ms + current_ms + 1u;
    for (; current_ms < ticks_to_execute; current_ms++)
    {
       sys_clock.m_sec = current_ms;

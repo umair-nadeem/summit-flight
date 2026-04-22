@@ -6,23 +6,14 @@
 class ResetSMTest : public Mpu6500BaseTest
 {
 protected:
-   using StateHandler    = mpu6500::Mpu6500StateHandler<decltype(spi_master_with_dma), mocks::common::Logger>;
+   using StateHandler    = mpu6500::Mpu6500StateHandler<decltype(spi_master_with_dma), logging::Logger>;
    using StateMachineDef = mpu6500::ResetStateMachine<StateHandler>;
 
    StateHandler mpu6500_handler{spi_master_with_dma,
                                 logger,
                                 imu_sensor_data,
                                 imu_sensor_status,
-                                read_failures_limit,
-                                execution_period_ms,
-                                receive_wait_timeout_ms,
-                                sample_rate_divider,
-                                dlpf_config,
-                                gyro_full_scale,
-                                accel_full_scale,
-                                accel_a_dlpf_config,
-                                gyro_range_plausibility_margin_radps,
-                                accel_range_plausibility_margin_mps2};
+                                params};
 
    boost::sml::sm<StateMachineDef> sm{mpu6500_handler};
 };
@@ -42,7 +33,7 @@ TEST_F(ResetSMTest, check_power_reset_command)
    EXPECT_THAT(tx_buffer, testing::ElementsAreArray(test_buffer.begin(), test_buffer.end()));
    EXPECT_TRUE(sm.is(StateMachineDef::s_power_reset_wait));
 
-   const std::size_t wait_ticks_needed = mpu6500::params::power_on_reset_wait_ms / execution_period_ms;
+   const std::size_t wait_ticks_needed = mpu6500::params::power_on_reset_wait_ms / params.execution_period_ms;
    for (std::size_t i = 0; i < wait_ticks_needed; i++)
    {
       sm.process_event(mpu6500::EventTick{});
@@ -55,7 +46,7 @@ TEST_F(ResetSMTest, check_power_reset_command)
 TEST_F(ResetSMTest, check_signal_path_reset_command)
 {
    sm.process_event(mpu6500::EventTick{});   // triggers power reset
-   const std::size_t power_reset_wait_ticks_needed = mpu6500::params::power_on_reset_wait_ms / execution_period_ms;
+   const std::size_t power_reset_wait_ticks_needed = mpu6500::params::power_on_reset_wait_ms / params.execution_period_ms;
    for (std::size_t i = 0; i < power_reset_wait_ticks_needed; i++)
    {
       sm.process_event(mpu6500::EventTick{});
@@ -76,7 +67,7 @@ TEST_F(ResetSMTest, check_signal_path_reset_command)
    EXPECT_THAT(tx_buffer, testing::ElementsAreArray(test_buffer.begin(), test_buffer.end()));
    EXPECT_TRUE(sm.is(StateMachineDef::s_signal_reset_wait));
 
-   const std::size_t signal_reset_wait_ticks_needed = mpu6500::params::signal_path_reset_wait_ms / execution_period_ms;
+   const std::size_t signal_reset_wait_ticks_needed = mpu6500::params::signal_path_reset_wait_ms / params.execution_period_ms;
    for (std::size_t i = 0; i < signal_reset_wait_ticks_needed; i++)
    {
       sm.process_event(mpu6500::EventTick{});

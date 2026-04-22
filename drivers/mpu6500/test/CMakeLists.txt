@@ -5,5 +5,6 @@ add_module_test(
       ResetSMTest.cpp
       ValidationSMTest.cpp
    LIBS
+      logging
       mocks
 )

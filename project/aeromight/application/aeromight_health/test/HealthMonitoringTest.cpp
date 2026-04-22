@@ -3,8 +3,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "logging/Logger.hpp"
 #include "mocks/common/ClockSource.hpp"
-#include "mocks/common/Logger.hpp"
 #include "mocks/rtos/QueueSender.hpp"
 
 class BatteryMock
@@ -62,12 +62,13 @@ protected:
       health_monitoring.run_once();
    }
 
-   static constexpr uint32_t period_in_ms                       = 1u;
-   static constexpr uint32_t max_age_stale_imu_sensor_health_ms = 3u;
-   static constexpr uint32_t max_age_barometer_sensor_health_ms = 3u;
-   static constexpr uint32_t max_age_estimation_health_ms       = 3u;
-   static constexpr uint32_t max_age_control_health_ms          = 3u;
-   static constexpr bool     evaluate_barometer_health          = true;
+   aeromight_health::HealthMonitoringParams params{
+       .execution_period_ms                = 1u,
+       .max_age_stale_imu_sensor_health_ms = 3u,
+       .max_age_barometer_sensor_health_ms = 3u,
+       .max_age_estimation_health_ms       = 3u,
+       .max_age_control_health_ms          = 3u,
+       .evaluate_barometer_health          = true};
 
    BatteryMock                                                   battery_mock{};
    mocks::rtos::QueueSender<aeromight_boundaries::HealthSummary> queue_sender_mock{};
@@ -77,7 +78,7 @@ protected:
    boundaries::SharedData<barometer::BarometerStatus>            barometer_health_subscriber{};
    boundaries::SharedData<aeromight_boundaries::EstimatorStatus> estimation_health_subscriber{};
    boundaries::SharedData<aeromight_boundaries::ControlStatus>   control_health_subscriber{};
-   mocks::common::Logger                                         logger_mock{"health_mon"};
+   logging::Logger                                               logger_mock{"health_mon"};
    uint32_t                                                      current_ms{0u};
 
    aeromight_health::HealthMonitoring<decltype(battery_mock),
@@ -92,12 +93,7 @@ protected:
                          estimation_health_subscriber,
                          control_health_subscriber,
                          logger_mock,
-                         period_in_ms,
-                         max_age_stale_imu_sensor_health_ms,
-                         max_age_barometer_sensor_health_ms,
-                         max_age_estimation_health_ms,
-                         max_age_control_health_ms,
-                         evaluate_barometer_health};
+                         params};
 };
 
 TEST_F(HealthMonitoringTest, wait_until_startup)
@@ -178,7 +174,7 @@ TEST_F(HealthMonitoringTest, stale_imu_data_causes_degraded_health)
    make_estimation_and_control_ready();
 
    // update baro, control and estimation health status
-   current_ms += max_age_stale_imu_sensor_health_ms;
+   current_ms += params.max_age_stale_imu_sensor_health_ms;
 
    barometer::BarometerStatus baro_health{true};
    barometer_health_subscriber.update_latest(baro_health, current_ms);
@@ -189,7 +185,7 @@ TEST_F(HealthMonitoringTest, stale_imu_data_causes_degraded_health)
    aeromight_boundaries::ControlStatus control_health{true, 0};
    control_health_subscriber.update_latest(control_health, current_ms);
 
-   const uint32_t ticks_required = (max_age_stale_imu_sensor_health_ms / period_in_ms) - 1u;   // one tick to make estimation ready
+   const uint32_t ticks_required = (params.max_age_stale_imu_sensor_health_ms / params.execution_period_ms) - 1u;   // one tick to make estimation ready
    provide_ticks(ticks_required);
 
    const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
@@ -211,7 +207,7 @@ TEST_F(HealthMonitoringTest, stale_baro_data_does_not_cause_degraded_health)
    make_estimation_and_control_ready();
 
    // update imu, estimation and control health status
-   current_ms += max_age_stale_imu_sensor_health_ms;
+   current_ms += params.max_age_stale_imu_sensor_health_ms;
 
    imu::ImuStatus imu_health{0, true};
    imu_health_subscriber.update_latest(imu_health, current_ms);
@@ -222,7 +218,7 @@ TEST_F(HealthMonitoringTest, stale_baro_data_does_not_cause_degraded_health)
    aeromight_boundaries::ControlStatus control_health{true, 0};
    control_health_subscriber.update_latest(control_health, current_ms);
 
-   const uint32_t ticks_required = (max_age_stale_imu_sensor_health_ms / period_in_ms) - 1u;   // one tick to make estimation ready
+   const uint32_t ticks_required = (params.max_age_stale_imu_sensor_health_ms / params.execution_period_ms) - 1u;   // one tick to make estimation ready
    provide_ticks(ticks_required);
 
    const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();
@@ -244,7 +240,7 @@ TEST_F(HealthMonitoringTest, stale_estimation_data_causes_degraded_health)
    make_estimation_and_control_ready();
 
    // update imu and baro health status
-   current_ms += max_age_stale_imu_sensor_health_ms;
+   current_ms += params.max_age_stale_imu_sensor_health_ms;
 
    imu::ImuStatus imu_health{0, true};
    imu_health_subscriber.update_latest(imu_health, current_ms);
@@ -255,7 +251,7 @@ TEST_F(HealthMonitoringTest, stale_estimation_data_causes_degraded_health)
    aeromight_boundaries::ControlStatus control_health{true, 0};
    control_health_subscriber.update_latest(control_health, current_ms);
 
-   const uint32_t ticks_required = (max_age_stale_imu_sensor_health_ms / period_in_ms) - 1u;   // one tick to make estimation ready
+   const uint32_t ticks_required = (params.max_age_stale_imu_sensor_health_ms / params.execution_period_ms) - 1u;   // one tick to make estimation ready
    provide_ticks(ticks_required);
 
    const aeromight_boundaries::HealthSummary health = health_monitoring.get_health_summary();

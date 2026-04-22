@@ -3,8 +3,9 @@
 
 #include "imu_sensor/ImuSensorStatus.hpp"
 #include "imu_sensor/RawImuSensorData.hpp"
-#include "mocks/common/Logger.hpp"
+#include "logging/Logger.hpp"
 #include "mocks/hw/SpiMasterWithDma.hpp"
+#include "mpu6500/Mpu6500Params.hpp"
 #include "mpu6500/params.hpp"
 #include "sys_time/ClockSource.hpp"
 
@@ -57,21 +58,17 @@ protected:
       rx_buffer[8] = 0xc7;   // TEMP_OUT_L
    }
 
-   static constexpr uint8_t  read_failures_limit     = 3u;
-   static constexpr uint32_t execution_period_ms     = 4u;
-   static constexpr uint32_t receive_wait_timeout_ms = 4u;
-
-   // parameter values
-   static constexpr uint8_t sample_rate_divider                  = 0x03;
-   static constexpr uint8_t dlpf_config                          = 0x02;
-   static constexpr uint8_t gyro_full_scale                      = 0x02;
-   static constexpr uint8_t accel_full_scale                     = 0x01;
-   static constexpr uint8_t accel_a_dlpf_config                  = 0x03;
-   static constexpr float   gyro_range_plausibility_margin_radps = 6.0f;
-   static constexpr float   accel_range_plausibility_margin_mps2 = 20.0f;
-   static constexpr uint8_t num_calibration_samples              = 5u;
-   static constexpr float   gyro_tolerance_radps                 = 0.1f;
-   static constexpr float   accel_tolerance_mps2                 = 1.5f;
+   mpu6500::Mpu6500Params params{
+       .read_failures_limit                  = 3u,
+       .execution_period_ms                  = 4u,
+       .receive_wait_timeout_ms              = 4u,
+       .sample_rate_divider                  = 0x03,
+       .dlpf_config                          = 0x02,
+       .gyro_full_scale                      = 0x02,
+       .accel_full_scale                     = 0x01,
+       .accel_a_dlpf_config                  = 0x03,
+       .gyro_range_plausibility_margin_radps = 6.0f,
+       .accel_range_plausibility_margin_mps2 = 20.0f};
 
    imu_sensor::RawImuSensorData                                imu_sensor_data{};
    imu_sensor::ImuSensorStatus                                 imu_sensor_status{};
@@ -79,5 +76,5 @@ protected:
    std::array<uint8_t, mpu6500::params::num_bytes_transaction> rx_buffer{};
    std::array<uint8_t, mpu6500::params::num_bytes_transaction> test_buffer{};
    mocks::hw::SpiMasterWithDma                                 spi_master_with_dma{tx_buffer, rx_buffer};
-   mocks::common::Logger                                       logger{"mpu_test"};
+   logging::Logger                                             logger{"mpu_test"};
 };

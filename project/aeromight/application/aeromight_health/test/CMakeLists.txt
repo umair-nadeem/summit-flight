@@ -2,5 +2,6 @@ add_module_test(
    SOURCES
       HealthMonitoringTest.cpp
    LIBS
+      logging
       mocks
 )

@@ -3,5 +3,6 @@ add_module_test(
       SystemManagerTest.cpp
    LIBS
       aeromight_boundaries
+      logging
       mocks
 )

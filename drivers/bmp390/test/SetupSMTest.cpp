@@ -6,7 +6,7 @@
 class Bmp390SetupSMTest : public Bmp390BaseTest
 {
 protected:
-   using StateHandler    = bmp390::Bmp390StateHandler<decltype(i2c_driver), mocks::common::Logger>;
+   using StateHandler    = bmp390::Bmp390StateHandler<decltype(i2c_driver), logging::Logger>;
    using StateMachineDef = bmp390::SetupStateMachine<StateHandler>;
 
    StateHandler                    state_handler;
@@ -18,10 +18,7 @@ protected:
                        logger,
                        barometer_sensor_data,
                        barometer_sensor_status,
-                       read_failures_limit,
-                       max_recovery_attempts,
-                       execution_period_ms,
-                       receive_wait_timeout_ms},
+                       params},
          sm{state_handler}
    {
    }
@@ -101,8 +98,8 @@ TEST_F(Bmp390SetupSMTest, check_read_id_fail_with_timeout)
    EXPECT_THAT(ref_tx_buffer, testing::ElementsAreArray(i2c_driver.m_tx_buffer_span));
 
    // read id command fails with timeout
-   sm.process_event(bmp390::EventTick{});                                 // read id command executed
-   provide_ticks((receive_wait_timeout_ms / execution_period_ms) + 1u);   // timeout ticks
+   sm.process_event(bmp390::EventTick{});                                               // read id command executed
+   provide_ticks((params.receive_wait_timeout_ms / params.execution_period_ms) + 1u);   // timeout ticks
 
    barometer_sensor::BarometerSensorErrorBits ref_error{};
    ref_error.set(static_cast<types::ErrorBitsType>(barometer_sensor::BarometerSensorError::bus_error));
@@ -229,13 +226,13 @@ TEST_F(Bmp390SetupSMTest, check_read_config_burst_fail_with_timeout)
 
    EXPECT_EQ(state_handler.get_error().to_ulong(), 0);
 
-   sm.process_event(bmp390::EventTick{});                                 // osr
-   sm.process_event(bmp390::EventTick{});                                 // odr
-   sm.process_event(bmp390::EventTick{});                                 // iir
-   sm.process_event(bmp390::EventTick{});                                 // power control
-   sm.process_event(bmp390::EventTick{});                                 // read config burst
+   sm.process_event(bmp390::EventTick{});                                               // osr
+   sm.process_event(bmp390::EventTick{});                                               // odr
+   sm.process_event(bmp390::EventTick{});                                               // iir
+   sm.process_event(bmp390::EventTick{});                                               // power control
+   sm.process_event(bmp390::EventTick{});                                               // read config burst
 
-   provide_ticks((receive_wait_timeout_ms / execution_period_ms) + 1u);   // timeout ticks
+   provide_ticks((params.receive_wait_timeout_ms / params.execution_period_ms) + 1u);   // timeout ticks
 
    barometer_sensor::BarometerSensorErrorBits ref_error{};
    ref_error.set(static_cast<types::ErrorBitsType>(barometer_sensor::BarometerSensorError::bus_error));

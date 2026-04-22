@@ -4,9 +4,9 @@
 
 #include <gmock/gmock.h>
 
+#include "logging/Logger.hpp"
 #include "mocks/common/ClockSource.hpp"
 #include "mocks/common/Crsf.hpp"
-#include "mocks/common/Logger.hpp"
 #include "mocks/rtos/QueueReceiver.hpp"
 #include "mocks/rtos/QueueSender.hpp"
 
@@ -39,10 +39,10 @@ protected:
    mocks::rtos::QueueSender<std::size_t>                                       queue_sender_mock{};
    CrsfDecoderMock                                                             crsf_decoder_mock{};
    mocks::common::ClockSource                                                  sys_clock{};
-   boundaries::SharedData<control::attitude::StickCommand>                     stick_commands{};
+   boundaries::SharedData<rc::StickCommand>                                    stick_commands{};
    boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints>        system_control_setpoints_storage{};
    boundaries::SharedData<rc::crsf::LinkStats>                                 link_stats_publisher{};
-   mocks::common::Logger                                                       logger_mock{"radioReceiver"};
+   logging::Logger                                                             logger_mock{"radioReceiver"};
 
    aeromight_rc::RadioReceiver<decltype(queue_receiver_mock),
                                decltype(queue_sender_mock),

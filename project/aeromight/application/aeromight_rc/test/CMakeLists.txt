@@ -4,5 +4,6 @@ add_module_test(
       RadioReceiverTest.cpp
       RadioTransmitterTest.cpp
    LIBS
+      logging
       mocks
 )

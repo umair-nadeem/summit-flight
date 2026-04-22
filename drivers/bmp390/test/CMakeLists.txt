@@ -3,5 +3,6 @@ add_module_test(
       Bmp390Test.cpp
       SetupSMTest.cpp
    LIBS
+      logging
       mocks
 )

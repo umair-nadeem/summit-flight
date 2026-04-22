@@ -3,6 +3,7 @@ add_module_test(
       EstimationTest.cpp
    LIBS
       bmp390
+      logging
       mocks
       aeromight_boundaries
       utilities

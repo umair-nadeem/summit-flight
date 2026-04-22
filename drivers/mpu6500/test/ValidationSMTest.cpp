@@ -6,23 +6,14 @@
 class ValidationSMTest : public Mpu6500BaseTest
 {
 protected:
-   using StateHandler    = mpu6500::Mpu6500StateHandler<decltype(spi_master_with_dma), mocks::common::Logger>;
+   using StateHandler    = mpu6500::Mpu6500StateHandler<decltype(spi_master_with_dma), logging::Logger>;
    using StateMachineDef = mpu6500::ValidationStateMachine<StateHandler>;
 
    StateHandler mpu6500_handler{spi_master_with_dma,
                                 logger,
                                 imu_sensor_data,
                                 imu_sensor_status,
-                                read_failures_limit,
-                                execution_period_ms,
-                                receive_wait_timeout_ms,
-                                sample_rate_divider,
-                                dlpf_config,
-                                gyro_full_scale,
-                                accel_full_scale,
-                                accel_a_dlpf_config,
-                                gyro_range_plausibility_margin_radps,
-                                accel_range_plausibility_margin_mps2};
+                                params};
 
    boost::sml::sm<StateMachineDef> sm{mpu6500_handler};
 };

@@ -4,12 +4,12 @@
 #include <gtest/gtest.h>
 
 #include <mocks/common/ClockSource.hpp>
-#include <mocks/common/Logger.hpp>
 #include <mocks/pcb_component/Led.hpp>
 #include <mocks/rtos/Notifier.hpp>
 #include <mocks/rtos/QueueReceiver.hpp>
 
 #include "boundaries/SharedData.hpp"
+#include "logging/Logger.hpp"
 
 class SystemManagerTest : public ::testing::Test
 {
@@ -43,8 +43,8 @@ protected:
 
    void set_good_radio_input()
    {
-      link_stats.uplink_quality_pct = good_uplink_quality_pct + 1;
-      link_stats.uplink_rssi_1_dbm  = min_good_signal_rssi_dbm + 1.0f;
+      link_stats.uplink_quality_pct = params.good_uplink_quality_pct + 1u;
+      link_stats.uplink_rssi_1_dbm  = static_cast<int8_t>(params.min_good_signal_rssi_dbm + 1.0f);
    }
 
    void give_arm_command()
@@ -76,7 +76,7 @@ protected:
    void create_bad_radio_input()
    {
       set_good_health_summary();
-      link_stats.uplink_quality_pct = good_uplink_quality_pct - 1u;
+      link_stats.uplink_quality_pct = static_cast<uint8_t>(params.good_uplink_quality_pct - 1u);
       system_control_setpoints.update_latest(setpoints, current_ms);
       link_stats_subscriber.update_latest(link_stats, current_ms);
       health_summary.timestamp_ms = current_ms;
@@ -124,7 +124,7 @@ protected:
 
       give_arm_command();
 
-      for (uint32_t i = 0; i < (min_state_debounce_duration_ms / period_in_ms); i++)
+      for (uint32_t i = 0; i < (params.min_state_debounce_duration_ms / params.execution_period_ms); i++)
       {
          system_control_setpoints.update_latest(setpoints, current_ms);
          link_stats_subscriber.update_latest(link_stats, current_ms);
@@ -136,14 +136,15 @@ protected:
       EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::armed);
    }
 
-   static constexpr float    stick_input_deadband_abs       = 0.1f;
-   static constexpr uint8_t  good_uplink_quality_pct        = 50u;
-   static constexpr float    min_good_signal_rssi_dbm       = -110.0f;
-   static constexpr uint32_t period_in_ms                   = 1u;
-   static constexpr uint32_t max_age_stale_data_ms          = 5u;
-   static constexpr uint32_t min_state_debounce_duration_ms = 3u;
-   static constexpr uint32_t timeout_sensors_readiness_ms   = 6u;
-   static constexpr uint32_t timeout_control_readiness_ms   = 4u;
+   aeromight_system::SystemManagerParams params{
+       .execution_period_ms            = 1u,
+       .stick_input_deadband_abs       = 0.1f,
+       .good_uplink_quality_pct        = 50u,
+       .min_good_signal_rssi_dbm       = -110.0f,
+       .max_age_stale_data_ms          = 5u,
+       .min_state_debounce_duration_ms = 3u,
+       .timeout_sensors_readiness_ms   = 6u,
+       .timeout_control_readiness_ms   = 4u};
 
    mocks::rtos::QueueReceiver<aeromight_boundaries::HealthSummary>      health_summary_queue_mock{};
    mocks::rtos::Notifier                                                control_start_notifer_mock{};
@@ -152,7 +153,7 @@ protected:
    mocks::pcb_component::Led                                            led{};
    boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints> system_control_setpoints{};
    boundaries::SharedData<rc::crsf::LinkStats>                          link_stats_subscriber{};
-   mocks::common::Logger                                                logger{"flight"};
+   logging::Logger                                                      logger{"flight"};
    boundaries::SharedData<aeromight_boundaries::SystemState>            system_state{};
    aeromight_boundaries::HealthSummary                                  health_summary{};
    aeromight_boundaries::SystemControlSetpoints                         setpoints{};
@@ -163,7 +164,7 @@ protected:
                                    decltype(control_start_notifer_mock),
                                    decltype(led),
                                    decltype(sys_clock),
-                                   mocks::common::Logger>
+                                   logging::Logger>
        system_manager{health_summary_queue_mock,
                       control_start_notifer_mock,
                       imu_start_calibration_notifer_mock,
@@ -172,14 +173,7 @@ protected:
                       system_control_setpoints,
                       link_stats_subscriber,
                       logger,
-                      stick_input_deadband_abs,
-                      good_uplink_quality_pct,
-                      min_good_signal_rssi_dbm,
-                      period_in_ms,
-                      max_age_stale_data_ms,
-                      min_state_debounce_duration_ms,
-                      timeout_sensors_readiness_ms,
-                      timeout_control_readiness_ms};
+                      params};
 };
 
 TEST_F(SystemManagerTest, initial_state)
@@ -196,7 +190,7 @@ TEST_F(SystemManagerTest, timeout_while_waiting_for_sensors_readiness)
 {
    move_to_wait_sensors_state();
 
-   const uint32_t ticks_required = timeout_sensors_readiness_ms / period_in_ms;
+   const uint32_t ticks_required = params.timeout_sensors_readiness_ms / params.execution_period_ms;
    provide_ticks(ticks_required);
 
    EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::fault);
@@ -215,7 +209,7 @@ TEST_F(SystemManagerTest, timeout_while_waiting_for_control_readiness)
 
    make_sensors_ready();
 
-   const uint32_t ticks_required = timeout_control_readiness_ms / period_in_ms;
+   const uint32_t ticks_required = params.timeout_control_readiness_ms / params.execution_period_ms;
    provide_ticks(ticks_required);
 
    EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::fault);
@@ -277,7 +271,7 @@ TEST_F(SystemManagerTest, fault_while_arming_due_to_stale_health)
    // good and up to date radio input
    set_good_radio_input();
 
-   const uint32_t ticks_needed = (max_age_stale_data_ms - current_ms);
+   const uint32_t ticks_needed = (params.max_age_stale_data_ms - current_ms);
    for (uint32_t i = 0; i < ticks_needed; i++)
    {
       system_control_setpoints.update_latest(setpoints, current_ms);
@@ -401,7 +395,7 @@ TEST_F(SystemManagerTest, fault_while_arming_due_to_stale_radio_input)
    // good and up to date health summary
    set_good_health_summary();
 
-   const uint32_t ticks_needed = (max_age_stale_data_ms - current_ms);
+   const uint32_t ticks_needed = (params.max_age_stale_data_ms - current_ms);
    for (uint32_t i = 0; i < ticks_needed; i++)
    {
       health_summary.timestamp_ms = current_ms;
@@ -431,7 +425,7 @@ TEST_F(SystemManagerTest, fault_while_arming_due_to_bad_radio_input)
       give_arm_command();
 
       // link status not ok
-      link_stats.uplink_quality_pct = good_uplink_quality_pct - 1u;
+      link_stats.uplink_quality_pct = static_cast<uint8_t>(params.good_uplink_quality_pct - 1u);
       system_control_setpoints.update_latest(setpoints, current_ms);
       link_stats_subscriber.update_latest(link_stats, current_ms);
       health_summary.timestamp_ms = current_ms;
@@ -449,7 +443,7 @@ TEST_F(SystemManagerTest, fault_while_arming_due_to_bad_radio_input)
       give_arm_command();
 
       // low link rssi
-      link_stats.uplink_rssi_1_dbm = min_good_signal_rssi_dbm - 1.0f;
+      link_stats.uplink_rssi_1_dbm = static_cast<int8_t>(params.min_good_signal_rssi_dbm - 1.0f);
       system_control_setpoints.update_latest(setpoints, current_ms);
       link_stats_subscriber.update_latest(link_stats, current_ms);
       health_summary.timestamp_ms = current_ms;
@@ -486,7 +480,7 @@ TEST_F(SystemManagerTest, disarm_while_armed)
    give_disarm_command();
    EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarming);
 
-   const uint32_t ticks_needed = min_state_debounce_duration_ms / period_in_ms;
+   const uint32_t ticks_needed = params.min_state_debounce_duration_ms / params.execution_period_ms;
    provide_ticks(ticks_needed);
    EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
 
@@ -562,7 +556,7 @@ TEST_F(SystemManagerTest, disarm_while_in_manual_mode)
 
    EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarming);
 
-   const uint32_t ticks_needed = min_state_debounce_duration_ms / period_in_ms;
+   const uint32_t ticks_needed = params.min_state_debounce_duration_ms / params.execution_period_ms;
    provide_ticks(ticks_needed);
    EXPECT_EQ(system_manager.get_state(), aeromight_system::SystemManagerState::disarmed);
 }

@@ -3,8 +3,9 @@
 
 #include "barometer_sensor/BarometerSensorStatus.hpp"
 #include "barometer_sensor/RawBarometerSensorData.hpp"
+#include "bmp390/Bmp390Params.hpp"
 #include "bmp390/params.hpp"
-#include "mocks/common/Logger.hpp"
+#include "logging/Logger.hpp"
 #include "mocks/hw/I2c.hpp"
 #include "sys_time/ClockSource.hpp"
 
@@ -16,10 +17,11 @@ protected:
       return static_cast<uint8_t>(sensor_normal_mode << 4U) | static_cast<uint8_t>(1u << 1u) | 1u;
    }
 
-   static constexpr uint8_t  read_failures_limit     = 3u;
-   static constexpr uint8_t  max_recovery_attempts   = 3u;
-   static constexpr uint32_t execution_period_ms     = 40u;
-   static constexpr uint32_t receive_wait_timeout_ms = 80u;
+   bmp390::Bmp390Params params{
+       .read_failures_limit     = 3u,
+       .max_recovery_attempts   = 3u,
+       .execution_period_ms     = 40u,
+       .receive_wait_timeout_ms = 80u};
 
    // parameter values
    static constexpr uint8_t osr_p              = 3u;
@@ -31,7 +33,7 @@ protected:
    barometer_sensor::RawBarometerSensorData barometer_sensor_data{};
    barometer_sensor::BarometerSensorStatus  barometer_sensor_status{};
    mocks::hw::I2c                           i2c_driver{};
-   mocks::common::Logger                    logger{"bmp390_test"};
+   logging::Logger                          logger{"bmp390_test"};
 
    std::array<uint8_t, bmp390::params::num_bytes_calibration_data>
        trimming_coefficients_buffer{214u, 108u, 213u, 76u, 249u, 234u, 26u, 252u, 20u, 6u,
