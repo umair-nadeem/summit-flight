@@ -1,6 +1,7 @@
 #pragma once
 
-#include <iostream>
+#include <cstdio>
+#include <cstring>
 
 namespace logging
 {
@@ -23,7 +24,11 @@ public:
    {
       if (m_enabled)
       {
-         std::cout << m_logger_name << ": " << text << "\n";
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+         std::printf("%s: %s\n", m_logger_name, text);
+         std::fflush(stdout);
+#pragma GCC diagnostic pop
       }
    }
 
@@ -32,8 +37,13 @@ public:
    {
       if (m_enabled)
       {
-         std::cout << m_logger_name << ": " << fmt;                  // print the "format" text as-is
-         ((std::cout << ... << (std::cout << " ", args)) << '\n');   // fold expression to print remaining args
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+         std::printf("%s: ", m_logger_name);
+         std::printf(fmt, std::forward<Args>(args)...);
+         std::printf("\n");
+         std::fflush(stdout);
+#pragma GCC diagnostic pop
       }
    }
 
