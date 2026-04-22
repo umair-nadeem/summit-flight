@@ -2,9 +2,7 @@
 
 #include <iostream>
 
-#include <gmock/gmock.h>
-
-namespace mocks::common
+namespace logging
 {
 
 class Logger
@@ -46,4 +44,4 @@ private:
    bool m_enabled{false};
 };
 
-}   // namespace mocks::common
+}   // namespace logging
