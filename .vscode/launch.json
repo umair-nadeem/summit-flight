@@ -28,6 +28,16 @@
             ]
         },
         {
+            "name": "aeromight_sitl",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/out/build/native/artifacts/aeromight_sitl",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {},
+            "stopOnEntry": false
+        },
+        {
             "name": "Bmp390Test",
             "type": "lldb",
             "request": "launch",

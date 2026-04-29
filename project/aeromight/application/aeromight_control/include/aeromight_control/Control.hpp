@@ -10,7 +10,6 @@
 #include "aeromight_boundaries/SystemState.hpp"
 #include "aeromight_boundaries/actuator.hpp"
 #include "boundaries/SharedData.hpp"
-#include "dshot/dshot.hpp"
 #include "interfaces/IClockSource.hpp"
 #include "math/Vector2.hpp"
 #include "math/Vector4.hpp"
@@ -24,7 +23,7 @@ template <typename AttitudeController,
           typename RateController,
           typename ControlAllocator,
           typename StickCommandSource,
-          typename Dshot,
+          typename ActuatorControl,
           typename GyroFilter,
           typename DtermFilter,
           typename Led,
@@ -45,7 +44,7 @@ public:
                     RateController&                              rate_controller,
                     ControlAllocator&                            control_allocator,
                     StickCommandSource&                          stick_command_source,
-                    Dshot&                                       dshot,
+                    ActuatorControl&                             actuator_control,
                     GyroFilter&                                  gyro_x_lpf,
                     GyroFilter&                                  gyro_y_lpf,
                     GyroFilter&                                  gyro_z_lpf,
@@ -63,7 +62,7 @@ public:
          m_rate_controller{rate_controller},
          m_control_allocator{control_allocator},
          m_stick_command_source{stick_command_source},
-         m_dshot{dshot},
+         m_actuator_control{actuator_control},
          m_gyro_lpf{gyro_x_lpf, gyro_y_lpf, gyro_z_lpf},
          m_gyro_dterm_lpf{pid_dterm_x_lpf, pid_dterm_y_lpf, pid_dterm_z_lpf},
          m_led{led},
@@ -152,7 +151,7 @@ public:
          }
       }
 
-      update_motor_commands();
+      update_actuator();
 
       publish_health();
 
@@ -274,30 +273,17 @@ private:
       m_rate_controller.set_saturation_status(m_control_allocator.get_actuator_saturation_positive(), m_control_allocator.get_actuator_saturation_negative());
    }
 
-   void update_motor_commands()
+   void update_actuator()
    {
-      math::Vec4f          motor_values{};
-      math::Vec4<uint16_t> dshot_throttle{};
-      math::Vec4<uint16_t> dshot_frames{};
+      math::Vec4f motor_values{};
 
-      // apply motor permutation
       motor::apply_motor_permutation(motor_values, m_actuator_setpoints, m_motor_mapping);
 
       motor::apply_thrust_linearization(motor_values, m_params.thrust_linearization_factor,
                                         m_control_allocator.get_actuator_min(),
                                         m_control_allocator.get_actuator_max());
 
-      for (std::size_t i = 0; i < num_actuators; i++)
-      {
-         dshot_throttle[i] = dshot::thrust_to_dshot_throttle(motor_values[i]);
-      }
-
-      for (std::size_t i = 0; i < num_actuators; i++)
-      {
-         dshot_frames[i] = dshot::get_dshot_frame(dshot_throttle[i], false);
-      }
-
-      m_dshot.send(dshot_frames.as_array());
+      m_actuator_control.update(motor_values.as_array(), false);
    }
 
    void publish_health()
@@ -366,7 +352,7 @@ private:
    RateController&                                           m_rate_controller;
    ControlAllocator&                                         m_control_allocator;
    StickCommandSource&                                       m_stick_command_source;
-   Dshot&                                                    m_dshot;
+   ActuatorControl&                                          m_actuator_control;
    std::array<std::reference_wrapper<GyroFilter>, num_axis>  m_gyro_lpf;
    std::array<std::reference_wrapper<DtermFilter>, num_axis> m_gyro_dterm_lpf;
    Led&                                                      m_led;

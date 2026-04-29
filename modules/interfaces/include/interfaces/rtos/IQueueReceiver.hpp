@@ -16,11 +16,6 @@ concept IQueueReceiver = requires(C c, T& t) {
       c.receive_if_available()
    }
    -> std::same_as<std::optional<T>>;
-
-   {
-      c.receive_from_isr(t)
-   }
-   -> std::same_as<bool>;
 };
 
 }   // namespace interfaces::rtos

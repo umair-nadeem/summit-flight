@@ -4,6 +4,7 @@ add_library(aeromight_sitl_lib INTERFACE)
 
 target_sources(aeromight_sitl_lib INTERFACE 
    aeromight_sitl.cpp
+   main_loop.cpp
 )
 
 target_link_libraries(aeromight_sitl_lib INTERFACE
@@ -24,8 +25,11 @@ target_link_libraries(aeromight_sitl_lib INTERFACE
    interfaces
    led
    logging
+   mocks
    power
    rc
+   rtos
+   sitl
 )
 
 add_compile_flags(aeromight_sitl_lib)

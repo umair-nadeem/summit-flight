@@ -2,10 +2,10 @@
 
 #include <algorithm>
 
-#include "dshot/params.hpp"
+#include "hw/dshot/params.hpp"
 #include "math/constants.hpp"
 
-namespace dshot
+namespace hw::dshot
 {
 
 inline uint16_t thrust_to_dshot_throttle(const float thrust) noexcept
@@ -30,4 +30,4 @@ inline uint16_t get_dshot_frame(const uint16_t dshot_throttle, const bool teleme
    return static_cast<uint16_t>((value << 4) | checksum);
 }
 
-}   // namespace dshot
+}   // namespace hw::dshot

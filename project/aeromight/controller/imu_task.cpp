@@ -66,10 +66,7 @@ extern "C"
          imu.execute(data->imu_sensor_data, data->imu_sensor_status);
       }
    }
-}
 
-extern "C"
-{
    // SPI1 RX DMA
    void DMA2_Stream0_IRQHandler()
    {

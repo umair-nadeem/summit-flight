@@ -1,6 +1,4 @@
 #include <cstddef>
-#include <cstdio>
-#include <cstring>
 #include <stdlib.h>
 
 #include "BarometerTaskData.hpp"

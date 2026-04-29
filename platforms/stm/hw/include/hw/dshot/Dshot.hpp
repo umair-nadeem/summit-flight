@@ -2,9 +2,9 @@
 
 #include <span>
 
-#include "dshot/params.hpp"
 #include "hw/dma/dma.hpp"
 #include "hw/dshot/DshotConfig.hpp"
+#include "hw/dshot/dshot_frame.hpp"
 #include "hw/timer/timer.hpp"
 
 namespace hw::dshot
@@ -16,7 +16,7 @@ class Dshot
    static constexpr float bit0_duty_cycle = 3.0f / 8.0f;
    static constexpr float bit1_duty_cycle = 3.0f / 4.0f;
 
-   using DshotBuffers = std::array<std::array<uint16_t, ::dshot::frame_len>, N>;
+   using DshotBuffers = std::array<std::array<uint16_t, frame_len>, N>;
    using DshotConfigs = std::array<hw::dshot::DshotConfig, N>;
 
 public:
@@ -65,11 +65,24 @@ public:
       }
    }
 
-   void send(const std::array<uint16_t, N>& frames)
+   void update(const std::array<float, N>& values, const bool telemetry)
    {
+      std::array<uint16_t, N> dshot_throttle{};
+      std::array<uint16_t, N> dshot_frames{};
+
       for (std::size_t i = 0; i < N; i++)
       {
-         fill_buffer(m_dshot_buffers[i], frames[i]);
+         dshot_throttle[i] = thrust_to_dshot_throttle(values[i]);
+      }
+
+      for (std::size_t i = 0; i < N; i++)
+      {
+         dshot_frames[i] = get_dshot_frame(dshot_throttle[i], telemetry);
+      }
+
+      for (std::size_t i = 0; i < N; i++)
+      {
+         fill_buffer(m_dshot_buffers[i], dshot_frames[i]);
       }
 
       for (const auto& config : m_dshot_configs)
@@ -100,7 +113,7 @@ public:
 
       for (const auto& config : m_dshot_configs)
       {
-         LL_DMA_SetDataLength(config.dma, config.stream, ::dshot::frame_len);
+         LL_DMA_SetDataLength(config.dma, config.stream, frame_len);
       }
 
       for (const auto& config : m_dshot_configs)
@@ -112,7 +125,7 @@ public:
 private:
    void fill_buffer(std::span<uint16_t> buffer, const uint16_t frame) const noexcept
    {
-      for (uint8_t i = 0; i < ::dshot::frame_bits; i++)
+      for (uint8_t i = 0; i < frame_bits; i++)
       {
          const bool bit = ((frame & static_cast<uint16_t>(1u << (15u - i))) != 0u);
          buffer[i]      = bit ? m_timing.ccr_one : m_timing.ccr_zero;

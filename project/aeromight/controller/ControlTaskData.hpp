@@ -3,10 +3,10 @@
 #include "aeromight_boundaries/ControlTaskEvents.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
 #include "aeromight_boundaries/actuator.hpp"
-#include "dshot/params.hpp"
 #include "hardware_bindings.hpp"
 #include "hw/dshot/Dshot.hpp"
 #include "hw/dshot/DshotConfig.hpp"
+#include "hw/dshot/params.hpp"
 #include "hw/pcb_component/Led.hpp"
 #include "hw/timer/Timer.hpp"
 #include "math/Vector4.hpp"
@@ -62,7 +62,7 @@ struct ControlTaskData
              &global_data.timer.tim4_config.timer_handle->CCR3}}};
 
    // dshot frame buffers
-   std::array<std::array<uint16_t, dshot::frame_len>, aeromight_boundaries::num_actuators> dshot_buffers{};
+   std::array<std::array<uint16_t, hw::dshot::frame_len>, aeromight_boundaries::num_actuators> dshot_buffers{};
 
    hw::dshot::Dshot<aeromight_boundaries::num_actuators> dshot{dshot_buffers,
                                                                dshot_configs,
