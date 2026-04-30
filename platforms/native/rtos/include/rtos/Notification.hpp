@@ -5,13 +5,21 @@
 #include <cstdint>
 #include <mutex>
 
+#include "error/error_handler.hpp"
+
 namespace rtos
 {
 
 class Notification
 {
 public:
-   void notify(const uint32_t bits = 1u)
+   explicit Notification(const types::EventBitsType bits_to_notify)
+       : m_bits_to_notify{bits_to_notify}
+   {
+      error::verify(bits_to_notify > 0);
+   }
+
+   void notify(const types::EventBitsType bits)
    {
       {
          std::lock_guard<std::mutex> lock(m_mutex);
@@ -20,19 +28,24 @@ public:
       m_cv.notify_one();
    }
 
-   void notify_from_isr(const uint32_t bits = 1u)
+   void notify()
    {
-      notify(bits);
+      notify(m_bits_to_notify);
    }
 
-   uint32_t wait(const uint32_t timeout_ms)
+   void notify_from_isr()
+   {
+      notify(m_bits_to_notify);
+   }
+
+   types::EventBitsType wait(const uint32_t timeout_ms)
    {
       std::unique_lock<std::mutex> lock(m_mutex);
 
       if (timeout_ms == 0u)
       {
-         uint32_t bits = m_bits;
-         m_bits        = 0u;
+         const types::EventBitsType bits = m_bits;
+         m_bits                          = 0u;
          return bits;
       }
 
@@ -46,15 +59,16 @@ public:
          return 0u;
       }
 
-      uint32_t bits = m_bits;
-      m_bits        = 0u;
+      const types::EventBitsType bits = m_bits;
+      m_bits                          = 0u;
       return bits;
    }
 
 private:
-   std::mutex              m_mutex;
-   std::condition_variable m_cv;
-   uint32_t                m_bits{0u};
+   const types::EventBitsType m_bits_to_notify;
+   std::mutex                 m_mutex{};
+   std::condition_variable    m_cv{};
+   types::EventBitsType       m_bits{0u};
 };
 
 }   // namespace rtos

@@ -17,5 +17,5 @@ MainLoopData main_loop_data{};
 int main()
 {
    sitl::run_main_loop(&(sitl::main_loop_data));
-   return -1;
+   return 0;
 }

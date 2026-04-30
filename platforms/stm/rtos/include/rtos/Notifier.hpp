@@ -4,6 +4,7 @@
 #include <type_traits>
 
 #include "FreeRTOS.h"
+#include "error/error_handler.hpp"
 #include "error/freertos_errors.hpp"
 #include "task.h"
 #include "types/types.hpp"
@@ -22,6 +23,7 @@ public:
    explicit Notifier(const types::EventBitsType bits)
        : m_bits{bits}
    {
+      error::verify(bits > 0);
    }
 
    void notify()

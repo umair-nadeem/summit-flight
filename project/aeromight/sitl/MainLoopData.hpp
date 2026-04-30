@@ -1,6 +1,8 @@
 #pragma once
 
+#include "aeromight_boundaries/ControlTaskEvents.hpp"
 #include "aeromight_boundaries/HealthSummary.hpp"
+#include "aeromight_boundaries/ImuTaskEvents.hpp"
 #include "aeromight_boundaries/StateEstimation.hpp"
 #include "boundaries/SharedData.hpp"
 #include "imu_sensor/ImuSensorStatus.hpp"
@@ -13,6 +15,7 @@
 #include "sitl//pcb_component/Led.hpp"
 #include "sitl/actuator/ActuatorControl.hpp"
 #include "sitl/hw/Adc.hpp"
+#include "utilities/enum_to_bit_mask.hpp"
 
 namespace sitl
 {
@@ -60,8 +63,8 @@ struct MainLoopData
 
    // system manager
    sitl::pcb_component::Led status_led{};
-   rtos::Notification       control_task_start_notifier{};
-   rtos::Notification       imu_task_calibrate_notifier{};
+   rtos::Notification       control_task_start_notifier{utilities::enum_to_bit_mask<aeromight_boundaries::ControlTaskEvents::start>()};
+   rtos::Notification       imu_task_calibrate_notifier{utilities::enum_to_bit_mask<aeromight_boundaries::ImuTaskEvents::calibrate>()};
 };
 
 extern MainLoopData main_loop_data;

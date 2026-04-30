@@ -14,6 +14,7 @@
 #include "control/attitude/AttitudeController.hpp"
 #include "control/rate/RateController.hpp"
 #include "estimation/AttitudeEstimator.hpp"
+#include "event_handling/event_check.hpp"
 #include "imu/Imu.hpp"
 #include "led/Led.hpp"
 #include "logging/Logger.hpp"
@@ -142,7 +143,7 @@ void run_main_loop(void* const params)
                logger_control,
                control_params};
 
-   data->adc.set_raw_value(16u);
+   data->adc.set_raw_value(15u);
    aeromight_health::HealthMonitoringParams health_params{};
    aeromight_health::HealthMonitoring<decltype(data->battery),
                                       decltype(data->health_summary_queue),
@@ -184,8 +185,27 @@ void run_main_loop(void* const params)
 
    uint32_t tick = 0;
 
+   data->imu_sensor_status.validation_ok = true;
+   data->imu_sensor_status.config_ok     = true;
+
+   data->imu_sensor_data.accel_mps2 = math::Vec3f{0.0f, 0.0f, 9.81f};
+   data->imu_sensor_data.gyro_radps = math::Vec3f{0.0f, 0.0f, 0.0f};
+
    while (true)
    {
+
+      if (!control.is_enabled())
+      {
+         const auto event_bits = data->control_task_start_notifier.wait(0);
+         if (event_handling::has_event(event_bits, aeromight_boundaries::ControlTaskEvents::start))
+         {
+            estimation.start();
+            control.start();
+         }
+      }
+
+      data->imu_sensor_data.count++;
+
       imu.execute(data->imu_sensor_data, data->imu_sensor_status);
 
       estimation.execute();
@@ -202,8 +222,8 @@ void run_main_loop(void* const params)
          system_manager.run_once();
       }
 
-      // Equivalent to vTaskDelayUntil
-      std::this_thread::sleep_until(next_wake_time);
+      tick++;
+      std::this_thread::sleep_until(next_wake_time);   // Equivalent to vTaskDelayUntil
       next_wake_time += period;
    }
 }
