@@ -9,6 +9,7 @@
 #include "aeromight_estimation/AltitudeEkf.hpp"
 #include "aeromight_estimation/Estimation.hpp"
 #include "aeromight_health/HealthMonitoring.hpp"
+#include "aeromight_params.hpp"
 #include "aeromight_system/SystemManager.hpp"
 #include "control/attitude/AttitudeController.hpp"
 #include "control/rate/RateController.hpp"
@@ -36,10 +37,9 @@ void run_main_loop(void* const params)
    using GyroFilterType  = math::FirstOrderLpf;
    using DtermFilterType = math::NullFilter;
 
-   constexpr uint32_t main_loop_period                     = 4000u;
-   constexpr float    stick_input_lpf_cutoff_hz            = 10.0f;
-   constexpr float    gyro_lpf_cutoff_hz                   = 101.0f;
-   constexpr float    pid_dterm_filter_cutoff_frequency_hz = 35.0f;
+   constexpr float stick_input_lpf_cutoff_hz            = 10.0f;
+   constexpr float gyro_lpf_cutoff_hz                   = 101.0f;
+   constexpr float pid_dterm_filter_cutoff_frequency_hz = 35.0f;
 
    logging::Logger logger_imu{"imu"};
    logging::Logger logger_estimation{"estimation"};
@@ -104,11 +104,11 @@ void run_main_loop(void* const params)
    auto gyro_z_lpf = math::make_filter<GyroFilterType>(gyro_lpf_cutoff_hz);
 
    auto pid_dterm_x_lpf = math::make_filter<DtermFilterType>(pid_dterm_filter_cutoff_frequency_hz,
-                                                             main_loop_period / 1000.0f);
+                                                             control_task_period_in_ms / 1000.0f);
    auto pid_dterm_y_lpf = math::make_filter<DtermFilterType>(pid_dterm_filter_cutoff_frequency_hz,
-                                                             main_loop_period / 1000.0f);
+                                                             control_task_period_in_ms / 1000.0f);
    auto pid_dterm_z_lpf = math::make_filter<DtermFilterType>(pid_dterm_filter_cutoff_frequency_hz,
-                                                             main_loop_period / 1000.0f);
+                                                             control_task_period_in_ms / 1000.0f);
 
    led::Led<sitl::pcb_component::Led, sys_time::ClockSource> led{data->control_led};
 
@@ -176,24 +176,31 @@ void run_main_loop(void* const params)
                       logger_system_manager,
                       system_params};
 
-   constexpr std::chrono::microseconds period{main_loop_period};
+   constexpr std::chrono::microseconds period{imu_task_period_in_ms * 1000u};
 
    auto next_wake_time = std::chrono::steady_clock::now() + period;
 
    std::printf("starting aeromight sitl main loop\n");
 
+   uint32_t tick = 0;
+
    while (true)
    {
-
       imu.execute(data->imu_sensor_data, data->imu_sensor_status);
 
       estimation.execute();
 
       control.execute();
 
-      health_monitoring.run_once();
+      if ((tick % (health_monitoring_task_period_in_ms / imu_task_period_in_ms)) == 0)
+      {
+         health_monitoring.run_once();
+      }
 
-      system_manager.run_once();
+      if ((tick % (system_manager_task_period_in_ms / imu_task_period_in_ms)) == 0)
+      {
+         system_manager.run_once();
+      }
 
       // Equivalent to vTaskDelayUntil
       std::this_thread::sleep_until(next_wake_time);

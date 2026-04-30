@@ -1,5 +1,6 @@
 #include "ImuTaskData.hpp"
 #include "aeromight_boundaries/AeromightData.hpp"
+#include "aeromight_params.hpp"
 #include "error/error_handler.hpp"
 #include "event_handling/EventBinding.hpp"
 #include "event_handling/EventDispatcher.hpp"
@@ -9,7 +10,6 @@
 #include "mpu6500/Mpu6500.hpp"
 #include "rtos/QueueSender.hpp"
 #include "sys_time/ClockSource.hpp"
-#include "task_params.hpp"
 
 namespace logging
 {
@@ -51,7 +51,7 @@ extern "C"
       using CalibrationBinding = event_handling::EventBinding<decltype(imu), &decltype(imu)::start_calibration>;
 
       event_handling::EventDispatcher imu_event_dispatcher{data->imu_task_notification_waiter,
-                                                           controller::task::imu_task_period_in_ms,
+                                                           imu_task_period_in_ms,
                                                            TickBinding{mpu6500, data->event_tick_bit_mask},
                                                            RxCompleteBinding{mpu6500, data->event_rx_complete_bit_mask},
                                                            CalibrationBinding{imu, data->event_calibrate_bit_mask}};

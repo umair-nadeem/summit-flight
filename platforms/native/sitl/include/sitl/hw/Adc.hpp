@@ -17,14 +17,14 @@ public:
       // no-op
    }
 
-   uint16_t get_raw_value() const
-   {
-      return m_raw;
-   }
-
    void set_raw_value(const uint16_t raw)
    {
       m_raw = raw;
+   }
+
+   uint16_t get_raw_value() const
+   {
+      return m_raw;
    }
 
 private:

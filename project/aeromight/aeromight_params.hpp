@@ -1,8 +1,5 @@
 #pragma once
 
-namespace controller::task
-{
-
 // configMAX_PRIORITIES -> 10
 static constexpr uint32_t system_core_clock = 100'000'000u;
 
@@ -54,5 +51,3 @@ static constexpr const char* const logging_task_name{"logging"};
 static constexpr uint32_t          logging_task_stack_size_in_bytes{1024u};
 static constexpr uint32_t          logging_task_stack_depth_in_words{logging_task_stack_size_in_bytes / sizeof(uint32_t)};
 static constexpr uint32_t          logging_task_priority{2u};
-
-}   // namespace controller::task

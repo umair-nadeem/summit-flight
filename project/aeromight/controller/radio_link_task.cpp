@@ -1,5 +1,6 @@
 #include "RadioLinkTaskData.hpp"
 #include "aeromight_boundaries/AeromightData.hpp"
+#include "aeromight_params.hpp"
 #include "aeromight_rc/RadioLink.hpp"
 #include "aeromight_rc/RadioReceiver.hpp"
 #include "aeromight_rc/RadioTransmitter.hpp"
@@ -8,7 +9,6 @@
 #include "rc/crsf/CrsfDecoder.hpp"
 #include "rtos/periodic_task.hpp"
 #include "sys_time/ClockSource.hpp"
-#include "task_params.hpp"
 
 namespace logging
 {
@@ -70,7 +70,7 @@ extern "C"
                               decltype(radio_transmitter)>
           radio_link{radio_receiver,
                      radio_transmitter,
-                     controller::task::radio_link_task_period_in_ms};
+                     radio_link_task_period_in_ms};
 
       rtos::run_periodic_task(radio_link);
    }

@@ -1,13 +1,13 @@
 #include "HealthMonitoringTaskData.hpp"
 #include "aeromight_boundaries/AeromightData.hpp"
 #include "aeromight_health/HealthMonitoring.hpp"
+#include "aeromight_params.hpp"
 #include "error/error_handler.hpp"
 #include "logging/LogClient.hpp"
 #include "power/battery/Battery.hpp"
 #include "power/battery/BatteryPercentageModel.hpp"
 #include "rtos/periodic_task.hpp"
 #include "sys_time/ClockSource.hpp"
-#include "task_params.hpp"
 
 namespace logging
 {

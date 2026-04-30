@@ -10,6 +10,7 @@
 #include "SysClockData.hpp"
 #include "SystemManagerTaskData.hpp"
 #include "aeromight_boundaries/AeromightData.hpp"
+#include "aeromight_params.hpp"
 #include "error/error_record.hpp"
 #include "hw/uart/uart.hpp"
 #include "rtos/Queue.hpp"
@@ -18,7 +19,6 @@
 #include "rtos/Semaphore.hpp"
 #include "rtos/task_api.hpp"
 #include "sys_time/ClockSource.hpp"
-#include "task_params.hpp"
 
 // sys clock timer
 hw::timer::TimerConfig sys_time::ClockSource::timer_config{controller::global_data.timer.tim2_config};
@@ -57,13 +57,13 @@ rtos::TCB barometer_task_tcb{};
 rtos::TCB logging_task_tcb{};
 
 // task stack
-alignas(std::max_align_t) uint32_t imu_task_stack_buffer[controller::task::imu_task_stack_depth_in_words];
-alignas(std::max_align_t) uint32_t control_task_stack_buffer[controller::task::control_task_stack_depth_in_words];
-alignas(std::max_align_t) uint32_t system_manager_task_stack_buffer[controller::task::system_manager_task_stack_depth_in_words];
-alignas(std::max_align_t) uint32_t radio_link_task_stack_buffer[controller::task::radio_link_task_stack_depth_in_words];
-alignas(std::max_align_t) uint32_t health_monitoring_task_stack_buffer[controller::task::health_monitoring_task_stack_depth_in_words];
-alignas(std::max_align_t) uint32_t barometer_task_stack_buffer[controller::task::barometer_task_stack_depth_in_words];
-alignas(std::max_align_t) uint32_t logging_task_stack_buffer[controller::task::logging_task_stack_depth_in_words];
+alignas(std::max_align_t) uint32_t imu_task_stack_buffer[imu_task_stack_depth_in_words];
+alignas(std::max_align_t) uint32_t control_task_stack_buffer[control_task_stack_depth_in_words];
+alignas(std::max_align_t) uint32_t system_manager_task_stack_buffer[system_manager_task_stack_depth_in_words];
+alignas(std::max_align_t) uint32_t radio_link_task_stack_buffer[radio_link_task_stack_depth_in_words];
+alignas(std::max_align_t) uint32_t health_monitoring_task_stack_buffer[health_monitoring_task_stack_depth_in_words];
+alignas(std::max_align_t) uint32_t barometer_task_stack_buffer[barometer_task_stack_depth_in_words];
+alignas(std::max_align_t) uint32_t logging_task_stack_buffer[logging_task_stack_depth_in_words];
 
 // task handles
 TaskHandle_t imu_task_handle;
@@ -91,10 +91,10 @@ void register_tasks()
 
    rtos::RtosTaskConfig imu_task_config{
        .func                 = imu_task,
-       .name                 = controller::task::imu_task_name,
-       .stack_depth_in_words = controller::task::imu_task_stack_depth_in_words,
+       .name                 = imu_task_name,
+       .stack_depth_in_words = imu_task_stack_depth_in_words,
        .params               = static_cast<void*>(&imu_task_data),
-       .priority             = controller::task::imu_task_priority,
+       .priority             = imu_task_priority,
        .stack_buffer         = imu_task_stack_buffer,
        .task_block           = imu_task_tcb};
 
@@ -105,10 +105,10 @@ void register_tasks()
 
    rtos::RtosTaskConfig control_task_config{
        .func                 = control_task,
-       .name                 = controller::task::control_task_name,
-       .stack_depth_in_words = controller::task::control_task_stack_depth_in_words,
+       .name                 = control_task_name,
+       .stack_depth_in_words = control_task_stack_depth_in_words,
        .params               = static_cast<void*>(&control_task_data),
-       .priority             = controller::task::control_task_priority,
+       .priority             = control_task_priority,
        .stack_buffer         = control_task_stack_buffer,
        .task_block           = control_task_tcb};
 
@@ -119,10 +119,10 @@ void register_tasks()
 
    rtos::RtosTaskConfig system_manager_task_config{
        .func                 = system_manager_task,
-       .name                 = controller::task::system_manager_task_name,
-       .stack_depth_in_words = controller::task::system_manager_task_stack_depth_in_words,
+       .name                 = system_manager_task_name,
+       .stack_depth_in_words = system_manager_task_stack_depth_in_words,
        .params               = static_cast<void*>(&system_manager_task_data),
-       .priority             = controller::task::system_manager_task_priority,
+       .priority             = system_manager_task_priority,
        .stack_buffer         = system_manager_task_stack_buffer,
        .task_block           = system_manager_task_tcb};
 
@@ -133,10 +133,10 @@ void register_tasks()
 
    rtos::RtosTaskConfig radio_link_task_config{
        .func                 = radio_link_task,
-       .name                 = controller::task::radio_link_task_name,
-       .stack_depth_in_words = controller::task::radio_link_task_stack_depth_in_words,
+       .name                 = radio_link_task_name,
+       .stack_depth_in_words = radio_link_task_stack_depth_in_words,
        .params               = static_cast<void*>(&radio_link_task_data),
-       .priority             = controller::task::radio_link_task_priority,
+       .priority             = radio_link_task_priority,
        .stack_buffer         = radio_link_task_stack_buffer,
        .task_block           = radio_link_task_tcb};
 
@@ -147,10 +147,10 @@ void register_tasks()
 
    rtos::RtosTaskConfig health_monitoring_task_config{
        .func                 = health_monitoring_task,
-       .name                 = controller::task::health_monitoring_task_name,
-       .stack_depth_in_words = controller::task::health_monitoring_task_stack_depth_in_words,
+       .name                 = health_monitoring_task_name,
+       .stack_depth_in_words = health_monitoring_task_stack_depth_in_words,
        .params               = static_cast<void*>(&health_monitoring_task_data),
-       .priority             = controller::task::health_monitoring_task_priority,
+       .priority             = health_monitoring_task_priority,
        .stack_buffer         = health_monitoring_task_stack_buffer,
        .task_block           = health_monitoring_task_tcb};
 
@@ -161,10 +161,10 @@ void register_tasks()
 
    rtos::RtosTaskConfig logging_task_config{
        .func                 = logging_task,
-       .name                 = controller::task::logging_task_name,
-       .stack_depth_in_words = controller::task::logging_task_stack_depth_in_words,
+       .name                 = logging_task_name,
+       .stack_depth_in_words = logging_task_stack_depth_in_words,
        .params               = static_cast<void*>(&logging_task_data),
-       .priority             = controller::task::logging_task_priority,
+       .priority             = logging_task_priority,
        .stack_buffer         = logging_task_stack_buffer,
        .task_block           = logging_task_tcb};
 

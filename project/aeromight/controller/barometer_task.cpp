@@ -1,5 +1,6 @@
 #include "BarometerTaskData.hpp"
 #include "aeromight_boundaries/AeromightData.hpp"
+#include "aeromight_params.hpp"
 #include "bmp390/Bmp390.hpp"
 #include "event_handling/EventBinding.hpp"
 #include "event_handling/EventDispatcher.hpp"
@@ -7,7 +8,6 @@
 #include "rtos/QueueSender.hpp"
 #include "rtos/periodic_task.hpp"
 #include "sys_time/ClockSource.hpp"
-#include "task_params.hpp"
 
 namespace logging
 {
@@ -26,7 +26,7 @@ extern "C"
 
       using LogClient = logging::LogClient<decltype(logging::logging_queue_sender)>;
 
-      constexpr uint32_t notification_wait_period_in_ms = controller::task::barometer_task_period_in_ms / 4u;
+      constexpr uint32_t notification_wait_period_in_ms = barometer_task_period_in_ms / 4u;
 
       LogClient logger_bmp390{logging::logging_queue_sender, "bmp390"};
 

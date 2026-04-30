@@ -1,5 +1,6 @@
 #include "SystemManagerTaskData.hpp"
 #include "aeromight_boundaries/AeromightData.hpp"
+#include "aeromight_params.hpp"
 #include "aeromight_system/SystemManager.hpp"
 #include "led/Led.hpp"
 #include "logging/LogClient.hpp"
@@ -7,7 +8,6 @@
 #include "rtos/QueueSender.hpp"
 #include "rtos/periodic_task.hpp"
 #include "sys_time/ClockSource.hpp"
-#include "task_params.hpp"
 
 namespace logging
 {

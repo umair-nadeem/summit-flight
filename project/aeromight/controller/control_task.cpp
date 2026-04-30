@@ -5,6 +5,7 @@
 #include "aeromight_control/EstimationAndControl.hpp"
 #include "aeromight_estimation/AltitudeEkf.hpp"
 #include "aeromight_estimation/Estimation.hpp"
+#include "aeromight_params.hpp"
 #include "control/attitude/AttitudeController.hpp"
 #include "control/rate/RateController.hpp"
 #include "error/error_handler.hpp"
@@ -23,7 +24,6 @@
 #include "rtos/constants.hpp"
 #include "rtos/periodic_task.hpp"
 #include "sys_time/ClockSource.hpp"
-#include "task_params.hpp"
 
 namespace logging
 {
@@ -104,11 +104,11 @@ extern "C"
       auto gyro_z_lpf = math::make_filter<GyroFilterType>(gyro_lpf_cutoff_hz);
 
       auto pid_dterm_x_lpf = math::make_filter<DtermFilterType>(pid_dterm_filter_cutoff_frequency_hz,
-                                                                controller::task::control_task_period_in_ms / 1000.0f);
+                                                                control_task_period_in_ms / 1000.0f);
       auto pid_dterm_y_lpf = math::make_filter<DtermFilterType>(pid_dterm_filter_cutoff_frequency_hz,
-                                                                controller::task::control_task_period_in_ms / 1000.0f);
+                                                                control_task_period_in_ms / 1000.0f);
       auto pid_dterm_z_lpf = math::make_filter<DtermFilterType>(pid_dterm_filter_cutoff_frequency_hz,
-                                                                controller::task::control_task_period_in_ms / 1000.0f);
+                                                                control_task_period_in_ms / 1000.0f);
 
       led::Led<hw::pcb_component::Led, sys_time::ClockSource> led{data->control_status_led};
 
@@ -146,7 +146,7 @@ extern "C"
                                               decltype(control)>
           estimation_and_control{estimation,
                                  control,
-                                 controller::task::control_task_period_in_ms};
+                                 control_task_period_in_ms};
 
       const auto event_bits = data->control_task_notification_waiter.wait(rtos::constants::max_delay);
       if ((event_bits == 0) ||

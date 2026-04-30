@@ -1,9 +1,9 @@
 #include "LoggingTaskData.hpp"
+#include "aeromight_params.hpp"
 #include "error/error_handler.hpp"
 #include "hw/uart/uart.hpp"
 #include "logging/LogServer.hpp"
 #include "logging/LogUart.hpp"
-#include "task_params.hpp"
 
 extern "C"
 {
