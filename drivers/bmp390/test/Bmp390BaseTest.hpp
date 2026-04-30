@@ -1,13 +1,14 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <mocks/sys_time/ClockSource.hpp>
+
 #include "barometer_sensor/BarometerSensorStatus.hpp"
 #include "barometer_sensor/RawBarometerSensorData.hpp"
 #include "bmp390/Bmp390Params.hpp"
 #include "bmp390/params.hpp"
 #include "logging/Logger.hpp"
 #include "mocks/hw/I2c.hpp"
-#include "sys_time/ClockSource.hpp"
 
 class Bmp390BaseTest : public testing::Test
 {

@@ -1,13 +1,14 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <mocks/sys_time/ClockSource.hpp>
+
 #include "imu_sensor/ImuSensorStatus.hpp"
 #include "imu_sensor/RawImuSensorData.hpp"
 #include "logging/Logger.hpp"
 #include "mocks/hw/SpiMasterWithDma.hpp"
 #include "mpu6500/Mpu6500Params.hpp"
 #include "mpu6500/params.hpp"
-#include "sys_time/ClockSource.hpp"
 
 class Mpu6500BaseTest : public testing::Test
 {

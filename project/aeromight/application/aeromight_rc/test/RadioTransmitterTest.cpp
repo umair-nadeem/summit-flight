@@ -2,9 +2,9 @@
 
 #include <gmock/gmock.h>
 
-#include "mocks/common/ClockSource.hpp"
 #include "mocks/common/Crsf.hpp"
 #include "mocks/hw/UartTransmitter.hpp"
+#include "mocks/sys_time/ClockSource.hpp"
 
 class RadioTransmitterTest : public ::testing::Test
 {
@@ -12,7 +12,7 @@ public:
    RadioTransmitterTest()
    {
       mocks::common::Crsf::reset();
-      mocks::common::ClockSource::reset();
+      mocks::sys_time::ClockSource::reset();
    }
 
 protected:
@@ -20,12 +20,12 @@ protected:
 
    std::array<std::byte, crsf::max_buffer_size>          uart_tx_buffer{};
    mocks::hw::UartTransmitter                            uart_transmitter_mock{};
-   mocks::common::ClockSource                            sys_clock{};
+   mocks::sys_time::ClockSource                          sys_clock{};
    boundaries::SharedData<power::battery::BatteryStatus> battery_status{};
 
    aeromight_rc::RadioTransmitter<decltype(uart_transmitter_mock),
                                   mocks::common::Crsf,
-                                  mocks::common::ClockSource>
+                                  mocks::sys_time::ClockSource>
        radio_transmitter{uart_transmitter_mock,
                          battery_status,
                          battery_status_transmission_period_in_ms};

@@ -74,6 +74,11 @@ public:
       publish_health();
    }
 
+   bool is_enabled() const
+   {
+      return m_estimation_status.enabled;
+   }
+
 private:
    void get_time()
    {

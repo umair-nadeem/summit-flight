@@ -3,10 +3,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include <mocks/common/ClockSource.hpp>
 #include <mocks/pcb_component/Led.hpp>
 #include <mocks/rtos/Notifier.hpp>
 #include <mocks/rtos/QueueReceiver.hpp>
+#include <mocks/sys_time/ClockSource.hpp>
 
 #include "boundaries/SharedData.hpp"
 #include "logging/Logger.hpp"
@@ -149,7 +149,7 @@ protected:
    mocks::rtos::QueueReceiver<aeromight_boundaries::HealthSummary>      health_summary_queue_mock{};
    mocks::rtos::Notifier                                                control_start_notifer_mock{};
    mocks::rtos::Notifier                                                imu_start_calibration_notifer_mock{};
-   mocks::common::ClockSource                                           sys_clock{};
+   mocks::sys_time::ClockSource                                         sys_clock{};
    mocks::pcb_component::Led                                            led{};
    boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints> system_control_setpoints{};
    boundaries::SharedData<rc::crsf::LinkStats>                          link_stats_subscriber{};

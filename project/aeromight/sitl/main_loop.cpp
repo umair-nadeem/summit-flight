@@ -1,4 +1,4 @@
-#include <chrono>
+
 #include <cstdio>
 #include <thread>
 
@@ -24,7 +24,7 @@
 #include "math/make_filter.hpp"
 #include "rc/StickCommandSource.hpp"
 #include "rc/ThrottleCurve.hpp"
-#include "sys_time/ClockSource.hpp"
+#include "sitl/sys_time/ClockSource.hpp"
 
 namespace sitl
 {
@@ -38,9 +38,11 @@ void run_main_loop(void* const params)
    using GyroFilterType  = math::FirstOrderLpf;
    using DtermFilterType = math::NullFilter;
 
-   constexpr float stick_input_lpf_cutoff_hz            = 10.0f;
-   constexpr float gyro_lpf_cutoff_hz                   = 101.0f;
-   constexpr float pid_dterm_filter_cutoff_frequency_hz = 35.0f;
+   constexpr uint32_t dt_ms                                = control_task_period_in_ms;
+   constexpr uint32_t dt_us                                = dt_ms * 1000u;
+   constexpr float    stick_input_lpf_cutoff_hz            = 10.0f;
+   constexpr float    gyro_lpf_cutoff_hz                   = 101.0f;
+   constexpr float    pid_dterm_filter_cutoff_frequency_hz = 35.0f;
 
    logging::Logger logger_imu{"imu"};
    logging::Logger logger_estimation{"estimation"};
@@ -48,11 +50,11 @@ void run_main_loop(void* const params)
    logging::Logger logger_health_monitoring{"health"};
    logging::Logger logger_system_manager{"system"};
 
-   imu::ImuParams                                   imu_params{};
-   imu::Imu<sys_time::ClockSource, logging::Logger> imu{aeromight_boundaries::aeromight_data.imu_data,
-                                                        aeromight_boundaries::aeromight_data.imu_health,
-                                                        logger_imu,
-                                                        imu_params};
+   imu::ImuParams                                         imu_params{};
+   imu::Imu<sitl::sys_time::ClockSource, logging::Logger> imu{aeromight_boundaries::aeromight_data.imu_data,
+                                                              aeromight_boundaries::aeromight_data.imu_health,
+                                                              logger_imu,
+                                                              imu_params};
 
    estimation::AttitudeEstimatorParams ahrs_params{};
    estimation::AttitudeEstimator       ahrs_filter{ahrs_params};
@@ -63,7 +65,7 @@ void run_main_loop(void* const params)
    aeromight_estimation::EstimationParams estimation_params{};
    aeromight_estimation::Estimation<decltype(ahrs_filter),
                                     decltype(altitude_ekf),
-                                    sys_time::ClockSource,
+                                    sitl::sys_time::ClockSource,
                                     logging::Logger>
        estimation{ahrs_filter,
                   altitude_ekf,
@@ -105,13 +107,13 @@ void run_main_loop(void* const params)
    auto gyro_z_lpf = math::make_filter<GyroFilterType>(gyro_lpf_cutoff_hz);
 
    auto pid_dterm_x_lpf = math::make_filter<DtermFilterType>(pid_dterm_filter_cutoff_frequency_hz,
-                                                             control_task_period_in_ms / 1000.0f);
+                                                             dt_ms / 1000.0f);
    auto pid_dterm_y_lpf = math::make_filter<DtermFilterType>(pid_dterm_filter_cutoff_frequency_hz,
-                                                             control_task_period_in_ms / 1000.0f);
+                                                             dt_ms / 1000.0f);
    auto pid_dterm_z_lpf = math::make_filter<DtermFilterType>(pid_dterm_filter_cutoff_frequency_hz,
-                                                             control_task_period_in_ms / 1000.0f);
+                                                             dt_ms / 1000.0f);
 
-   led::Led<sitl::pcb_component::Led, sys_time::ClockSource> led{data->control_led};
+   led::Led<sitl::pcb_component::Led, sitl::sys_time::ClockSource> led{data->control_led};
 
    aeromight_control::ControlParams control_params{};
    aeromight_control::Control<decltype(attitude_controller),
@@ -122,7 +124,7 @@ void run_main_loop(void* const params)
                               decltype(gyro_x_lpf),
                               decltype(pid_dterm_x_lpf),
                               decltype(led),
-                              sys_time::ClockSource,
+                              sitl::sys_time::ClockSource,
                               logging::Logger>
        control{attitude_controller,
                rate_controller,
@@ -147,7 +149,7 @@ void run_main_loop(void* const params)
    aeromight_health::HealthMonitoringParams health_params{};
    aeromight_health::HealthMonitoring<decltype(data->battery),
                                       decltype(data->health_summary_queue),
-                                      sys_time::ClockSource,
+                                      sitl::sys_time::ClockSource,
                                       logging::Logger>
        health_monitoring{data->battery,
                          data->health_summary_queue,
@@ -177,13 +179,14 @@ void run_main_loop(void* const params)
                       logger_system_manager,
                       system_params};
 
-   constexpr std::chrono::microseconds period{imu_task_period_in_ms * 1000u};
-
-   auto next_wake_time = std::chrono::steady_clock::now() + period;
+   constexpr std::chrono::microseconds period_us{dt_us};
+   auto                                next_wake_time_us = std::chrono::steady_clock::now() + period_us;
 
    std::printf("starting aeromight sitl main loop\n");
 
    uint32_t tick = 0;
+
+   sys_time::ClockSource::init();
 
    data->imu_sensor_status.validation_ok = true;
    data->imu_sensor_status.config_ok     = true;
@@ -194,7 +197,7 @@ void run_main_loop(void* const params)
    while (true)
    {
 
-      if (!control.is_enabled())
+      if (!control.is_enabled() || !estimation.is_enabled())
       {
          const auto event_bits = data->control_task_start_notifier.wait(0);
          if (event_handling::has_event(event_bits, aeromight_boundaries::ControlTaskEvents::start))
@@ -212,19 +215,20 @@ void run_main_loop(void* const params)
 
       control.execute();
 
-      if ((tick % (health_monitoring_task_period_in_ms / imu_task_period_in_ms)) == 0)
+      if ((tick % (health_monitoring_task_period_in_ms / dt_ms)) == 0)
       {
          health_monitoring.run_once();
       }
 
-      if ((tick % (system_manager_task_period_in_ms / imu_task_period_in_ms)) == 0)
+      if ((tick % (system_manager_task_period_in_ms / dt_ms)) == 0)
       {
          system_manager.run_once();
       }
 
       tick++;
-      std::this_thread::sleep_until(next_wake_time);   // Equivalent to vTaskDelayUntil
-      next_wake_time += period;
+      std::this_thread::sleep_until(next_wake_time_us);   // Equivalent to FreeRTOS vTaskDelayUntil
+      next_wake_time_us += period_us;
+      sys_time::ClockSource::advance_us(dt_us);
    }
 }
 

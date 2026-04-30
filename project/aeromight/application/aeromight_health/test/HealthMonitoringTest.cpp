@@ -4,8 +4,8 @@
 #include <gtest/gtest.h>
 
 #include "logging/Logger.hpp"
-#include "mocks/common/ClockSource.hpp"
 #include "mocks/rtos/QueueSender.hpp"
+#include "mocks/sys_time/ClockSource.hpp"
 
 class BatteryMock
 {
@@ -72,7 +72,7 @@ protected:
 
    BatteryMock                                                   battery_mock{};
    mocks::rtos::QueueSender<aeromight_boundaries::HealthSummary> queue_sender_mock{};
-   mocks::common::ClockSource                                    sys_clock{};
+   mocks::sys_time::ClockSource                                  sys_clock{};
    boundaries::SharedData<power::battery::BatteryStatus>         battery_status_publisher{};
    boundaries::SharedData<imu::ImuStatus>                        imu_health_subscriber{};
    boundaries::SharedData<barometer::BarometerStatus>            barometer_health_subscriber{};
@@ -83,7 +83,7 @@ protected:
 
    aeromight_health::HealthMonitoring<decltype(battery_mock),
                                       decltype(queue_sender_mock),
-                                      mocks::common::ClockSource,
+                                      mocks::sys_time::ClockSource,
                                       decltype(logger_mock)>
        health_monitoring{battery_mock,
                          queue_sender_mock,

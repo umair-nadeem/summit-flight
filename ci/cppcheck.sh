@@ -19,7 +19,6 @@ do
       --suppress=missingInclude \
       --suppress=unusedFunction \
       -i $project_root/external \
-      -i $project_root/platform \
       --quiet \
       --error-exitcode=1 \
       --project=$compile_commands"

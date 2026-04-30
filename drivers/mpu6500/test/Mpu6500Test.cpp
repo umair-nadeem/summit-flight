@@ -5,7 +5,7 @@
 
 #include "Mpu6500BaseTest.hpp"
 #include "mocks/hw/SpiMasterWithDma.hpp"
-#include "sys_time/ClockSource.hpp"
+#include "mocks/sys_time/ClockSource.hpp"
 
 class Mpu6500Test : public Mpu6500BaseTest
 {

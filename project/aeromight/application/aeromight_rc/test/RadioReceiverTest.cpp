@@ -5,10 +5,10 @@
 #include <gmock/gmock.h>
 
 #include "logging/Logger.hpp"
-#include "mocks/common/ClockSource.hpp"
 #include "mocks/common/Crsf.hpp"
 #include "mocks/rtos/QueueReceiver.hpp"
 #include "mocks/rtos/QueueSender.hpp"
+#include "mocks/sys_time/ClockSource.hpp"
 
 class CrsfDecoderMock
 {
@@ -24,7 +24,7 @@ public:
    RadioReceiverTest()
    {
       mocks::common::Crsf::reset();
-      mocks::common::ClockSource::reset();
+      mocks::sys_time::ClockSource::reset();
    }
 
 protected:
@@ -38,7 +38,7 @@ protected:
    mocks::rtos::QueueReceiver<boundaries::BufferWithOwnershipIndex<std::byte>> queue_receiver_mock{};
    mocks::rtos::QueueSender<std::size_t>                                       queue_sender_mock{};
    CrsfDecoderMock                                                             crsf_decoder_mock{};
-   mocks::common::ClockSource                                                  sys_clock{};
+   mocks::sys_time::ClockSource                                                sys_clock{};
    boundaries::SharedData<rc::StickCommand>                                    stick_commands{};
    boundaries::SharedData<aeromight_boundaries::SystemControlSetpoints>        system_control_setpoints_storage{};
    boundaries::SharedData<rc::crsf::LinkStats>                                 link_stats_publisher{};
@@ -47,7 +47,7 @@ protected:
    aeromight_rc::RadioReceiver<decltype(queue_receiver_mock),
                                decltype(queue_sender_mock),
                                decltype(crsf_decoder_mock),
-                               mocks::common::ClockSource,
+                               mocks::sys_time::ClockSource,
                                decltype(logger_mock)>
        radio_receiver{queue_receiver_mock,
                       queue_sender_mock,

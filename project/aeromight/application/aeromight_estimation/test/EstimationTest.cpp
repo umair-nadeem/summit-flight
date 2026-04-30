@@ -6,7 +6,7 @@
 #include "aeromight_estimation/EkfState.hpp"
 #include "bmp390/params.hpp"
 #include "logging/Logger.hpp"
-#include "mocks/common/ClockSource.hpp"
+#include "mocks/sys_time/ClockSource.hpp"
 #include "utilities/Barometric.hpp"
 
 class AttitudeEstimatorMock
@@ -64,7 +64,7 @@ protected:
 
    testing::NiceMock<AttitudeEstimatorMock>                      ahrs_filter_mock{};
    testing::NiceMock<EkfMock>                                    ekf_mock{};
-   mocks::common::ClockSource                                    sys_clock{};
+   mocks::sys_time::ClockSource                                  sys_clock{};
    boundaries::SharedData<aeromight_boundaries::EstimatorStatus> estimator_status{};
    aeromight_boundaries::StateEstimation                         state_estimation_storage{};
    boundaries::SharedData<imu::ImuData>                          imu_data{};
