@@ -63,8 +63,8 @@ struct MainLoopData
 
    // system manager
    sitl::pcb_component::Led status_led{};
-   rtos::Notification       control_task_start_notifier{utilities::enum_to_bit_mask<aeromight_boundaries::ControlTaskEvents::start>()};
-   rtos::Notification       imu_task_calibrate_notifier{utilities::enum_to_bit_mask<aeromight_boundaries::ImuTaskEvents::calibrate>()};
+   rtos::Notification       control_task_notification{utilities::enum_to_bit_mask<aeromight_boundaries::ControlTaskEvents::start>()};
+   rtos::Notification       imu_task_notification{utilities::enum_to_bit_mask<aeromight_boundaries::ImuTaskEvents::calibrate>()};
 };
 
 extern MainLoopData main_loop_data;

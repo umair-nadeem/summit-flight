@@ -170,8 +170,8 @@ void run_main_loop(void* const params)
                                    sys_time::ClockSource,
                                    logging::Logger>
        system_manager{data->health_summary_queue,
-                      data->control_task_start_notifier,
-                      data->imu_task_calibrate_notifier,
+                      data->control_task_notification,
+                      data->imu_task_notification,
                       status_led,
                       aeromight_boundaries::aeromight_data.system_state_info,
                       aeromight_boundaries::aeromight_data.system_control_setpoints,
@@ -199,7 +199,7 @@ void run_main_loop(void* const params)
 
       if (!control.is_enabled() || !estimation.is_enabled())
       {
-         const auto event_bits = data->control_task_start_notifier.wait(0);
+         const auto event_bits = data->control_task_notification.wait(0);
          if (event_handling::has_event(event_bits, aeromight_boundaries::ControlTaskEvents::start))
          {
             estimation.start();
