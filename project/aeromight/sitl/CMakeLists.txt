@@ -18,7 +18,6 @@ target_link_libraries(aeromight_sitl_lib INTERFACE
    barometer
    control
    crsf
-   dshot
    event_handling
    error
    imu

@@ -37,7 +37,6 @@ target_link_libraries(aeromight_lib INTERFACE
    barometer
    bmp390
    control
-   dshot
    event_handling
    error
    imu
@@ -47,6 +46,7 @@ target_link_libraries(aeromight_lib INTERFACE
    mpu6500
    power
    rc
+   sys_time
 )
 
 target_compile_options(aeromight_lib INTERFACE

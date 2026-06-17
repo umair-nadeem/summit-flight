@@ -2,7 +2,6 @@ add_module(
    SOURCES
    LIBS
       control
-      dshot
       error
       math
       motor
